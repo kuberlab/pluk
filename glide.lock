@@ -1,0 +1,38 @@
+hash: e68b3ffd78ea3dad3369cece2129a9d27a1b47f03f138cfa2b3a023499c7401f
+updated: 2017-12-18T12:32:36.757438845+03:00
+imports:
+- name: github.com/emicklei/go-restful
+  version: ff4f55a206334ef123e4f79bbf348980da81ca46
+  subpackages:
+  - log
+- name: github.com/golang/glog
+  version: 44145f04b68cf362d9c4df2182967c2275eaefed
+- name: github.com/gorilla/context
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
+- name: github.com/gorilla/mux
+  version: 7f08801859139f86dfafd1c296e2cba9a80d292e
+- name: github.com/jinzhu/gorm
+  version: 5174cc5c242a728b435ea2be8a2f7f998e15429b
+- name: github.com/jinzhu/inflection
+  version: 1c35d901db3da928c72a72d8458480cc9ade058f
+- name: github.com/kuberlab/lib
+  version: 74077c4a281388387ecd6a702db410de972d9401
+  repo: ssh://git@github.com/kuberlab/lib.git
+  subpackages:
+  - pkg/errors
+  - pkg/types
+  - pkg/utils
+- name: github.com/kuberlab/pacak
+  version: ce2187f263ec49dbce8c0ddb79534b5f2bd6bc44
+  repo: ssh://git@github.com/kuberlab/pacak.git
+- name: github.com/pborman/uuid
+  version: e533369306653d193b93dae055f6083cbf8ba54f
+- name: github.com/Sirupsen/logrus
+  version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
+- name: golang.org/x/sys
+  version: 7ddbeae9ae08c6a06a59597f0c9edbc5ff2444ce
+  subpackages:
+  - unix
+- name: gopkg.in/robfig/cron.v2
+  version: be2e0b0deed5a68ffee390b4583a13aff8321535
+testImports: []
