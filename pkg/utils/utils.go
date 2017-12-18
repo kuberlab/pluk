@@ -1,13 +1,19 @@
 package utils
 
 import (
+	"crypto/sha512"
+	"fmt"
 	"os"
 	"strings"
 	"time"
 )
 
 const (
-	debug = "DEBUG"
+	debug          = "DEBUG"
+	dataVar        = "DATA_DIR"
+	gitVar         = "GIT_DIR"
+	defaultGitDir  = "/git"
+	defaultDataDir = "/data"
 )
 
 func MustParse(date string) time.Time {
@@ -30,6 +36,27 @@ func DebugEnabled() bool {
 	return false
 }
 
+func GitDir() string {
+	gitDir := os.Getenv(gitVar)
+	if gitDir == "" {
+		return defaultGitDir
+	}
+	return gitDir
+}
+
+func DataDir() string {
+	dataDir := os.Getenv(dataVar)
+	if dataDir == "" {
+		return defaultDataDir
+	}
+	return dataDir
+}
+
 func String(s string) *string {
 	return &s
+}
+
+func CalcHash(data []byte) string {
+	sum := sha512.Sum512(data)
+	return fmt.Sprintf("%x", sum[:])
 }

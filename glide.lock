@@ -1,10 +1,12 @@
-hash: e68b3ffd78ea3dad3369cece2129a9d27a1b47f03f138cfa2b3a023499c7401f
-updated: 2017-12-18T12:32:36.757438845+03:00
+hash: 2ba9175aaae59bf810f47f53fa32ecd511697dae0c9acdbf75f9e3ab9dd3e0b0
+updated: 2017-12-18T15:03:37.90000182+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
   subpackages:
   - log
+- name: github.com/gogits/git-module
+  version: 5cc36acd9bc119acc0376a4db452e8ce55451c9f
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
 - name: github.com/gorilla/context
@@ -25,10 +27,20 @@ imports:
 - name: github.com/kuberlab/pacak
   version: ce2187f263ec49dbce8c0ddb79534b5f2bd6bc44
   repo: ssh://git@github.com/kuberlab/pacak.git
+  subpackages:
+  - pkg/errors
+  - pkg/pacakimpl
+  - pkg/process
+  - pkg/sync
+  - pkg/util
+- name: github.com/mcuadros/go-version
+  version: 88e56e02bea1c203c99222c365fa52a69996ccac
 - name: github.com/pborman/uuid
   version: e533369306653d193b93dae055f6083cbf8ba54f
 - name: github.com/Sirupsen/logrus
   version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
+- name: github.com/Unknwon/com
+  version: 7677a1d7c1137cd3dd5ba7a076d0c898a1ef4520
 - name: golang.org/x/sys
   version: 7ddbeae9ae08c6a06a59597f0c9edbc5ff2444ce
   subpackages:

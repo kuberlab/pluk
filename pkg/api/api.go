@@ -7,13 +7,17 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/gorilla/mux"
+	"github.com/kuberlab/pacak/pkg/pacakimpl"
+	"github.com/kuberlab/pluk/pkg/utils"
 )
 
-type API struct{}
+type API struct {
+	gitInterface pacakimpl.GitInterface
+}
 
 func Start() {
 	logrus.Info("Starting pluk...")
-	//api := API{}
+	api := &API{gitInterface: pacakimpl.NewGitInterface(utils.GitDir(), "/git-local")}
 
 	r := mux.NewRouter()
 	r.NotFoundHandler = NotFoundHandler()
@@ -24,7 +28,12 @@ func Start() {
 	ws.ApiVersion("v1")
 	ws.Produces(restful.MIME_JSON)
 
-	//ws.Route(ws.GET("/apps/{app}").To(api.app))
+	ws.Route(ws.GET("/datasets/{workspace}").To(api.datasets))
+	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions").To(api.versions))
+	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}").To(api.getDataset))
+
+	// Save dataset for version, uploading as an archive.
+	ws.Route(ws.POST("/datasets/{workspace}/{name}/{version}").To(api.saveDataset))
 
 	container.Add(ws)
 	r.PathPrefix("/v1/").Handler(container)
