@@ -1,17 +1,18 @@
 FROM golang:1.9.2
 
+COPY ./pluksrv.go "$GOPATH/src/github.com/kuberlab/pluk/pluksrv.go"
+COPY ./pkg "$GOPATH/src/github.com/kuberlab/pluk/pkg"
+COPY ./vendor "$GOPATH/src/github.com/kuberlab/pluk/vendor"
+
+RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && go build pluksrv.go
+
+FROM golang:1.9.2
+
 RUN apt-get update
 RUN apt-get install git curl -y
 
-COPY ./pluksrv "$GOPATH/bin/pluksrv"
+COPY --from=0 /go/src/github.com/kuberlab/pluk/pluksrv /go/bin/pluksrv
 
-RUN chmod +x "$GOPATH/bin/pluksrv"
-
-#RUN mkdir /pacak-git-bare
-#RUN mkdir /pacak-git-local
-#
-#VOLUME ["/pacak-git-bare","/pacak-git-local"]
-
-CMD pluksrv
+CMD [ "pluksrv" ]
 
 EXPOSE 8082
