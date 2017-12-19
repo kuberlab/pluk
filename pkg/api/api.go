@@ -34,10 +34,10 @@ func Start() {
 
 	// Check if chunk exists
 	ws.Route(ws.GET("/chunks/{hash}").To(api.checkChunk))
-	// Save hashed file
+	// Save hashed file chunk
 	ws.Route(ws.POST("/chunks/{hash}").To(api.saveChunk))
 
-	// Save dataset for version, uploading as an archive.
+	// Save file structure for version.
 	ws.Route(ws.POST("/datasets/{workspace}/{name}/{version}").To(api.saveDataset))
 
 	container.Add(ws)
