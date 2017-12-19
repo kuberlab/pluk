@@ -2,9 +2,9 @@ package main
 
 import (
 	"os"
-
-	"github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/kuberlab/pluk/cmd/push"
+	"github.com/kuberlab/pluk/cmd/logging"
 )
 
 const (
@@ -15,24 +15,11 @@ const (
 
 var (
 	configPath string
-	logLevel   string
 	baseURL    string
 )
 
-func initLogging(cmd *cobra.Command, args []string) {
-	logrus.SetFormatter(&logrus.TextFormatter{TimestampFormat: "2006-01-02 15:04:05", FullTimestamp: true})
-
-	lvl, err := logrus.ParseLevel(logLevel)
-	if err != nil {
-		logrus.SetLevel(logrus.DebugLevel)
-	} else {
-		logrus.SetLevel(lvl)
-	}
-	return
-}
 
 func initConfig(cmd *cobra.Command, args []string) error {
-
 	return nil
 }
 
@@ -40,19 +27,19 @@ func newRootCmd() *cobra.Command {
 	var rootCmd = &cobra.Command{
 		Use:               "kdataset",
 		Short:             "Management script for datasets",
-		PersistentPreRun:  initLogging,
+		PersistentPreRun:  logging.InitLogging,
 		PersistentPreRunE: initConfig,
 	}
 
 	p := rootCmd.PersistentFlags()
 	// Declare common arguments.
+	p.StringVar(&logging.LogLevel, "log-level", defaultLogLevel, "Logging level. One of (debug, info, warning, error)")
 	p.StringVarP(&configPath, "config", "", defaultConfigPath, "Path to config file")
-	p.StringVar(&logLevel, "log-level", defaultLogLevel, "Logging level. One of (debug, info, warning, error)")
 	p.StringVar(&baseURL, "url", "", "Base url to pluk.")
 
 	// Add all commands
 	rootCmd.AddCommand(
-		newPushCmd(),
+		push.NewPushCmd(),
 	)
 	return rootCmd
 }
