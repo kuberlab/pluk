@@ -11,6 +11,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"time"
 )
 
 const (
@@ -24,8 +25,10 @@ type FileStructure struct {
 }
 
 type HashedFile struct {
-	Path   string   `json:"path"`
-	Hashes []string `json:"hashes"`
+	Path     string      `json:"path"`
+	Hashes   []string    `json:"hashes"`
+	Mode     os.FileMode `json:"mode"`
+	ModeTime time.Time   `json:"mode_time"`
 }
 
 func SaveDataset(git pacakimpl.GitInterface, structure FileStructure, workspace string, name string, version string, comment string) error {

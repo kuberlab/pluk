@@ -5,12 +5,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
 	"io"
-
+	chunk_io "github.com/kuberlab/pluk/pkg/io"
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/dataset"
-	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -99,28 +97,22 @@ func (cmd *pushCmd) run() (err error) {
 		if err != nil {
 			return err
 		}
-		r := types.NewChunkedReader(cmd.chunkSize, file)
+		r := chunk_io.NewChunkedReader(cmd.chunkSize, file)
 		// Populate file structure.
 		hashed := &dataset.HashedFile{Path: strings.TrimPrefix(path, cwd+"/")}
-
-		for {
-			chunkData, hash, err := r.NextChunk()
-			if err != nil {
-				if err == io.EOF {
-					// Last
-					//if err = checkAndUpload(chunkData, hash); err != nil {
-					//	return err
-					//}
-					//hashed.Hashes = append(hashed.Hashes, hash)
-					break
-				} else {
-					return err
-				}
-			}
-			if err = checkAndUpload(chunkData, hash); err != nil {
+		var chunkData []byte
+		var hash string
+		var err error
+		for err != io.EOF {
+			chunkData, hash, err = r.NextChunk()
+			if err != nil && err != io.EOF {
 				return err
+			} else if len(chunkData) > 0 {
+				if uploadError := checkAndUpload(chunkData, hash); uploadError != nil {
+					return uploadError
+				}
+				hashed.Hashes = append(hashed.Hashes, hash)
 			}
-			hashed.Hashes = append(hashed.Hashes, hash)
 		}
 		structure.Files = append(structure.Files, hashed)
 		return nil
