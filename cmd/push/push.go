@@ -11,6 +11,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/dataset"
 	"github.com/spf13/cobra"
 	"github.com/kuberlab/pluk/cmd/logging"
+	"github.com/kuberlab/pluk/cmd/client"
 )
 
 type pushCmd struct {
@@ -63,7 +64,7 @@ func (cmd *pushCmd) run() (err error) {
 		return err
 	}
 
-	client, err := NewClient(baseURL)
+	client, err := client.NewClient(client.Settings.BaseURL)
 	if err != nil {
 		return err
 	}
@@ -86,6 +87,9 @@ func (cmd *pushCmd) run() (err error) {
 
 	logrus.Debug("Run push...")
 	err = filepath.Walk(cwd, func(path string, f os.FileInfo, err error) error {
+		if err!=nil{
+			return err
+		}
 		if strings.HasPrefix(f.Name(), ".") {
 			return nil
 		}
@@ -103,7 +107,6 @@ func (cmd *pushCmd) run() (err error) {
 		hashed := &dataset.HashedFile{Path: strings.TrimPrefix(path, cwd+"/")}
 		var chunkData []byte
 		var hash string
-		var err error
 		for err != io.EOF {
 			chunkData, hash, err = r.NextChunk()
 			if err != nil && err != io.EOF {

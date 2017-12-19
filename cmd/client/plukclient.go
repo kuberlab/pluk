@@ -1,4 +1,4 @@
-package push
+package client
 
 import (
 	"bytes"

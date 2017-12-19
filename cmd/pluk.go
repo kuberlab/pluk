@@ -5,17 +5,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/kuberlab/pluk/cmd/push"
 	"github.com/kuberlab/pluk/cmd/logging"
+	"github.com/kuberlab/pluk/cmd/client"
 )
 
 const (
 	// TODO: change it to dealer config.
 	defaultConfigPath = "~/.kuberlab/pluk"
 	defaultLogLevel   = "debug"
-)
-
-var (
-	configPath string
-	baseURL    string
 )
 
 
@@ -25,7 +21,7 @@ func initConfig(cmd *cobra.Command, args []string) error {
 
 func newRootCmd() *cobra.Command {
 	var rootCmd = &cobra.Command{
-		Use:               "kdataset",
+		Use:               "pluk",
 		Short:             "Management script for datasets",
 		PersistentPreRun:  logging.InitLogging,
 		PersistentPreRunE: initConfig,
@@ -33,9 +29,9 @@ func newRootCmd() *cobra.Command {
 
 	p := rootCmd.PersistentFlags()
 	// Declare common arguments.
-	p.StringVar(&logging.LogLevel, "log-level", defaultLogLevel, "Logging level. One of (debug, info, warning, error)")
-	p.StringVarP(&configPath, "config", "", defaultConfigPath, "Path to config file")
-	p.StringVar(&baseURL, "url", "", "Base url to pluk.")
+	p.StringVar(&client.Settings.LogLevel, "log-level", defaultLogLevel, "Logging level. One of (debug, info, warning, error)")
+	p.StringVarP(&client.Settings.ConfigPath, "config", "", defaultConfigPath, "Path to config file")
+	p.StringVar(&client.Settings.BaseURL, "url", "", "Base url to pluk.")
 
 	// Add all commands
 	rootCmd.AddCommand(
