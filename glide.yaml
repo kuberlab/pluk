@@ -3,6 +3,7 @@ import:
 - package: github.com/kuberlab/lib
   repo: ssh://git@github.com/kuberlab/lib.git
 - package: github.com/Sirupsen/logrus
+- package: github.com/spf13/cobra
 - package: github.com/gogits/git-module
 - package: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46

@@ -1,5 +1,5 @@
-hash: 2ba9175aaae59bf810f47f53fa32ecd511697dae0c9acdbf75f9e3ab9dd3e0b0
-updated: 2017-12-18T15:03:37.90000182+03:00
+hash: be75ae298c06683f315cdcd156a511f938687e00bc73fb0ec3c6f401c999a5b3
+updated: 2017-12-19T13:06:39.255138585+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -13,6 +13,8 @@ imports:
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/mux
   version: 7f08801859139f86dfafd1c296e2cba9a80d292e
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jinzhu/gorm
   version: 5174cc5c242a728b435ea2be8a2f7f998e15429b
 - name: github.com/jinzhu/inflection
@@ -39,6 +41,10 @@ imports:
   version: e533369306653d193b93dae055f6083cbf8ba54f
 - name: github.com/Sirupsen/logrus
   version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
+- name: github.com/spf13/cobra
+  version: ccaecb155a2177302cb56cae929251a256d0f646
+- name: github.com/spf13/pflag
+  version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/Unknwon/com
   version: 7677a1d7c1137cd3dd5ba7a076d0c898a1ef4520
 - name: golang.org/x/sys
