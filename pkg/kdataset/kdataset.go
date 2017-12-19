@@ -10,12 +10,13 @@ import (
 const (
 	// TODO: change it to dealer config.
 	defaultConfigPath = "~/.kuberlab/pluk"
-	defaultLogLevel   = "info"
+	defaultLogLevel   = "debug"
 )
 
 var (
 	configPath string
 	logLevel   string
+	baseURL    string
 )
 
 func initLogging(cmd *cobra.Command, args []string) {
@@ -23,7 +24,7 @@ func initLogging(cmd *cobra.Command, args []string) {
 
 	lvl, err := logrus.ParseLevel(logLevel)
 	if err != nil {
-		logrus.SetLevel(logrus.InfoLevel)
+		logrus.SetLevel(logrus.DebugLevel)
 	} else {
 		logrus.SetLevel(lvl)
 	}
@@ -36,23 +37,24 @@ func initConfig(cmd *cobra.Command, args []string) error {
 }
 
 func newRootCmd() *cobra.Command {
-	var rootManageCmd = &cobra.Command{
+	var rootCmd = &cobra.Command{
 		Use:               "kdataset",
 		Short:             "Management script for datasets",
 		PersistentPreRun:  initLogging,
 		PersistentPreRunE: initConfig,
 	}
 
-	p := rootManageCmd.PersistentFlags()
+	p := rootCmd.PersistentFlags()
 	// Declare common arguments.
 	p.StringVarP(&configPath, "config", "", defaultConfigPath, "Path to config file")
 	p.StringVar(&logLevel, "log-level", defaultLogLevel, "Logging level. One of (debug, info, warning, error)")
+	p.StringVar(&baseURL, "url", "", "Base url to pluk.")
 
 	// Add all commands
-	rootManageCmd.AddCommand(
+	rootCmd.AddCommand(
 		newPushCmd(),
 	)
-	return rootManageCmd
+	return rootCmd
 }
 
 func main() {

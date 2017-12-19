@@ -72,3 +72,23 @@ func (c *ChunkedReader) Read(p []byte) (n int, err error) {
 	}
 	return
 }
+
+func (c *ChunkedReader) NextChunk() ([]byte, string, error) {
+	data := make([]byte, c.ChunkSize)
+	n, err := c.Read(data)
+	if err != nil {
+		if err == io.EOF {
+			return data, c.Chunks[len(c.Chunks)-1], err
+		}
+		return nil, "", err
+	}
+
+	if n < c.ChunkSize {
+		_, err := c.Read(make([]byte, 10))
+		if err != nil && err != io.EOF {
+			return nil, "", err
+		}
+	}
+
+	return data, c.Chunks[len(c.Chunks)-1], nil
+}

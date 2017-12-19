@@ -33,9 +33,9 @@ func Start() {
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}").To(api.getDataset))
 
 	// Check if chunk exists
-	ws.Route(ws.GET("/datasets/{hash}").To(api.checkChunk))
+	ws.Route(ws.GET("/chunks/{hash}").To(api.checkChunk))
 	// Save hashed file
-	ws.Route(ws.POST("/datasets/{hash}").To(api.saveChunk))
+	ws.Route(ws.POST("/chunks/{hash}").To(api.saveChunk))
 
 	// Save dataset for version, uploading as an archive.
 	ws.Route(ws.POST("/datasets/{workspace}/{name}/{version}").To(api.saveDataset))

@@ -75,6 +75,7 @@ func SaveChunk(hash string, data io.ReadCloser) error {
 	if err != nil {
 		return err
 	}
+	logrus.Debugf("Created %v", filePath)
 
 	defer file.Close()
 
