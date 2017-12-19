@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"os"
 	"path"
 	"strings"
@@ -17,55 +16,34 @@ import (
 const (
 	Author        = "pluk"
 	AuthorEmail   = "pluk@kuberlab.io"
-	ChunkByteSize = 1048576
 	defaultBranch = "master"
 )
 
-func SaveDataset(git pacakimpl.GitInterface, targz io.ReadCloser, workspace string, name string, version string, comment string) error {
-	files := make([]pacakimpl.GitFile, 0)
+type FileStructure struct {
+	Files []*HashedFile `json:"files"`
+}
 
-	saveAndPopulateFiles := func(name string, data []byte) error {
-		chunksCount := int64(math.Ceil(float64(len(data)) / float64(ChunkByteSize)))
-		var hashes = make([]string, 0)
-		for i := int64(0); i < chunksCount; i++ {
-			start := i * ChunkByteSize
-			end := (i + 1) * ChunkByteSize
-			if end >= int64(len(data)) {
-				end = int64(len(data))
-			}
-			chunkHash := utils.CalcHash(data[start:end])
+type HashedFile struct {
+	Path   string   `json:"path"`
+	Hashes []string `json:"hashes"`
+}
 
-			hashDir := chunkHash[:8]
-			hashFile := chunkHash[8:]
-
-			targetDir := path.Join(utils.DataDir(), hashDir)
-			fullPath := targetDir + "/" + hashFile
-			hashes = append(hashes, fullPath)
-
-			logrus.Debugf("Full hash path: %v", fullPath)
-			os.MkdirAll(targetDir, os.ModePerm)
-			// Save hash file with chunk data
-			if err := ioutil.WriteFile(fullPath, data[start:end], 0666); err != nil {
-				return err
-			}
-		}
-		files = append(
-			files,
-			pacakimpl.GitFile{
-				Path: name,
-				Data: []byte(strings.Join(hashes, "\n")),
-			},
-		)
-		return nil
-	}
+func SaveDataset(git pacakimpl.GitInterface, structure FileStructure, workspace string, name string, version string, comment string) error {
 	repo := fmt.Sprintf("%v/%v", workspace, name)
 	pacakRepo, err := initRepo(git, repo, true)
 	if err != nil {
 		return err
 	}
 
-	if err = iterateOverTarGz(targz, saveAndPopulateFiles); err != nil {
-		return err
+	// Make absolute path for hashes and build gitFiles
+	files := make([]pacakimpl.GitFile, 0)
+	for _, f := range structure.Files {
+		paths := make([]string, 0)
+		for _, h := range f.Hashes {
+			filePath := utils.GetHashedFilename(h)
+			paths = append(paths, filePath)
+		}
+		files = append(files, pacakimpl.GitFile{Path: f.Path, Data: []byte(strings.Join(paths, "\n"))})
 	}
 	logrus.Infof("Saving data for %v/%v...", workspace, name)
 
@@ -110,8 +88,18 @@ func SaveChunk(hash string, data io.ReadCloser) error {
 	return nil
 }
 
-func GetDataset(git pacakimpl.GitInterface, workspace string, name string, version string) {
-	// find all chunks in dataset repo, squash them and pack into tar.gz
+func GetDataset(git pacakimpl.GitInterface, workspace string, name string, version string) (io.ReadCloser, error) {
+	repo := fmt.Sprintf("%v/%v", workspace, name)
+	pacakRepo, err := initRepo(git, repo, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Need to checkout needed commit and archive the chunked data.
+	// TODO: patch pacak for checkout commit tree.
+	pacakRepo.Commits(defaultBranch, func(string) bool { return false })
+
+	return nil, nil
 }
 
 func Versions(git pacakimpl.GitInterface, workspace string, name string) ([]string, error) {

@@ -39,7 +39,6 @@ func Start() {
 
 	// Save dataset for version, uploading as an archive.
 	ws.Route(ws.POST("/datasets/{workspace}/{name}/{version}").To(api.saveDataset))
-	ws.Route(ws.POST("/datasets/{workspace}/{name}/{version}").To(api.saveDataset))
 
 	container.Add(ws)
 	r.PathPrefix("/v1/").Handler(container)
