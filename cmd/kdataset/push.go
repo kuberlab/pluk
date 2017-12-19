@@ -1,17 +1,17 @@
-package push
+package main
 
 import (
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
-	"io"
-	chunk_io "github.com/kuberlab/pluk/pkg/io"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/dataset"
+	chunk_io "github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/spf13/cobra"
-	"github.com/kuberlab/pluk/cmd/logging"
-	"github.com/kuberlab/pluk/cmd/client"
 )
 
 type pushCmd struct {
@@ -19,14 +19,15 @@ type pushCmd struct {
 	name      string
 	version   string
 	chunkSize int
+	baseURL   string
 }
 
-func NewPushCmd() *cobra.Command {
-	push := &pushCmd{}
+func NewPushCmd(baseURL string) *cobra.Command {
+	push := &pushCmd{baseURL: baseURL}
 	cmd := &cobra.Command{
 		Use:    "push <workspace> <dataset-name>:<version>",
 		Short:  "Push the dataset within current directory",
-		PreRun: logging.InitLogging,
+		PreRun: initLogging,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			// Validation
 			if len(args) < 2 {
@@ -64,7 +65,7 @@ func (cmd *pushCmd) run() (err error) {
 		return err
 	}
 
-	client, err := client.NewClient(client.Settings.BaseURL)
+	client, err := plukclient.NewClient(cmd.baseURL)
 	if err != nil {
 		return err
 	}

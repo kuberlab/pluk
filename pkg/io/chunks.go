@@ -6,7 +6,6 @@ import (
 	"io"
 )
 
-
 type ChunkedReader struct {
 	ChunkSize int
 	reader    io.Reader
