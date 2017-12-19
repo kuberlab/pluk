@@ -13,7 +13,13 @@ func (api *API) saveDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
 
-	err := dataset.SaveDataset(api.gitInterface, req.Request.Body, workspace, name, version, comment)
+	structure := dataset.FileStructure{}
+	err := req.ReadEntity(&structure)
+	if err != nil {
+		WriteStatusError(resp, http.StatusBadRequest, err)
+	}
+
+	err = dataset.SaveDataset(api.gitInterface, structure, workspace, name, version, comment)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
