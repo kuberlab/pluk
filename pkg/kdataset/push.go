@@ -108,10 +108,10 @@ func (cmd *pushCmd) run() (err error) {
 			if err != nil {
 				if err == io.EOF {
 					// Last
-					if err = checkAndUpload(chunkData, hash); err != nil {
-						return err
-					}
-					hashed.Hashes = append(hashed.Hashes, hash)
+					//if err = checkAndUpload(chunkData, hash); err != nil {
+					//	return err
+					//}
+					//hashed.Hashes = append(hashed.Hashes, hash)
 					break
 				} else {
 					return err
