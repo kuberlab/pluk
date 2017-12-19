@@ -45,7 +45,7 @@ func NewChunkedReader(chunkSize int, reader io.Reader) *ChunkedReader {
 func (c *ChunkedReader) Read(p []byte) (n int, err error) {
 	n, err = c.reader.Read(p)
 	if err != nil && err != io.EOF {
-		return n,err
+		return n, err
 	}
 	m := n
 	i := 0
@@ -72,4 +72,3 @@ func (c *ChunkedReader) Read(p []byte) (n int, err error) {
 	}
 	return
 }
-

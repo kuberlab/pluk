@@ -14,6 +14,7 @@ const (
 	gitVar         = "GIT_DIR"
 	defaultGitDir  = "/git"
 	defaultDataDir = "/data"
+	ChunkDirLength = 8
 )
 
 func MustParse(date string) time.Time {
@@ -59,4 +60,10 @@ func String(s string) *string {
 func CalcHash(data []byte) string {
 	sum := sha512.Sum512(data)
 	return fmt.Sprintf("%x", sum[:])
+}
+
+func GetHashedFilename(hash string) string {
+	hashDir := hash[:ChunkDirLength]
+	hashFile := hash[ChunkDirLength:]
+	return fmt.Sprintf("%v/%v/%v", DataDir(), hashDir, hashFile)
 }

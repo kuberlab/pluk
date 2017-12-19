@@ -1,11 +1,11 @@
 package types
 
 import (
-	"testing"
 	"crypto/sha512"
 	"fmt"
-	"strings"
 	"io"
+	"strings"
+	"testing"
 )
 
 func TestReader(t *testing.T) {
@@ -15,8 +15,8 @@ func TestReader(t *testing.T) {
 	a := fmt.Sprintf("%x", sum[:])
 	sum = sha512.Sum512([]byte(test[20:]))
 	b := fmt.Sprintf("%x", sum[:])
-	res := []string{a,a,b}
-	for readSize := 1 ; readSize < 24; readSize++ {
+	res := []string{a, a, b}
+	for readSize := 1; readSize < 24; readSize++ {
 		r := NewChunkedReader(chunkSize, strings.NewReader(test))
 		for {
 			b := make([]byte, readSize)
@@ -27,11 +27,11 @@ func TestReader(t *testing.T) {
 		}
 		testFunc := func(should []string, actual []string) string {
 			if len(should) != len(actual) {
-				return fmt.Sprintf("Size %d. Expected %d chunks, got %d.",readSize, len(should), len(actual))
+				return fmt.Sprintf("Size %d. Expected %d chunks, got %d.", readSize, len(should), len(actual))
 			}
 			for i := range should {
 				if should[i] != actual[i] {
-					return fmt.Sprintf("Size %d. Expected %s for %d'th chunks , got %s.",readSize, should[i], i, actual[i])
+					return fmt.Sprintf("Size %d. Expected %s for %d'th chunks , got %s.", readSize, should[i], i, actual[i])
 				}
 			}
 			return ""
@@ -42,4 +42,3 @@ func TestReader(t *testing.T) {
 	}
 
 }
-

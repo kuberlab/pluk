@@ -26,6 +26,29 @@ func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 
 }
 
+type CheckChunkResponse struct {
+	Hash   string `json:"hash"`
+	Exists bool   `json:"exists"`
+}
+
+func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
+	hash := req.PathParameter("hash")
+	exists := dataset.CheckChunk(hash)
+
+	resp.WriteEntity(CheckChunkResponse{Hash: hash, Exists: exists})
+}
+
+func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {
+	hash := req.PathParameter("hash")
+
+	if err := dataset.SaveChunk(hash, req.Request.Body); err != nil {
+		WriteStatusError(resp, http.StatusInternalServerError, err)
+		return
+	}
+
+	resp.Write([]byte("Ok!\n"))
+}
+
 type VersionList struct {
 	Versions []string `json:"versions"`
 }

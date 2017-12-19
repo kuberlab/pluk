@@ -77,6 +77,39 @@ func SaveDataset(git pacakimpl.GitInterface, targz io.ReadCloser, workspace stri
 	return nil
 }
 
+func CheckChunk(hash string) bool {
+	filePath := utils.GetHashedFilename(hash)
+	_, err := os.Stat(filePath)
+	return err == nil
+}
+
+func SaveChunk(hash string, data io.ReadCloser) error {
+	filePath := utils.GetHashedFilename(hash)
+
+	splitted := strings.Split(filePath, "/")
+	baseDir := splitted[:len(splitted)-1]
+
+	if err := os.MkdirAll(strings.Join(baseDir, "/"), os.ModePerm); err != nil {
+		return err
+	}
+
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	written, err := io.Copy(file, data)
+	if err != nil {
+		return err
+	}
+	data.Close()
+
+	logrus.Debugf("Written %v bytes.", written)
+	return nil
+}
+
 func GetDataset(git pacakimpl.GitInterface, workspace string, name string, version string) {
 	// find all chunks in dataset repo, squash them and pack into tar.gz
 }
