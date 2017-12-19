@@ -101,8 +101,27 @@ func GetDataset(git pacakimpl.GitInterface, workspace string, name string, versi
 	}
 
 	// Need to checkout needed commit and archive the chunked data.
-	// TODO: patch pacak for checkout commit tree.
-	pacakRepo.Commits(defaultBranch, func(string) bool { return false })
+	commits, err := pacakRepo.Commits(defaultBranch, func(message string) bool {
+		msg := parseMessage(message)
+		if msg == nil {
+			return false
+		}
+		return msg.Version == version
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(commits) < 1 {
+		return nil, fmt.Errorf("Version %v not found.", version)
+	}
+
+	commitID := commits[0].ID
+	logrus.Infof("Found commit %v.", commitID)
+
+	pacakRepo.Checkout(commitID)
+	defer pacakRepo.Checkout(defaultBranch)
+
+	// Build archive.
 
 	return nil, nil
 }
@@ -117,19 +136,13 @@ func Versions(git pacakimpl.GitInterface, workspace string, name string) ([]stri
 
 	var versions = make([]string, 0)
 	_, err = pacakRepo.Commits(defaultBranch, func(message string) bool {
-		lines := strings.Split(message, "\n")
-		for _, line := range lines {
-			splitted := strings.Split(line, ": ")
-			if len(splitted) != 2 {
-				return false
-			}
-			if splitted[0] == "Version" {
-				versions = append(versions, splitted[1])
-				return true
-			}
+		msg := parseMessage(message)
+		if msg == nil {
+			return false
 		}
+		versions = append(versions, msg.Version)
 
-		return false
+		return true
 	})
 
 	return versions, err

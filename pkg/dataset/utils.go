@@ -10,6 +10,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/gogits/git-module"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
+	"strings"
 )
 
 func initRepo(git pacakimpl.GitInterface, repo string, create bool) (pacakimpl.PacakRepo, error) {
@@ -38,6 +39,25 @@ func getCommitter() git.Signature {
 		Email: AuthorEmail,
 		When:  time.Now(),
 	}
+}
+
+type CommitMessage struct {
+	Comment string
+	Version string
+}
+
+func parseMessage(message string) *CommitMessage {
+	lines := strings.Split(message, "\n")
+	for _, line := range lines {
+		splitted := strings.Split(line, ": ")
+		if len(splitted) != 2 {
+			return nil
+		}
+		if splitted[0] == "Version" {
+			return &CommitMessage{Version: splitted[1]}
+		}
+	}
+	return nil
 }
 
 func iterateOverTarGz(targz io.ReadCloser, action func(name string, data []byte) error) error {
