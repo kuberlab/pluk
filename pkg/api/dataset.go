@@ -5,6 +5,7 @@ import (
 
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/pluk/pkg/dataset"
+	"io"
 )
 
 func (api *API) saveDataset(req *restful.Request, resp *restful.Response) {
@@ -29,7 +30,21 @@ func (api *API) saveDataset(req *restful.Request, resp *restful.Response) {
 }
 
 func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
+	version := req.PathParameter("version")
+	name := req.PathParameter("name")
+	workspace := req.PathParameter("workspace")
 
+	data, err := dataset.GetDataset(api.gitInterface, workspace, name, version)
+	if err != nil {
+		WriteStatusError(resp, http.StatusInternalServerError, err)
+		return
+	}
+
+	_, err = io.Copy(resp, data)
+	if err != nil {
+		WriteStatusError(resp, http.StatusInternalServerError, err)
+		return
+	}
 }
 
 type CheckChunkResponse struct {
