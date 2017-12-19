@@ -79,7 +79,7 @@ func (c *Client) CheckChunk(hash string) (*api.CheckChunkResponse, error) {
 }
 
 func (c *Client) CommitFileStructure(structure dataset.FileStructure, workspace, name, version string) error {
-	u := fmt.Sprintf("datasets/%v/%v/%v", workspace, name, version)
+	u := fmt.Sprintf("/datasets/%v/%v/%v", workspace, name, version)
 
 	req, err := c.NewRequest("POST", u, structure)
 	if err != nil {

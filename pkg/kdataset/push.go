@@ -130,6 +130,11 @@ func (cmd *pushCmd) run() (err error) {
 	}
 
 	// finally, commit file structure.
+	logrus.Debugf("File structure: %v", structure)
+	if err = client.CommitFileStructure(structure, cmd.workspace, cmd.name, cmd.version); err != nil {
+		return err
+	}
+	logrus.Info("Successfully uploaded.")
 
 	return
 }
