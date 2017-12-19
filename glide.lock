@@ -1,5 +1,5 @@
-hash: 884cc06a5a63b926c3d1b2e6a3382d7098b6e693ed136757edbdeefb462865df
-updated: 2017-12-19T13:31:46.034903755+03:00
+hash: 216c775979a6f8defb0bdd9da487b7b9273d71b25769653ce73fb526806fdb8e
+updated: 2017-12-19T18:12:13.56625063+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -21,7 +21,6 @@ imports:
   version: 1c35d901db3da928c72a72d8458480cc9ade058f
 - name: github.com/kuberlab/lib
   version: 74077c4a281388387ecd6a702db410de972d9401
-  repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/errors
   - pkg/types
