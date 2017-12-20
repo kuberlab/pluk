@@ -1,0 +1,66 @@
+package dataset
+
+import (
+	"archive/tar"
+	"compress/gzip"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/emicklei/go-restful"
+	"github.com/kuberlab/pluk/pkg/io"
+)
+
+func WriteTarGz(root string, resp *restful.Response) error {
+	// Wrap in gzip writer
+	zipper := gzip.NewWriter(resp)
+
+	// Wrap in tar writer
+	twriter := tar.NewWriter(zipper)
+	defer func() {
+		twriter.Close()
+		zipper.Close()
+	}()
+
+	now := time.Now()
+
+	err := filepath.Walk(root, func(path string, f os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		sinceRoot := strings.TrimPrefix(path, root+"/")
+		if strings.HasPrefix(sinceRoot, ".") {
+			return nil
+		}
+		if f.IsDir() {
+			return nil
+		}
+
+		logrus.Debugf("Processing file %v", path)
+
+		content, errF := io.GetRealFileContent(path)
+		if errF != nil {
+			return errF
+		}
+		h := &tar.Header{
+			Name:    sinceRoot,
+			Mode:    0666,
+			Size:    int64(len(content)),
+			ModTime: now,
+		}
+		if err := twriter.WriteHeader(h); err != nil {
+			return err
+		}
+		if _, err := twriter.Write(content); err != nil {
+			return err
+		}
+		resp.Flush()
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}

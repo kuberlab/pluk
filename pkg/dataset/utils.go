@@ -1,16 +1,12 @@
 package dataset
 
 import (
-	"archive/tar"
-	"compress/gzip"
-	"fmt"
-	"io"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"strings"
+
 	"github.com/gogits/git-module"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
-	"strings"
 )
 
 func initRepo(git pacakimpl.GitInterface, repo string, create bool) (pacakimpl.PacakRepo, error) {
@@ -55,48 +51,6 @@ func parseMessage(message string) *CommitMessage {
 		}
 		if splitted[0] == "Version" {
 			return &CommitMessage{Version: splitted[1]}
-		}
-	}
-	return nil
-}
-
-func iterateOverTarGz(targz io.ReadCloser, action func(name string, data []byte) error) error {
-	gzf, err := gzip.NewReader(targz)
-	if err != nil {
-		return err
-	}
-
-	tarReader := tar.NewReader(gzf)
-
-	for {
-		header, err := tarReader.Next()
-
-		if err == io.EOF {
-			break
-		}
-
-		if err != nil {
-			return err
-		}
-
-		name := header.Name
-
-		switch header.Typeflag {
-		case tar.TypeDir:
-			continue
-		case tar.TypeReg:
-			logrus.Debugf("processing %v..", name)
-			data := make([]byte, header.Size)
-			_, err = tarReader.Read(data)
-			if err != nil {
-				return err
-			}
-			if err = action(name, data); err != nil {
-				return err
-			}
-
-		default:
-			return fmt.Errorf("Unable to figure out type %v in file %v.", header.Typeflag, name)
 		}
 	}
 	return nil

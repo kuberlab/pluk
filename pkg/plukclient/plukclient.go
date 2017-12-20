@@ -62,7 +62,7 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 }
 
 func (c *Client) CheckChunk(hash string) (*api.CheckChunkResponse, error) {
-	u := fmt.Sprintf("%v/%v", "/chunks", hash)
+	u := fmt.Sprintf("/chunks/%v", hash)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
@@ -107,6 +107,12 @@ func (c *Client) SaveChunk(hash string, data []byte) error {
 	}
 
 	return err
+}
+
+func (c *Client) DownloadDataset(workspace, name, version string) (io.ReadCloser, error) {
+	u := fmt.Sprintf("/datasets/%v/%v/versions/%v", workspace, name, version)
+	u = u
+	return nil, nil
 }
 
 // Do sends an API request and returns the API response.  The API response is

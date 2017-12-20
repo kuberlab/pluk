@@ -19,11 +19,10 @@ type pushCmd struct {
 	name      string
 	version   string
 	chunkSize int
-	baseURL   string
 }
 
-func NewPushCmd(baseURL string) *cobra.Command {
-	push := &pushCmd{baseURL: baseURL}
+func NewPushCmd() *cobra.Command {
+	push := &pushCmd{}
 	cmd := &cobra.Command{
 		Use:    "push <workspace> <dataset-name>:<version>",
 		Short:  "Push the dataset within current directory",
@@ -65,7 +64,7 @@ func (cmd *pushCmd) run() (err error) {
 		return err
 	}
 
-	client, err := plukclient.NewClient(cmd.baseURL)
+	client, err := plukclient.NewClient(baseURL)
 	if err != nil {
 		return err
 	}
@@ -88,7 +87,7 @@ func (cmd *pushCmd) run() (err error) {
 
 	logrus.Debug("Run push...")
 	err = filepath.Walk(cwd, func(path string, f os.FileInfo, err error) error {
-		if err!=nil{
+		if err != nil {
 			return err
 		}
 		if strings.HasPrefix(f.Name(), ".") {
@@ -108,16 +107,19 @@ func (cmd *pushCmd) run() (err error) {
 		hashed := &dataset.HashedFile{Path: strings.TrimPrefix(path, cwd+"/")}
 		var chunkData []byte
 		var hash string
-		for err != io.EOF {
+		for {
 			chunkData, hash, err = r.NextChunk()
 			if err != nil && err != io.EOF {
 				return err
-			} else if len(chunkData) > 0 {
-				if uploadError := checkAndUpload(chunkData, hash); uploadError != nil {
-					return uploadError
-				}
-				hashed.Hashes = append(hashed.Hashes, hash)
 			}
+			if err == io.EOF {
+				break
+			}
+			logrus.Debugf("chunk len: %v", len(chunkData))
+			if uploadError := checkAndUpload(chunkData, hash); uploadError != nil {
+				return uploadError
+			}
+			hashed.Hashes = append(hashed.Hashes, hash)
 		}
 		structure.Files = append(structure.Files, hashed)
 		return nil

@@ -51,7 +51,7 @@ func newRootCmd() *cobra.Command {
 
 	// Add all commands
 	rootCmd.AddCommand(
-		NewPushCmd(baseURL),
+		NewPushCmd(),
 	)
 	return rootCmd
 }

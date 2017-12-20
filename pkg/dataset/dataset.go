@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/emicklei/go-restful"
+	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
@@ -93,13 +95,12 @@ func SaveChunk(hash string, data io.ReadCloser) error {
 	return nil
 }
 
-func GetDataset(git pacakimpl.GitInterface, workspace string, name string, version string) (io.ReadCloser, error) {
+func GetDataset(git pacakimpl.GitInterface, workspace string, name string, version string, resp *restful.Response) error {
 	repo := fmt.Sprintf("%v/%v", workspace, name)
 	pacakRepo, err := initRepo(git, repo, false)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
 	// Need to checkout needed commit and archive the chunked data.
 	commits, err := pacakRepo.Commits(defaultBranch, func(message string) bool {
 		msg := parseMessage(message)
@@ -109,21 +110,22 @@ func GetDataset(git pacakimpl.GitInterface, workspace string, name string, versi
 		return msg.Version == version
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if len(commits) < 1 {
-		return nil, fmt.Errorf("Version %v not found.", version)
+		return errors.NewStatus(400, fmt.Sprintf("Version %v not found.", version))
 	}
 
 	commitID := commits[0].ID
 	logrus.Infof("Found commit %v.", commitID)
 
-	pacakRepo.Checkout(commitID)
+	if err = pacakRepo.Checkout(commitID); err != nil {
+		return err
+	}
 	defer pacakRepo.Checkout(defaultBranch)
 
 	// Build archive.
-
-	return nil, nil
+	return WriteTarGz(fmt.Sprintf("%v/%v/%v", utils.GitLocalDir(), workspace, name), resp)
 }
 
 func Versions(git pacakimpl.GitInterface, workspace string, name string) ([]string, error) {

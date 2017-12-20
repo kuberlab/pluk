@@ -9,12 +9,14 @@ import (
 )
 
 const (
-	debug          = "DEBUG"
-	dataVar        = "DATA_DIR"
-	gitVar         = "GIT_DIR"
-	defaultGitDir  = "/git"
-	defaultDataDir = "/data"
-	ChunkDirLength = 8
+	debug              = "DEBUG"
+	dataVar            = "DATA_DIR"
+	gitVar             = "GIT_DIR"
+	gitLocalVar        = "GIT_LOCAL_DIR"
+	defaultGitDir      = "/git"
+	defaultGitLocalDir = "/git-local"
+	defaultDataDir     = "/data"
+	ChunkDirLength     = 8
 )
 
 func MustParse(date string) time.Time {
@@ -43,6 +45,14 @@ func GitDir() string {
 		return defaultGitDir
 	}
 	return gitDir
+}
+
+func GitLocalDir() string {
+	gitLocalDir := os.Getenv(gitLocalVar)
+	if gitLocalDir == "" {
+		return defaultGitLocalDir
+	}
+	return gitLocalDir
 }
 
 func DataDir() string {

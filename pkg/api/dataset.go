@@ -1,7 +1,6 @@
 package api
 
 import (
-	"io"
 	"net/http"
 
 	"github.com/emicklei/go-restful"
@@ -34,17 +33,20 @@ func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
 
-	data, err := dataset.GetDataset(api.gitInterface, workspace, name, version)
+	err := dataset.GetDataset(api.gitInterface, workspace, name, version, resp)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
 
-	_, err = io.Copy(resp, data)
-	if err != nil {
-		WriteStatusError(resp, http.StatusInternalServerError, err)
-		return
-	}
+	resp.Header().Add("Content-Type", "application/tar+gzip")
+
+	//resp.Header().Add("Content-Disposition", fmt.Sprintf("attachment;filename=%s-%s.%s.tgz;", workspace, name, version))
+	//_, err = io.Copy(resp, data)
+	//if err != nil {
+	//	WriteStatusError(resp, http.StatusInternalServerError, err)
+	//	return
+	//}
 }
 
 type CheckChunkResponse struct {
