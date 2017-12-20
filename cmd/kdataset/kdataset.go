@@ -52,6 +52,7 @@ func newRootCmd() *cobra.Command {
 	// Add all commands
 	rootCmd.AddCommand(
 		NewPushCmd(),
+		NewPullCmd(),
 	)
 	return rootCmd
 }

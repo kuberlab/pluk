@@ -113,7 +113,7 @@ func GetDataset(git pacakimpl.GitInterface, workspace string, name string, versi
 		return err
 	}
 	if len(commits) < 1 {
-		return errors.NewStatus(400, fmt.Sprintf("Version %v not found.", version))
+		return errors.NewStatus(404, fmt.Sprintf("Version %v not found.", version))
 	}
 
 	commitID := commits[0].ID

@@ -62,10 +62,10 @@ func WriteErrorString(resp *restful.Response, status int, message string) {
 
 func WriteStatusError(resp *restful.Response, status int, err error) {
 	if mlerr, ok := err.(*errors.Error); ok {
-		if status == 0 {
+		if mlerr.Status != status {
 			status = mlerr.Status
 		}
-		logrus.Errorf("Request error: %d - %v", status, mlerr.Reason)
+		logrus.Errorf("Request error: %d - %v;%v", status, mlerr.Message, mlerr.Reason)
 		resp.WriteHeaderAndEntity(status, mlerr)
 	} else {
 		WriteErrorString(resp, status, err.Error())

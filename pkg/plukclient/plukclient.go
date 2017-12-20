@@ -109,10 +109,19 @@ func (c *Client) SaveChunk(hash string, data []byte) error {
 	return err
 }
 
-func (c *Client) DownloadDataset(workspace, name, version string) (io.ReadCloser, error) {
+func (c *Client) DownloadDataset(workspace, name, version string, w io.Writer) error {
 	u := fmt.Sprintf("/datasets/%v/%v/versions/%v", workspace, name, version)
-	u = u
-	return nil, nil
+
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.Do(req, w)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Do sends an API request and returns the API response.  The API response is
