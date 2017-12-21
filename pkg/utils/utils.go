@@ -10,6 +10,7 @@ import (
 
 const (
 	debug              = "DEBUG"
+	authValidationVar  = "AUTH_VALIDATION"
 	dataVar            = "DATA_DIR"
 	gitVar             = "GIT_DIR"
 	gitLocalVar        = "GIT_LOCAL_DIR"
@@ -61,6 +62,10 @@ func DataDir() string {
 		return defaultDataDir
 	}
 	return dataDir
+}
+
+func AuthValidationURL() string {
+	return os.Getenv(authValidationVar)
 }
 
 func String(s string) *string {

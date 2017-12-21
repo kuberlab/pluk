@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
@@ -13,11 +14,17 @@ import (
 
 type API struct {
 	gitInterface pacakimpl.GitInterface
+	cache        *utils.RequestCache
+	client       *http.Client
 }
 
 func Start() {
 	logrus.Info("Starting pluk...")
-	api := &API{gitInterface: pacakimpl.NewGitInterface(utils.GitDir(), "/git-local")}
+	api := &API{
+		gitInterface: pacakimpl.NewGitInterface(utils.GitDir(), "/git-local"),
+		cache:        utils.NewRequestCache(),
+		client:       &http.Client{Timeout: time.Minute},
+	}
 
 	r := mux.NewRouter()
 	r.NotFoundHandler = NotFoundHandler()
@@ -28,6 +35,7 @@ func Start() {
 	ws.ApiVersion("v1")
 	ws.Produces(restful.MIME_JSON)
 
+	ws.Filter(api.AuthHook)
 	ws.Route(ws.GET("/datasets/{workspace}").To(api.datasets))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions").To(api.versions))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}").To(api.getDataset))

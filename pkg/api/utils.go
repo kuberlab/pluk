@@ -13,6 +13,7 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/lib/pkg/types"
+	"github.com/kuberlab/pluk/pkg/utils"
 )
 
 type LogRecordHandler struct {
@@ -182,4 +183,41 @@ func GetQueryParamDateTime(req *restful.Request, name string, optional bool) *ti
 		return nil
 	}
 	return val.(*time.Time)
+}
+
+func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *restful.FilterChain) {
+	authURL := utils.AuthValidationURL()
+	if authURL == "" {
+		filter.ProcessFilter(req, resp)
+		return
+	}
+
+	authHeader := req.HeaderParameter("Authorization")
+	cookie := req.HeaderParameter("Cookie")
+	key := authHeader + cookie
+
+	if api.cache.Get(key) {
+		filter.ProcessFilter(req, resp)
+		return
+	} else {
+		request, _ := http.NewRequest("GET", authURL, nil)
+		request.Header.Add("Cookie", cookie)
+		request.Header.Add("Authorization", authHeader)
+
+		logrus.Debugf("GET %v", request.URL)
+
+		r, err := api.client.Do(request)
+		if err != nil {
+			WriteStatusError(resp, http.StatusInternalServerError, err)
+			return
+		}
+		logrus.Debugf("Got %v", r.StatusCode)
+		if r.StatusCode >= 400 {
+			WriteStatusError(resp, r.StatusCode, fmt.Errorf("Cannot authenticate to %v", authURL))
+			return
+		}
+		api.cache.Set(key, true)
+	}
+
+	filter.ProcessFilter(req, resp)
 }
