@@ -1,5 +1,5 @@
 hash: 216c775979a6f8defb0bdd9da487b7b9273d71b25769653ce73fb526806fdb8e
-updated: 2017-12-19T18:12:13.56625063+03:00
+updated: 2017-12-21T12:14:33.102503796+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -12,7 +12,7 @@ imports:
 - name: github.com/gorilla/context
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/mux
-  version: 7f08801859139f86dfafd1c296e2cba9a80d292e
+  version: 392c28fe23e1c45ddba891b0320b3b5df220beea
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jinzhu/gorm
@@ -26,7 +26,7 @@ imports:
   - pkg/types
   - pkg/utils
 - name: github.com/kuberlab/pacak
-  version: fa912699b30e14cb8b3c04ec0625689ab4ececa8
+  version: 42a264f03c349c6f3896e4abff008dc4a4c2d7a1
   repo: ssh://git@github.com/kuberlab/pacak.git
   subpackages:
   - pkg/errors
@@ -37,9 +37,9 @@ imports:
 - name: github.com/mcuadros/go-version
   version: 88e56e02bea1c203c99222c365fa52a69996ccac
 - name: github.com/pborman/uuid
-  version: e533369306653d193b93dae055f6083cbf8ba54f
+  version: e790cca94e6cc75c7064b1332e63811d4aae1a53
 - name: github.com/Sirupsen/logrus
-  version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
+  version: 3ec0642a7fb6488f65b06f9040adc67e3990296a
 - name: github.com/spf13/cobra
   version: 7be4beda01ec05d0b93d80b3facd2b6f44080d94
 - name: github.com/spf13/pflag

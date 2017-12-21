@@ -51,13 +51,19 @@ func SaveDataset(git pacakimpl.GitInterface, structure FileStructure, workspace 
 		}
 		files = append(files, pacakimpl.GitFile{Path: f.Path, Data: []byte(strings.Join(paths, "\n"))})
 	}
-	logrus.Infof("Saving data for %v/%v...", workspace, name)
+	logrus.Infof("Saving data for %v/%v:%v...", workspace, name, version)
 
 	commit, err := pacakRepo.Save(getCommitter(), buildMessage(version, comment), defaultBranch, defaultBranch, files)
 	if err != nil {
 		return err
 	}
 	logrus.Infof("Saved as commit %v.", commit)
+
+	if err = pacakRepo.PushTag(version, commit, true); err != nil {
+		return err
+	}
+	logrus.Infof("Created tag %v.", version)
+
 	return nil
 }
 
@@ -101,25 +107,13 @@ func GetDataset(git pacakimpl.GitInterface, workspace string, name string, versi
 	if err != nil {
 		return err
 	}
-	// Need to checkout needed commit and archive the chunked data.
-	commits, err := pacakRepo.Commits(defaultBranch, func(message string) bool {
-		msg := parseMessage(message)
-		if msg == nil {
-			return false
-		}
-		return msg.Version == version
-	})
-	if err != nil {
-		return err
-	}
-	if len(commits) < 1 {
-		return errors.NewStatus(404, fmt.Sprintf("Version %v not found.", version))
+	logrus.Infof("Checkout tag %v.", version)
+
+	if !pacakRepo.IsTagExists(version) {
+		return errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, name))
 	}
 
-	commitID := commits[0].ID
-	logrus.Infof("Found commit %v.", commitID)
-
-	if err = pacakRepo.Checkout(commitID); err != nil {
+	if err = pacakRepo.Checkout(version); err != nil {
 		return err
 	}
 	defer pacakRepo.Checkout(defaultBranch)
@@ -136,18 +130,7 @@ func Versions(git pacakimpl.GitInterface, workspace string, name string) ([]stri
 		return nil, err
 	}
 
-	var versions = make([]string, 0)
-	_, err = pacakRepo.Commits(defaultBranch, func(message string) bool {
-		msg := parseMessage(message)
-		if msg == nil {
-			return false
-		}
-		versions = append(versions, msg.Version)
-
-		return true
-	})
-
-	return versions, err
+	return pacakRepo.TagList()
 }
 
 func Datasets(workspace string) ([]string, error) {

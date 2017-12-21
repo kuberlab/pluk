@@ -13,5 +13,7 @@ import:
 - package: github.com/gorilla/mux
 - package: github.com/pborman/uuid
 - package: gopkg.in/robfig/cron.v2
+- package: github.com/kuberlab/lib
+  repo: ssh://git@github.com/kuberlab/lib.git
 - package: github.com/kuberlab/pacak
   repo: ssh://git@github.com/kuberlab/pacak.git
