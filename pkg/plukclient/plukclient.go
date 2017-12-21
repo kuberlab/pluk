@@ -22,16 +22,28 @@ type Client struct {
 	Client    *http.Client
 	BaseURL   *url.URL
 	UserAgent string
+
+	auth *AuthOpts
 }
 
-func NewClient(baseURL string) (*Client, error) {
+type AuthOpts struct {
+	Token  string
+	Cookie string
+}
+
+func NewClient(baseURL string, auth *AuthOpts) (*Client, error) {
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	base, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err
 	}
 	baseClient := &http.Client{Timeout: time.Minute}
-	return &Client{BaseURL: base, Client: baseClient, UserAgent: "go-plukclient/1"}, nil
+	return &Client{
+		BaseURL:   base,
+		Client:    baseClient,
+		UserAgent: "go-plukclient/1",
+		auth:      auth,
+	}, nil
 }
 
 func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Request, error) {
@@ -50,6 +62,14 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	req, err := http.NewRequest(method, u, buf)
 	if err != nil {
 		return nil, err
+	}
+	if c.auth != nil {
+		if c.auth.Cookie != "" {
+			req.Header.Set("Cookie", c.auth.Cookie)
+		}
+		if c.auth.Token != "" {
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", c.auth.Token))
+		}
 	}
 
 	if body != nil {
@@ -96,10 +116,11 @@ func (c *Client) CommitFileStructure(structure dataset.FileStructure, workspace,
 func (c *Client) SaveChunk(hash string, data []byte) error {
 	u := fmt.Sprintf("%v/chunks/%v", c.BaseURL, hash)
 
-	req, err := http.NewRequest("POST", u, bytes.NewReader(data))
+	req, err := c.NewRequest("POST", u, nil)
 	if err != nil {
 		return err
 	}
+	req.Body = ioutil.NopCloser(bytes.NewReader(data))
 	_, err = c.Do(req, nil)
 
 	if err != nil {

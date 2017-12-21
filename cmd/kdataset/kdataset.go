@@ -1,15 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/kuberlab/pluk/cmd/kdataset/config"
 	"github.com/spf13/cobra"
 )
 
 const (
-	// TODO: change it to dealer config.
-	defaultConfigPath = "~/.kuberlab/pluk"
+	defaultConfigPath = "~/.kuberlab/config"
 	defaultLogLevel   = "debug"
 )
 
@@ -20,6 +22,18 @@ var (
 )
 
 func initConfig(cmd *cobra.Command, args []string) error {
+	// Expand the path
+	path, err := exec.Command("sh", "-c", fmt.Sprintf("echo -n %v", configPath)).Output()
+	if err != nil {
+		return err
+	}
+	err = config.InitConfig(string(path))
+	if err != nil {
+		return err
+	}
+	if baseURL != "" {
+		config.Config.PlukURL = baseURL
+	}
 	return nil
 }
 

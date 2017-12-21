@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/kuberlab/pluk/cmd/kdataset/config"
 	"github.com/kuberlab/pluk/pkg/dataset"
 	chunk_io "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/plukclient"
@@ -64,7 +65,10 @@ func (cmd *pushCmd) run() (err error) {
 		return err
 	}
 
-	client, err := plukclient.NewClient(baseURL)
+	client, err := plukclient.NewClient(
+		config.Config.PlukURL,
+		&plukclient.AuthOpts{Token: config.Config.Token},
+	)
 	if err != nil {
 		return err
 	}

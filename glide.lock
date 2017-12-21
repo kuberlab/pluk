@@ -1,5 +1,5 @@
-hash: 08ed45e25a6199e7ac5a0bbc9542d5b0325784396e705085e0252802b288a0bf
-updated: 2017-12-21T14:24:29.570226342+03:00
+hash: 022925135eb4c4d706e6cca622a3c186c29e957ca42d0d69cda942dd4ce58285
+updated: 2017-12-21T17:07:07.75475653+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -55,4 +55,7 @@ imports:
   - unix
 - name: gopkg.in/robfig/cron.v2
   version: be2e0b0deed5a68ffee390b4583a13aff8321535
+- name: gopkg.in/yaml.v2
+  version: a5b47d31c556af34a302ce5d659e6fea44d90de0
+  repo: https://gopkg.in/yaml.v2
 testImports: []
