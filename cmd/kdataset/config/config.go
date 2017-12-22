@@ -28,7 +28,7 @@ func InitConfig(filepath string) error {
 		return err
 	}
 
-	logrus.Infof("Config loaded from %v.", filepath)
+	logrus.Debugf("Config loaded from %v.", filepath)
 	return nil
 }
 

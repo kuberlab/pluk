@@ -12,6 +12,7 @@ import (
 
 const (
 	defaultConfigPath = "~/.kuberlab/config"
+	defaultBaseURL    = "http://localhost:8082/internal"
 	defaultLogLevel   = "debug"
 )
 
@@ -22,22 +23,40 @@ var (
 )
 
 func initConfig(cmd *cobra.Command, args []string) error {
+	initLogging()
 	// Expand the path
 	path, err := exec.Command("sh", "-c", fmt.Sprintf("echo -n %v", configPath)).Output()
 	if err != nil {
 		return err
 	}
+
+	overridePlukURL := func() {
+		if baseURL != "" {
+			config.Config.PlukURL = baseURL
+		}
+		if baseURL == "" && config.Config.PlukURL == "" {
+			config.Config.PlukURL = defaultBaseURL
+		}
+	}
+
+	_, err = os.Stat(string(path))
+	if err != nil && os.IsNotExist(err) {
+		logrus.Error(err)
+		config.Config = &config.DealerConfig{}
+		overridePlukURL()
+		return nil
+	}
+
 	err = config.InitConfig(string(path))
 	if err != nil {
 		return err
 	}
-	if baseURL != "" {
-		config.Config.PlukURL = baseURL
-	}
+	overridePlukURL()
+
 	return nil
 }
 
-func initLogging(cmd *cobra.Command, args []string) {
+func initLogging() {
 	logrus.SetFormatter(&logrus.TextFormatter{TimestampFormat: "2006-01-02 15:04:05", FullTimestamp: true})
 
 	lvl, err := logrus.ParseLevel(logLevel)
@@ -51,9 +70,8 @@ func initLogging(cmd *cobra.Command, args []string) {
 
 func newRootCmd() *cobra.Command {
 	var rootCmd = &cobra.Command{
-		Use:               "pluk",
-		Short:             "Management script for datasets",
-		PersistentPreRun:  initLogging,
+		Use:               "kdataset",
+		Short:             "Management script for datasets.",
 		PersistentPreRunE: initConfig,
 	}
 
@@ -67,6 +85,8 @@ func newRootCmd() *cobra.Command {
 	rootCmd.AddCommand(
 		NewPushCmd(),
 		NewPullCmd(),
+		NewDatasetsCmd(),
+		NewVersionsCmd(),
 	)
 	return rootCmd
 }

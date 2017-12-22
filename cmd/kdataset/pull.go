@@ -22,9 +22,8 @@ type pullCmd struct {
 func NewPullCmd() *cobra.Command {
 	pull := &pullCmd{}
 	cmd := &cobra.Command{
-		Use:    "pull <workspace> <dataset-name>:<version> [-O output-file.tar.gz]",
-		Short:  "Download the dataset archive.",
-		PreRun: initLogging,
+		Use:   "pull <workspace> <dataset-name>:<version> [-O output-file.tar.gz]",
+		Short: "Download the dataset archive.",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			// Validation
 			if len(args) < 2 {
@@ -66,19 +65,22 @@ func (cmd *pullCmd) run() (err error) {
 		&plukclient.AuthOpts{Token: config.Config.Token},
 	)
 	if err != nil {
-		return err
+		logrus.Error(err)
+		return nil
 	}
 
 	logrus.Debug("Run pull...")
 	f, err := os.Create(cmd.output)
 	if err != nil {
-		return err
+		logrus.Error(err)
+		return nil
 	}
 	defer f.Close()
 
 	err = client.DownloadDataset(cmd.workspace, cmd.name, cmd.version, f)
 	if err != nil {
-		return err
+		fmt.Println(err.Error())
+		return nil
 	}
 
 	logrus.Infof("Successfully downloaded dataset to %v.", cmd.output)

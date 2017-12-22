@@ -98,6 +98,40 @@ func (c *Client) CheckChunk(hash string) (*api.CheckChunkResponse, error) {
 	return res, err
 }
 
+func (c *Client) ListDatasets(workspace string) (*api.DataSetList, error) {
+	u := fmt.Sprintf("/datasets/%v", workspace)
+
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	res := new(api.DataSetList)
+	_, err = c.Do(req, res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
+func (c *Client) ListVersions(workspace, datasetName string) (*api.VersionList, error) {
+	u := fmt.Sprintf("/datasets/%v/%v/versions", workspace, datasetName)
+
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	res := new(api.VersionList)
+	_, err = c.Do(req, res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
 func (c *Client) CommitFileStructure(structure dataset.FileStructure, workspace, name, version string) error {
 	u := fmt.Sprintf("/datasets/%v/%v/%v", workspace, name, version)
 

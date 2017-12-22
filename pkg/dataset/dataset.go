@@ -153,6 +153,9 @@ func Datasets(workspace string) ([]string, error) {
 
 	dirs, err := ioutil.ReadDir(baseDir)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
 		return nil, err
 	}
 	sets := make([]string, 0)

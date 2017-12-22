@@ -25,9 +25,8 @@ type pushCmd struct {
 func NewPushCmd() *cobra.Command {
 	push := &pushCmd{}
 	cmd := &cobra.Command{
-		Use:    "push <workspace> <dataset-name>:<version>",
-		Short:  "Push the dataset within current directory",
-		PreRun: initLogging,
+		Use:   "push <workspace> <dataset-name>:<version>",
+		Short: "Push the dataset within current directory",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			// Validation
 			if len(args) < 2 {
@@ -59,10 +58,11 @@ func NewPushCmd() *cobra.Command {
 	return cmd
 }
 
-func (cmd *pushCmd) run() (err error) {
+func (cmd *pushCmd) run() error {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return err
+		logrus.Error(err)
+		return nil
 	}
 
 	client, err := plukclient.NewClient(
@@ -70,7 +70,8 @@ func (cmd *pushCmd) run() (err error) {
 		&plukclient.AuthOpts{Token: config.Config.Token},
 	)
 	if err != nil {
-		return err
+		logrus.Error(err)
+		return nil
 	}
 
 	structure := dataset.FileStructure{Files: make([]*dataset.HashedFile, 0)}
@@ -131,15 +132,17 @@ func (cmd *pushCmd) run() (err error) {
 		return nil
 	})
 	if err != nil {
-		return err
+		logrus.Error(err)
+		return nil
 	}
 
 	// finally, commit file structure.
 	logrus.Debugf("File structure: %v", structure)
 	if err = client.CommitFileStructure(structure, cmd.workspace, cmd.name, cmd.version); err != nil {
-		return err
+		logrus.Error(err)
+		return nil
 	}
 	logrus.Info("Successfully uploaded.")
 
-	return
+	return nil
 }
