@@ -9,6 +9,9 @@ import (
 )
 
 const (
+	ApiVersion         = "v1"
+	ApiPrefix          = "/" + ApiVersion
+	InternalPrefix     = "/internal"
 	debug              = "DEBUG"
 	authValidationVar  = "AUTH_VALIDATION"
 	dataVar            = "DATA_DIR"
