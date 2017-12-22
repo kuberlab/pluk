@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/emicklei/go-restful"
@@ -42,11 +43,37 @@ func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 	resp.Header().Add("Content-Type", "application/tar+gzip")
 
 	//resp.Header().Add("Content-Disposition", fmt.Sprintf("attachment;filename=%s-%s.%s.tgz;", workspace, name, version))
-	//_, err = io.Copy(resp, data)
-	//if err != nil {
-	//	WriteStatusError(resp, http.StatusInternalServerError, err)
-	//	return
-	//}
+}
+
+func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
+	name := req.PathParameter("name")
+	workspace := req.PathParameter("workspace")
+
+	datasets, err := dataset.Datasets(workspace)
+	if err != nil {
+		WriteStatusError(resp, http.StatusInternalServerError, err)
+		return
+	}
+
+	var found bool
+	for _, ds := range datasets {
+		if ds == name {
+			found = true
+			break
+		}
+	}
+	if !found {
+		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		return
+	}
+
+	err = dataset.DeleteDataset(api.gitInterface, workspace, name)
+	if err != nil {
+		WriteStatusError(resp, http.StatusInternalServerError, err)
+		return
+	}
+
+	resp.WriteHeader(http.StatusNoContent)
 }
 
 type CheckChunkResponse struct {

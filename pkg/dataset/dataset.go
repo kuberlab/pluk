@@ -131,6 +131,12 @@ func GetDataset(git pacakimpl.GitInterface, workspace string, name string, versi
 	return WriteTarGz(fmt.Sprintf("%v/%v/%v", utils.GitLocalDir(), workspace, name), resp)
 }
 
+func DeleteDataset(git pacakimpl.GitInterface, workspace string, name string) error {
+	repo := fmt.Sprintf("%v/%v", workspace, name)
+
+	return git.DeleteRepository(repo)
+}
+
 func Versions(git pacakimpl.GitInterface, workspace string, name string) ([]string, error) {
 	repo := fmt.Sprintf("%v/%v", workspace, name)
 	pacakRepo, err := initRepo(git, repo, false)
