@@ -3,6 +3,7 @@ package dataset
 import (
 	"archive/tar"
 	"compress/gzip"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
-	"github.com/kuberlab/pluk/pkg/io"
+	plukio "github.com/kuberlab/pluk/pkg/io"
 )
 
 func WriteTarGz(root string, resp *restful.Response) error {
@@ -40,23 +41,30 @@ func WriteTarGz(root string, resp *restful.Response) error {
 
 		logrus.Debugf("Processing file %v", path)
 
-		content, errF := io.GetRealFileContent(path)
+		size, reader, errF := plukio.GetRealFileReader(path)
 		if errF != nil {
 			return errF
 		}
 		h := &tar.Header{
 			Name:    sinceRoot,
 			Mode:    0666,
-			Size:    int64(len(content)),
+			Size:    int64(size),
 			ModTime: now,
 		}
 		if err := twriter.WriteHeader(h); err != nil {
 			return err
 		}
-		if _, err := twriter.Write(content); err != nil {
-			return err
+
+		for {
+			content, err := plukio.GetNextRealChunk(reader)
+			if err == io.EOF {
+				break
+			}
+			if _, err := twriter.Write(content); err != nil {
+				return err
+			}
+			resp.Flush()
 		}
-		resp.Flush()
 		return nil
 	})
 	if err != nil {

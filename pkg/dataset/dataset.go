@@ -29,6 +29,7 @@ type FileStructure struct {
 
 type HashedFile struct {
 	Path     string      `json:"path"`
+	Size     uint64      `json:"size"`
 	Hashes   []string    `json:"hashes"`
 	Mode     os.FileMode `json:"mode"`
 	ModeTime time.Time   `json:"mode_time"`
@@ -49,7 +50,15 @@ func SaveDataset(git pacakimpl.GitInterface, structure FileStructure, workspace 
 			filePath := utils.GetHashedFilename(h)
 			paths = append(paths, filePath)
 		}
-		files = append(files, pacakimpl.GitFile{Path: f.Path, Data: []byte(strings.Join(paths, "\n"))})
+		// Virtual file structure:
+		// <size (uint64)>
+		// <chunk path1>
+		// <chunk path2>
+		// ..
+		// <chunk pathN>
+		//
+		content := fmt.Sprintf("%v\n%v", f.Size, strings.Join(paths, "\n"))
+		files = append(files, pacakimpl.GitFile{Path: f.Path, Data: []byte(content)})
 	}
 	logrus.Infof("Saving data for %v/%v:%v...", workspace, name, version)
 

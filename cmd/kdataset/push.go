@@ -123,8 +123,10 @@ func (cmd *pushCmd) run() (err error) {
 			if uploadError := checkAndUpload(chunkData, hash); uploadError != nil {
 				return uploadError
 			}
+			hashed.Size += uint64(len(chunkData))
 			hashed.Hashes = append(hashed.Hashes, hash)
 		}
+		logrus.Debugf("Whole file size = %v", hashed.Size)
 		structure.Files = append(structure.Files, hashed)
 		return nil
 	})

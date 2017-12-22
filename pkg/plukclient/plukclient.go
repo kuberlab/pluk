@@ -114,7 +114,7 @@ func (c *Client) CommitFileStructure(structure dataset.FileStructure, workspace,
 }
 
 func (c *Client) SaveChunk(hash string, data []byte) error {
-	u := fmt.Sprintf("%v/chunks/%v", c.BaseURL, hash)
+	u := fmt.Sprintf("/chunks/%v", hash)
 
 	req, err := c.NewRequest("POST", u, nil)
 	if err != nil {
