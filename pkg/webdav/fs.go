@@ -2,9 +2,12 @@ package webdav
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/kuberlab/pluk/pkg/datasets"
+	"github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/utils"
 	"golang.org/x/net/context"
 	"golang.org/x/net/webdav"
 )
@@ -17,8 +20,12 @@ func (*FS) Mkdir(ctx context.Context, name string, perm os.FileMode) error {
 	return errors.New("Do not implemented.")
 }
 
-func (*FS) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (webdav.File, error) {
-	panic("implement me")
+func (fs *FS) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (webdav.File, error) {
+	f, err := os.OpenFile(fs.fullPath(name), flag, perm)
+	if err != nil {
+		return nil, err
+	}
+	return io.NewChunkedFile(f)
 }
 
 func (*FS) RemoveAll(ctx context.Context, name string) error {
@@ -29,6 +36,18 @@ func (*FS) Rename(ctx context.Context, oldName, newName string) error {
 	return errors.New("Do not implemented.")
 }
 
-func (*FS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
-	panic("implement me")
+func (fs *FS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
+	f, err := os.Open(fs.fullPath(name))
+	if err != nil {
+		return nil, err
+	}
+	chunked, err := io.NewChunkedFile(f)
+	if err != nil {
+		return nil, err
+	}
+	return chunked.Stat()
+}
+
+func (fs *FS) fullPath(name string) string {
+	return fmt.Sprintf("%v/%v/%v/%v", utils.GitLocalDir(), fs.Dataset.Workspace, fs.Dataset.Name, name)
 }
