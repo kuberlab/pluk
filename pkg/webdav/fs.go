@@ -2,12 +2,15 @@ package webdav
 
 import (
 	"errors"
+	"os"
+
+	"github.com/kuberlab/pluk/pkg/datasets"
 	"golang.org/x/net/context"
 	"golang.org/x/net/webdav"
-	"os"
 )
 
 type FS struct {
+	Dataset *datasets.Dataset
 }
 
 func (*FS) Mkdir(ctx context.Context, name string, perm os.FileMode) error {
