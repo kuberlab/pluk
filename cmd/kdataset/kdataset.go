@@ -88,6 +88,7 @@ func newRootCmd() *cobra.Command {
 		NewDatasetsCmd(),
 		NewVersionsCmd(),
 		NewDatasetDeleteCmd(),
+		NewVersionDeleteCmd(),
 	)
 	return rootCmd
 }

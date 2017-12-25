@@ -15,7 +15,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/api"
-	"github.com/kuberlab/pluk/pkg/dataset"
+	"github.com/kuberlab/pluk/pkg/datasets"
 )
 
 type Client struct {
@@ -132,7 +132,7 @@ func (c *Client) ListVersions(workspace, datasetName string) (*api.VersionList, 
 	return res, err
 }
 
-func (c *Client) CommitFileStructure(structure dataset.FileStructure, workspace, name, version string) error {
+func (c *Client) CommitFileStructure(structure datasets.FileStructure, workspace, name, version string) error {
 	u := fmt.Sprintf("/datasets/%v/%v/%v", workspace, name, version)
 
 	req, err := c.NewRequest("POST", u, structure)
@@ -181,6 +181,21 @@ func (c *Client) DownloadDataset(workspace, name, version string, w io.Writer) e
 
 func (c *Client) DeleteDataset(workspace, name string) error {
 	u := fmt.Sprintf("/datasets/%v/%v", workspace, name)
+
+	req, err := c.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.Do(req, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) DeleteVersion(workspace, name, version string) error {
+	u := fmt.Sprintf("/datasets/%v/%v/versions/%v", workspace, name, version)
 
 	req, err := c.NewRequest("DELETE", u, nil)
 	if err != nil {

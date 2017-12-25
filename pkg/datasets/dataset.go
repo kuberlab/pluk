@@ -1,13 +1,10 @@
-package dataset
+package datasets
 
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"path"
 	"strings"
-
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -35,9 +32,15 @@ type HashedFile struct {
 	ModeTime time.Time   `json:"mode_time"`
 }
 
-func SaveDataset(git pacakimpl.GitInterface, structure FileStructure, workspace string, name string, version string, comment string) error {
-	repo := fmt.Sprintf("%v/%v", workspace, name)
-	pacakRepo, err := initRepo(git, repo, true)
+type Dataset struct {
+	git       pacakimpl.GitInterface
+	Workspace string `json:"workspace"`
+	Name      string `json:"name"`
+}
+
+func (d *Dataset) Save(structure FileStructure, version string, comment string) error {
+	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
+	pacakRepo, err := initRepo(d.git, repo, true)
 	if err != nil {
 		return err
 	}
@@ -60,7 +63,7 @@ func SaveDataset(git pacakimpl.GitInterface, structure FileStructure, workspace 
 		content := fmt.Sprintf("%v\n%v", f.Size, strings.Join(paths, "\n"))
 		files = append(files, pacakimpl.GitFile{Path: f.Path, Data: []byte(content)})
 	}
-	logrus.Infof("Saving data for %v/%v:%v...", workspace, name, version)
+	logrus.Infof("Saving data for %v/%v:%v...", d.Workspace, d.Name, version)
 
 	commit, err := pacakRepo.Save(getCommitter(), buildMessage(version, comment), defaultBranch, defaultBranch, files)
 	if err != nil {
@@ -110,16 +113,16 @@ func SaveChunk(hash string, data io.ReadCloser) error {
 	return nil
 }
 
-func GetDataset(git pacakimpl.GitInterface, workspace string, name string, version string, resp *restful.Response) error {
-	repo := fmt.Sprintf("%v/%v", workspace, name)
-	pacakRepo, err := initRepo(git, repo, false)
+func (d *Dataset) Download(version string, resp *restful.Response) error {
+	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
+	pacakRepo, err := initRepo(d.git, repo, false)
 	if err != nil {
 		return err
 	}
 	logrus.Infof("Checkout tag %v.", version)
 
 	if !pacakRepo.IsTagExists(version) {
-		return errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, name))
+		return errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
 	}
 
 	if err = pacakRepo.Checkout(version); err != nil {
@@ -128,18 +131,12 @@ func GetDataset(git pacakimpl.GitInterface, workspace string, name string, versi
 	defer pacakRepo.Checkout(defaultBranch)
 
 	// Build archive.
-	return WriteTarGz(fmt.Sprintf("%v/%v/%v", utils.GitLocalDir(), workspace, name), resp)
+	return WriteTarGz(fmt.Sprintf("%v/%v/%v", utils.GitLocalDir(), d.Workspace, d.Name), resp)
 }
 
-func DeleteDataset(git pacakimpl.GitInterface, workspace string, name string) error {
-	repo := fmt.Sprintf("%v/%v", workspace, name)
-
-	return git.DeleteRepository(repo)
-}
-
-func Versions(git pacakimpl.GitInterface, workspace string, name string) ([]string, error) {
-	repo := fmt.Sprintf("%v/%v", workspace, name)
-	pacakRepo, err := initRepo(git, repo, false)
+func (d *Dataset) Versions() ([]string, error) {
+	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
+	pacakRepo, err := initRepo(d.git, repo, false)
 
 	if err != nil {
 		return nil, err
@@ -148,24 +145,20 @@ func Versions(git pacakimpl.GitInterface, workspace string, name string) ([]stri
 	return pacakRepo.TagList()
 }
 
-func Datasets(workspace string) ([]string, error) {
-	baseDir := path.Join(utils.GitDir(), workspace)
+func (d *Dataset) Delete() error {
+	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
 
-	dirs, err := ioutil.ReadDir(baseDir)
+	return d.git.DeleteRepository(repo)
+}
+
+func (d *Dataset) DeleteVersion(version string) error {
+	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
+	pacakRepo, err := initRepo(d.git, repo, false)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return []string{}, nil
-		}
-		return nil, err
+		return err
 	}
-	sets := make([]string, 0)
 
-	for _, dir := range dirs {
-		if dir.IsDir() {
-			sets = append(sets, dir.Name())
-		}
-	}
-	return sets, nil
+	return pacakRepo.DeleteTag(version)
 }
 
 func buildMessage(version, comment string) string {

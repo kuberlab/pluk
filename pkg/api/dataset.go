@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/emicklei/go-restful"
-	"github.com/kuberlab/pluk/pkg/dataset"
+	"github.com/kuberlab/pluk/pkg/datasets"
 )
 
 func (api *API) saveDataset(req *restful.Request, resp *restful.Response) {
@@ -14,13 +14,14 @@ func (api *API) saveDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
 
-	structure := dataset.FileStructure{}
+	structure := datasets.FileStructure{}
 	err := req.ReadEntity(&structure)
 	if err != nil {
 		WriteStatusError(resp, http.StatusBadRequest, err)
 	}
 
-	err = dataset.SaveDataset(api.gitInterface, structure, workspace, name, version, comment)
+	dataset := api.ds.NewDataset(workspace, name)
+	err = dataset.Save(structure, version, comment)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
@@ -34,7 +35,12 @@ func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
 
-	err := dataset.GetDataset(api.gitInterface, workspace, name, version, resp)
+	dataset := api.ds.GetDataset(workspace, name)
+	if dataset == nil {
+		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		return
+	}
+	err := dataset.Download(version, resp)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
@@ -49,25 +55,33 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
 
-	datasets, err := dataset.Datasets(workspace)
+	dataset := api.ds.GetDataset(workspace, name)
+	if dataset == nil {
+		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		return
+	}
+
+	err := dataset.Delete()
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
 
-	var found bool
-	for _, ds := range datasets {
-		if ds == name {
-			found = true
-			break
-		}
-	}
-	if !found {
+	resp.WriteHeader(http.StatusNoContent)
+}
+
+func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
+	name := req.PathParameter("name")
+	version := req.PathParameter("version")
+	workspace := req.PathParameter("workspace")
+
+	dataset := api.ds.GetDataset(workspace, name)
+	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
 	}
 
-	err = dataset.DeleteDataset(api.gitInterface, workspace, name)
+	err := dataset.DeleteVersion(version)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
@@ -83,7 +97,7 @@ type CheckChunkResponse struct {
 
 func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
-	exists := dataset.CheckChunk(hash)
+	exists := datasets.CheckChunk(hash)
 
 	resp.WriteEntity(CheckChunkResponse{Hash: hash, Exists: exists})
 }
@@ -91,7 +105,7 @@ func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
 func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
 
-	if err := dataset.SaveChunk(hash, req.Request.Body); err != nil {
+	if err := datasets.SaveChunk(hash, req.Request.Body); err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
@@ -107,7 +121,12 @@ func (api *API) versions(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
 
-	versions, err := dataset.Versions(api.gitInterface, workspace, name)
+	dataset := api.ds.GetDataset(workspace, name)
+	if dataset == nil {
+		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		return
+	}
+	versions, err := dataset.Versions()
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
@@ -116,16 +135,12 @@ func (api *API) versions(req *restful.Request, resp *restful.Response) {
 }
 
 type DataSetList struct {
-	Datasets []string `json:"datasets"`
+	Datasets []*datasets.Dataset `json:"datasets"`
 }
 
 func (api *API) datasets(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 
-	sets, err := dataset.Datasets(workspace)
-	if err != nil {
-		WriteStatusError(resp, http.StatusInternalServerError, err)
-		return
-	}
+	sets := api.ds.ListDatasets(workspace)
 	resp.WriteEntity(DataSetList{Datasets: sets})
 }

@@ -59,7 +59,7 @@ func (cmd *datasetsCmd) run() (err error) {
 
 	fmt.Println("DATASETS:")
 	for _, ds := range datasets.Datasets {
-		fmt.Println(ds)
+		fmt.Println(ds.Name)
 	}
 	return
 }

@@ -9,11 +9,13 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/gorilla/mux"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
+	"github.com/kuberlab/pluk/pkg/datasets"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
 type API struct {
 	gitInterface pacakimpl.GitInterface
+	ds           *datasets.Manager
 	cache        *utils.RequestCache
 	client       *http.Client
 }
@@ -21,10 +23,12 @@ type API struct {
 func Start() {
 	logrus.Info("Starting pluk...")
 	utils.PrintEnvInfo()
+	gitIface := pacakimpl.NewGitInterface(utils.GitDir(), utils.GitLocalDir())
 	api := &API{
-		gitInterface: pacakimpl.NewGitInterface(utils.GitDir(), utils.GitLocalDir()),
+		gitInterface: gitIface,
 		cache:        utils.NewRequestCache(),
 		client:       &http.Client{Timeout: time.Minute},
+		ds:           datasets.NewManager(gitIface),
 	}
 
 	r := mux.NewRouter()
@@ -62,6 +66,7 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	ws.Route(ws.DELETE("/datasets/{workspace}/{name}").To(api.deleteDataset))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions").To(api.versions))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}").To(api.getDataset))
+	ws.Route(ws.DELETE("/datasets/{workspace}/{name}/versions/{version}").To(api.deleteVersion))
 
 	// Check if chunk exists
 	ws.Route(ws.GET("/chunks/{hash}").To(api.checkChunk))

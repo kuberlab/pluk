@@ -19,7 +19,7 @@ func NewDatasetDeleteCmd() *cobra.Command {
 	datasets := &datasetDeleteCmd{}
 	cmd := &cobra.Command{
 		Use:   "dataset-delete <workspace> <dataset-name>",
-		Short: "List datasets for current workspace.",
+		Short: "Delete specific dataset.",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			// Validation
 			if len(args) < 2 {
