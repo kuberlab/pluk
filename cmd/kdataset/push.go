@@ -51,7 +51,7 @@ func NewPushCmd() *cobra.Command {
 		&push.chunkSize,
 		"chunk-size",
 		"",
-		1048576,
+		10485760,
 		"Chunk-size for scanning",
 	)
 

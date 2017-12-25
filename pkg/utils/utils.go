@@ -15,7 +15,7 @@ const (
 	debug              = "DEBUG"
 	authValidationVar  = "AUTH_VALIDATION"
 	dataVar            = "DATA_DIR"
-	gitVar             = "GIT_DIR"
+	gitVar             = "GIT_BARE_DIR"
 	gitLocalVar        = "GIT_LOCAL_DIR"
 	defaultGitDir      = "/git"
 	defaultGitLocalDir = "/git-local"
@@ -84,4 +84,12 @@ func GetHashedFilename(hash string) string {
 	hashDir := hash[:ChunkDirLength]
 	hashFile := hash[ChunkDirLength:]
 	return fmt.Sprintf("%v/%v/%v", DataDir(), hashDir, hashFile)
+}
+
+func PrintEnvInfo() {
+	fmt.Printf("DEBUG = %v\n", DebugEnabled())
+	fmt.Printf("GIT_BARE_DIR = %q\n", GitDir())
+	fmt.Printf("GIT_LOCAL_DIR = %q\n", GitLocalDir())
+	fmt.Printf("DATA_DIR = %q\n", DataDir())
+	fmt.Printf("AUTH_VALIDATION = %q\n", AuthValidationURL())
 }

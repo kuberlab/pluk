@@ -20,8 +20,9 @@ type API struct {
 
 func Start() {
 	logrus.Info("Starting pluk...")
+	utils.PrintEnvInfo()
 	api := &API{
-		gitInterface: pacakimpl.NewGitInterface(utils.GitDir(), "/git-local"),
+		gitInterface: pacakimpl.NewGitInterface(utils.GitDir(), utils.GitLocalDir()),
 		cache:        utils.NewRequestCache(),
 		client:       &http.Client{Timeout: time.Minute},
 	}

@@ -37,7 +37,7 @@ func NewClient(baseURL string, auth *AuthOpts) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	baseClient := &http.Client{Timeout: time.Minute}
+	baseClient := &http.Client{Timeout: time.Minute * 10}
 	return &Client{
 		BaseURL:   base,
 		Client:    baseClient,
@@ -173,6 +173,21 @@ func (c *Client) DownloadDataset(workspace, name, version string, w io.Writer) e
 	}
 
 	_, err = c.Do(req, w)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) DeleteDataset(workspace, name string) error {
+	u := fmt.Sprintf("/datasets/%v/%v", workspace, name)
+
+	req, err := c.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.Do(req, nil)
 	if err != nil {
 		return err
 	}

@@ -13,7 +13,7 @@ import (
 const (
 	defaultConfigPath = "~/.kuberlab/config"
 	defaultBaseURL    = "http://localhost:8082/internal"
-	defaultLogLevel   = "debug"
+	defaultLogLevel   = "info"
 )
 
 var (
@@ -87,6 +87,7 @@ func newRootCmd() *cobra.Command {
 		NewPullCmd(),
 		NewDatasetsCmd(),
 		NewVersionsCmd(),
+		NewDatasetDeleteCmd(),
 	)
 	return rootCmd
 }
