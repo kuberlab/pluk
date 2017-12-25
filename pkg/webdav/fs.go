@@ -33,7 +33,6 @@ func (fs *FS) OpenFile(ctx context.Context, name string, flag int, perm os.FileM
 	if fi.IsDir() {
 		return f, nil
 	}
-
 	return io.NewChunkedFile(f)
 }
 

@@ -24,7 +24,7 @@ type ChunkedFile struct {
 	Chunks             []chunk
 	currentChunk       int
 	currentChunkReader io.ReadCloser
-	offset             int64 // current chunk offset
+	offset             int64 // absolute offset
 }
 
 type chunk struct {
@@ -107,7 +107,7 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 	return read, err
 }
 
-func (f *ChunkedFile) Seek(offset int64, whence int) (int64, error) {
+func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
 	if (whence == io.SeekStart && offset > f.size) || (whence == io.SeekEnd && offset > 0) {
 		return 0, fmt.Errorf("offset %v more than size of the file", offset)
 	}
@@ -121,42 +121,27 @@ func (f *ChunkedFile) Seek(offset int64, whence int) (int64, error) {
 		f.currentChunkReader = nil
 	}
 
+	var absoluteOffset int64
 	switch whence {
 	case io.SeekStart:
-		ofs := offset
-		for i, ch := range f.Chunks {
-			if ofs-ch.size < 0 {
-				f.currentChunk = i
-				break
-			}
-			ofs -= ch.size
-		}
-		f.offset = ofs
+		absoluteOffset = offset
 	case io.SeekCurrent:
-		ofs := f.offset + offset
-		if offset < 0 {
-			if f.currentChunk == 0 {
-				return 0, fmt.Errorf("seek before the start of the file")
-			}
-			f.currentChunk--
-			f.offset = f.Chunks[f.currentChunk].size - ofs
-		} else if offset > f.Chunks[f.currentChunk].size {
-			f.offset -= f.Chunks[f.currentChunk].size
-			f.currentChunk++
-		}
+		absoluteOffset = f.offset + offset
 	case io.SeekEnd:
-		ofs := -offset
-		for i := len(f.Chunks) - 1; i >= 0; i-- {
-			if ofs-f.Chunks[i].size < 0 {
-				f.currentChunk = i
-				break
-			}
-			ofs -= f.Chunks[i].size
-		}
-		f.offset = f.Chunks[f.currentChunk].size - ofs
+		absoluteOffset = f.size - offset
 	}
 
-	return offset, nil
+	ofs := absoluteOffset
+	for i, ch := range f.Chunks {
+		if ofs-ch.size < 0 {
+			f.currentChunk = i
+			break
+		}
+		ofs -= ch.size
+	}
+	f.offset = absoluteOffset
+
+	return absoluteOffset, nil
 }
 
 func (f *ChunkedFile) Readdir(count int) ([]os.FileInfo, error) {
