@@ -1,5 +1,5 @@
-hash: 022925135eb4c4d706e6cca622a3c186c29e957ca42d0d69cda942dd4ce58285
-updated: 2017-12-21T17:07:07.75475653+03:00
+hash: 9a0f0ec14b32aaa9ace4238d912417502a37b1c88c9a968b6b50b74853d51fbc
+updated: 2017-12-25T15:35:45.511643356+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -49,6 +49,12 @@ imports:
   version: 5ccb023bc27df288a957c5e994cd44fd19619465
 - name: github.com/Unknwon/com
   version: 7677a1d7c1137cd3dd5ba7a076d0c898a1ef4520
+- name: golang.org/x/net
+  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
+  subpackages:
+  - context
+  - webdav
+  - webdav/internal/xml
 - name: golang.org/x/sys
   version: 7ddbeae9ae08c6a06a59597f0c9edbc5ff2444ce
   subpackages:
