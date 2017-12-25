@@ -62,12 +62,46 @@ func NewChunkedFile(f *os.File) (*ChunkedFile, error) {
 }
 
 func (f *ChunkedFile) Close() error {
-	return f.currentChunkReader.Close()
-	//return nil
+	if f.currentChunkReader != nil {
+		return f.currentChunkReader.Close()
+	}
+	return nil
 }
 
-func (*ChunkedFile) Read(p []byte) (n int, err error) {
-	panic("implement me")
+func (f *ChunkedFile) Read(p []byte) (n int, err error) {
+	var read int
+	if f.currentChunkReader == nil {
+		reader, err := os.Open(f.Chunks[f.currentChunk].path)
+		if err != nil {
+			return read, err
+		}
+		f.currentChunkReader = reader
+	}
+
+	var reader *os.File
+	var r int
+	for {
+		r, err = f.currentChunkReader.Read(p[read:])
+		read += r
+		if err == io.EOF && f.currentChunk < (len(f.Chunks)-1) && read < len(p) {
+			// Read more; current chunk is over.
+			f.currentChunkReader.Close()
+			f.currentChunk++
+			reader, err = os.Open(f.Chunks[f.currentChunk].path)
+			if err != nil {
+				return read, err
+			}
+			f.currentChunkReader = reader
+			err = nil
+		} else {
+			// either nothing to read or
+			// all chunks are over or
+			// buffer is full
+			break
+		}
+	}
+
+	return read, err
 }
 
 func (f *ChunkedFile) Seek(offset int64, whence int) (int64, error) {
@@ -81,6 +115,7 @@ func (f *ChunkedFile) Seek(offset int64, whence int) (int64, error) {
 
 	if f.currentChunkReader != nil {
 		f.currentChunkReader.Close()
+		f.currentChunkReader = nil
 	}
 
 	switch whence {
