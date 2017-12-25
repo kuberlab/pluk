@@ -25,6 +25,15 @@ func (fs *FS) OpenFile(ctx context.Context, name string, flag int, perm os.FileM
 	if err != nil {
 		return nil, err
 	}
+
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if fi.IsDir() {
+		return f, nil
+	}
+
 	return io.NewChunkedFile(f)
 }
 
@@ -46,7 +55,6 @@ func (fs *FS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 		return nil, err
 	}
 	if fi.IsDir() {
-		fmt.Println("DIR")
 		return fi, nil
 	}
 	chunked, err := io.NewChunkedFile(f)

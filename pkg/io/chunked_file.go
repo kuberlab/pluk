@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"golang.org/x/net/webdav"
 )
 
 type ChunkedFile struct {
@@ -31,7 +32,7 @@ type chunk struct {
 	size int64
 }
 
-func NewChunkedFile(f *os.File) (*ChunkedFile, error) {
+func NewChunkedFile(f *os.File) (webdav.File, error) {
 	file := &ChunkedFile{f: f}
 
 	data, err := ioutil.ReadAll(f)
@@ -40,12 +41,14 @@ func NewChunkedFile(f *os.File) (*ChunkedFile, error) {
 	}
 	lines := strings.Split(string(data), "\n")
 	if len(lines) < 2 {
-		return nil, fmt.Errorf("Probably corrupted file, contained less than 2 lines: %v", string(data))
+		return f, nil
+		//return nil, fmt.Errorf("Probably corrupted file [name=%v], contained less than 2 lines: %v", f.Name(), string(data))
 	}
 
 	size, err := strconv.ParseInt(lines[0], 10, 64)
 	if err != nil {
-		return nil, err
+		return f, nil
+		//return nil, err
 	}
 
 	file.size = size
