@@ -41,6 +41,14 @@ func (fs *FS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if fi.IsDir() {
+		fmt.Println("DIR")
+		return fi, nil
+	}
 	chunked, err := io.NewChunkedFile(f)
 	if err != nil {
 		return nil, err
@@ -49,5 +57,5 @@ func (fs *FS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 }
 
 func (fs *FS) fullPath(name string) string {
-	return fmt.Sprintf("%v/%v/%v/%v", utils.GitLocalDir(), fs.Dataset.Workspace, fs.Dataset.Name, name)
+	return fmt.Sprintf("%v/%v/%v%v", utils.GitLocalDir(), fs.Dataset.Workspace, fs.Dataset.Name, name)
 }

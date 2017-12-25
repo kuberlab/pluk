@@ -114,24 +114,30 @@ func SaveChunk(hash string, data io.ReadCloser) error {
 }
 
 func (d *Dataset) Download(version string, resp *restful.Response) error {
+	if pacakRepo, err := d.CheckoutVersion(version); err != nil {
+		return err
+	} else {
+		defer pacakRepo.Checkout(defaultBranch)
+	}
+
+	// Build archive.
+	return WriteTarGz(fmt.Sprintf("%v/%v/%v", utils.GitLocalDir(), d.Workspace, d.Name), resp)
+}
+
+func (d *Dataset) CheckoutVersion(version string) (pacakimpl.PacakRepo, error) {
 	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
 	pacakRepo, err := initRepo(d.git, repo, false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	logrus.Infof("Checkout tag %v.", version)
 
 	if !pacakRepo.IsTagExists(version) {
-		return errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
+		return pacakRepo, errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
 	}
 
-	if err = pacakRepo.Checkout(version); err != nil {
-		return err
-	}
-	defer pacakRepo.Checkout(defaultBranch)
-
-	// Build archive.
-	return WriteTarGz(fmt.Sprintf("%v/%v/%v", utils.GitLocalDir(), d.Workspace, d.Name), resp)
+	err = pacakRepo.Checkout(version)
+	return pacakRepo, err
 }
 
 func (d *Dataset) Versions() ([]string, error) {
