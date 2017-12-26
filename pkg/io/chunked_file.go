@@ -1,7 +1,6 @@
 package io
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/webdav"
 )
 

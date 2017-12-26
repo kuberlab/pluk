@@ -49,14 +49,15 @@ func WriteTarGz(root string, resp *restful.Response) error {
 		if errF != nil {
 			return errF
 		}
-		chunkedFi, errF := chunked.Stat()
+		size, errF := chunked.Seek(0, io.SeekEnd)
 		if errF != nil {
 			return errF
 		}
+		chunked.Seek(0, io.SeekStart)
 		h := &tar.Header{
 			Name:    sinceRoot,
 			Mode:    0666,
-			Size:    chunkedFi.Size(),
+			Size:    size,
 			ModTime: now,
 		}
 		if err := twriter.WriteHeader(h); err != nil {
