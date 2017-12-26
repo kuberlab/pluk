@@ -27,7 +27,7 @@ func WriteTarGz(root string, resp *restful.Response) error {
 
 	now := time.Now()
 
-	err := filepath.Walk(root, func(path string, f os.FileInfo, err error) error {
+	err := filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -35,20 +35,28 @@ func WriteTarGz(root string, resp *restful.Response) error {
 		if strings.HasPrefix(sinceRoot, ".") {
 			return nil
 		}
-		if f.IsDir() {
+		if fi.IsDir() {
 			return nil
 		}
 
 		logrus.Debugf("Processing file %v", path)
 
-		size, reader, errF := plukio.GetRealFileReader(path)
+		f, errF := os.Open(path)
+		if errF != nil {
+			return err
+		}
+		chunked, errF := plukio.NewChunkedFile(f)
+		if errF != nil {
+			return errF
+		}
+		chunkedFi, errF := chunked.Stat()
 		if errF != nil {
 			return errF
 		}
 		h := &tar.Header{
 			Name:    sinceRoot,
 			Mode:    0666,
-			Size:    int64(size),
+			Size:    chunkedFi.Size(),
 			ModTime: now,
 		}
 		if err := twriter.WriteHeader(h); err != nil {
@@ -56,11 +64,12 @@ func WriteTarGz(root string, resp *restful.Response) error {
 		}
 
 		for {
-			content, err := plukio.GetNextRealChunk(reader)
+			buf := make([]byte, 1048576)
+			n, err := chunked.Read(buf)
 			if err == io.EOF {
 				break
 			}
-			if _, err := twriter.Write(content); err != nil {
+			if _, err := twriter.Write(buf[:n]); err != nil {
 				return err
 			}
 			resp.Flush()
