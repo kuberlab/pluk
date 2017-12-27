@@ -114,14 +114,14 @@ func SaveChunk(hash string, data io.ReadCloser) error {
 }
 
 func (d *Dataset) Download(version string, resp *restful.Response) error {
-	if pacakRepo, err := d.CheckoutVersion(version); err != nil {
+	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
+	pacakRepo, err := initRepo(d.git, repo, false)
+	if err != nil {
 		return err
-	} else {
-		defer pacakRepo.Checkout(defaultBranch)
 	}
 
 	// Build archive.
-	return WriteTarGz(fmt.Sprintf("%v/%v/%v", utils.GitLocalDir(), d.Workspace, d.Name), resp)
+	return WriteTarGz(pacakRepo, version, resp)
 }
 
 func (d *Dataset) CheckoutVersion(version string) (pacakimpl.PacakRepo, error) {

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kuberlab/pacak/pkg/pacakimpl"
 	"golang.org/x/net/webdav"
 )
 
@@ -28,6 +29,38 @@ type ChunkedFile struct {
 type chunk struct {
 	path string
 	size int64
+}
+
+func NewChunkedFileFromRepo(repo pacakimpl.PacakRepo, ref, path string) (webdav.File, error) {
+	data, err := repo.GetFileDataAtRev(ref, path)
+	if err != nil {
+		return nil, err
+	}
+	file := &ChunkedFile{}
+
+	lines := strings.Split(string(data), "\n")
+	if len(lines) < 2 {
+		return file, nil
+		//return nil, fmt.Errorf("Probably corrupted file [name=%v], contained less than 2 lines: %v", f.Name(), string(data))
+	}
+
+	size, err := strconv.ParseInt(lines[0], 10, 64)
+	if err != nil {
+		return file, nil
+		//return nil, err
+	}
+
+	file.size = size
+	file.Chunks = make([]chunk, 0)
+	for _, chunkPath := range lines[1:] {
+		info, err := os.Stat(chunkPath)
+		if err != nil {
+			return nil, err
+		}
+		file.Chunks = append(file.Chunks, chunk{chunkPath, info.Size()})
+	}
+	//file.Dir = path.Dir(f.Name())
+	return file, nil
 }
 
 func NewChunkedFile(f *os.File) (webdav.File, error) {
