@@ -6,28 +6,7 @@ import (
 	"strings"
 
 	"github.com/gogits/git-module"
-	"github.com/kuberlab/pacak/pkg/pacakimpl"
 )
-
-func initRepo(git pacakimpl.GitInterface, repo string, create bool) (pacakimpl.PacakRepo, error) {
-	pacakRepo, err := git.GetRepository(repo)
-	if err != nil {
-		if !create {
-			return nil, err
-		}
-		if err = git.InitRepository(getCommitter(), repo, []pacakimpl.GitFile{}); err != nil {
-			return nil, err
-		}
-	}
-
-	if pacakRepo == nil {
-		pacakRepo, err = git.GetRepository(repo)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return pacakRepo, nil
-}
 
 func getCommitter() git.Signature {
 	return git.Signature{

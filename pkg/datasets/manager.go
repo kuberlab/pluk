@@ -45,14 +45,18 @@ func (m *Manager) GetDataset(workspace, name string) *Dataset {
 
 	for _, d := range datasets {
 		if d.Name == name {
-			return d
+			res := d
+			res.InitRepo(false)
+			return res
 		}
 	}
 	return nil
 }
 
 func (m *Manager) NewDataset(workspace, name string) *Dataset {
-	return &Dataset{Name: name, Workspace: workspace, git: m.git}
+	ds := &Dataset{Name: name, Workspace: workspace, git: m.git}
+	ds.InitRepo(true)
+	return ds
 }
 
 func (m *Manager) DeleteDataset(workspace, name string) error {

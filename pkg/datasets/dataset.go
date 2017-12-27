@@ -34,17 +34,12 @@ type HashedFile struct {
 
 type Dataset struct {
 	git       pacakimpl.GitInterface
+	Repo      pacakimpl.PacakRepo
 	Workspace string `json:"workspace"`
 	Name      string `json:"name"`
 }
 
 func (d *Dataset) Save(structure FileStructure, version string, comment string) error {
-	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
-	pacakRepo, err := initRepo(d.git, repo, true)
-	if err != nil {
-		return err
-	}
-
 	// Make absolute path for hashes and build gitFiles
 	files := make([]pacakimpl.GitFile, 0)
 	for _, f := range structure.Files {
@@ -65,13 +60,13 @@ func (d *Dataset) Save(structure FileStructure, version string, comment string) 
 	}
 	logrus.Infof("Saving data for %v/%v:%v...", d.Workspace, d.Name, version)
 
-	commit, err := pacakRepo.Save(getCommitter(), buildMessage(version, comment), defaultBranch, defaultBranch, files)
+	commit, err := d.Repo.Save(getCommitter(), buildMessage(version, comment), defaultBranch, defaultBranch, files)
 	if err != nil {
 		return err
 	}
 	logrus.Infof("Saved as commit %v.", commit)
 
-	if err = pacakRepo.PushTag(version, commit, true); err != nil {
+	if err = d.Repo.PushTag(version, commit, true); err != nil {
 		return err
 	}
 	logrus.Infof("Created tag %v.", version)
@@ -114,41 +109,29 @@ func SaveChunk(hash string, data io.ReadCloser) error {
 }
 
 func (d *Dataset) Download(version string, resp *restful.Response) error {
-	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
-	pacakRepo, err := initRepo(d.git, repo, false)
-	if err != nil {
-		return err
-	}
-
 	// Build archive.
-	return WriteTarGz(pacakRepo, version, resp)
+	return WriteTarGz(d.Repo, version, resp)
 }
 
-func (d *Dataset) CheckoutVersion(version string) (pacakimpl.PacakRepo, error) {
-	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
-	pacakRepo, err := initRepo(d.git, repo, false)
-	if err != nil {
-		return nil, err
+func (d *Dataset) CheckVersion(version string) (bool, error) {
+	if !d.Repo.IsTagExists(version) {
+		return false, errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
 	}
+	return true, nil
+}
+
+func (d *Dataset) CheckoutVersion(version string) error {
 	logrus.Infof("Checkout tag %v.", version)
 
-	if !pacakRepo.IsTagExists(version) {
-		return pacakRepo, errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
+	if !d.Repo.IsTagExists(version) {
+		return errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
 	}
 
-	err = pacakRepo.Checkout(version)
-	return pacakRepo, err
+	return d.Repo.Checkout(version)
 }
 
 func (d *Dataset) Versions() ([]string, error) {
-	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
-	pacakRepo, err := initRepo(d.git, repo, false)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return pacakRepo.TagList()
+	return d.Repo.TagList()
 }
 
 func (d *Dataset) Delete() error {
@@ -158,13 +141,29 @@ func (d *Dataset) Delete() error {
 }
 
 func (d *Dataset) DeleteVersion(version string) error {
+	return d.Repo.DeleteTag(version)
+}
+
+func (d *Dataset) InitRepo(create bool) error {
 	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
-	pacakRepo, err := initRepo(d.git, repo, false)
+	pacakRepo, err := d.git.GetRepository(repo)
 	if err != nil {
-		return err
+		if !create {
+			return err
+		}
+		if err = d.git.InitRepository(getCommitter(), repo, []pacakimpl.GitFile{}); err != nil {
+			return err
+		}
 	}
 
-	return pacakRepo.DeleteTag(version)
+	if pacakRepo == nil {
+		pacakRepo, err = d.git.GetRepository(repo)
+		if err != nil {
+			return err
+		}
+	}
+	d.Repo = pacakRepo
+	return nil
 }
 
 func buildMessage(version, comment string) string {

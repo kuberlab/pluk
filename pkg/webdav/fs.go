@@ -14,6 +14,7 @@ import (
 
 type FS struct {
 	Dataset *datasets.Dataset
+	Version string
 }
 
 func (*FS) Mkdir(ctx context.Context, name string, perm os.FileMode) error {

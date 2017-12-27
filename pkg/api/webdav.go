@@ -20,18 +20,18 @@ func (api *API) webdav() http.HandlerFunc {
 		dataset := api.ds.GetDataset(workspace, name)
 		if dataset == nil {
 			resp.WriteHeader(http.StatusNotFound)
-			//WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+			resp.Write([]byte(fmt.Sprintf("Dataset %v not found", name)))
 			return
 		}
 
-		if _, err := dataset.CheckoutVersion(version); err != nil {
+		if _, err := dataset.CheckVersion(version); err != nil {
 			resp.WriteHeader(http.StatusNotFound)
 			resp.Write([]byte(err.Error()))
 			return
 		}
 		srv := &webdav.Handler{
 			Prefix:     fmt.Sprintf("/webdav/%v/%v/%v", workspace, name, version),
-			FileSystem: &pluk_webdav.FS{Dataset: dataset},
+			FileSystem: &pluk_webdav.FS{Dataset: dataset, Version: version},
 			LockSystem: webdav.NewMemLS(),
 			Logger: func(r *http.Request, err error) {
 				if err != nil {
