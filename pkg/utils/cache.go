@@ -28,6 +28,18 @@ func (c *RequestCache) Get(key string) bool {
 	return raw.(bool)
 }
 
+func (c *RequestCache) GetRaw(key string) interface{} {
+	raw, found := c.Cache.Get(key)
+	if !found {
+		return nil
+	}
+	return raw
+}
+
 func (c *RequestCache) Set(key string, value bool) {
+	c.Cache.SetDefault(key, value)
+}
+
+func (c *RequestCache) SetRaw(key string, value interface{}) {
 	c.Cache.SetDefault(key, value)
 }

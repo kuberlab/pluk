@@ -75,6 +75,9 @@ func (f *ChunkedFile) Close() error {
 func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 	var read int
 	if f.currentChunkReader == nil {
+		if len(f.Chunks) == 0 {
+			return 0, io.EOF
+		}
 		reader, err := os.Open(f.Chunks[f.currentChunk].path)
 		if err != nil {
 			return read, err
@@ -152,12 +155,25 @@ func (f *ChunkedFile) Readdir(count int) ([]os.FileInfo, error) {
 	}
 
 	// filter infos by path.
-	path := strings.TrimPrefix(f.name, "/")
 
 	res := make([]os.FileInfo, 0)
 	for _, fi := range infos {
-		if strings.HasPrefix(fi.Name(), path) && !strings.Contains(fi.Name(), "/") {
-			res = append(res, fi)
+		if strings.HasPrefix(fi.Name(), f.name) && fi.Name() != f.name {
+			path := strings.TrimPrefix(fi.Name(), f.name)
+			if strings.Contains(path, "/") {
+				continue
+			}
+
+			res = append(
+				res,
+				&ChunkedFileInfo{
+					name:    path,
+					size:    fi.Size(),
+					dir:     fi.IsDir(),
+					mode:    fi.Mode(),
+					modTime: fi.ModTime(),
+				},
+			)
 		}
 	}
 
@@ -168,6 +184,7 @@ func (f *ChunkedFile) Readdir(count int) ([]os.FileInfo, error) {
 }
 
 func (f *ChunkedFile) Stat() (os.FileInfo, error) {
+	//t := time.Now()
 	baseStat, err := f.repo.StatFileAtRev(f.ref, f.name)
 	if err != nil {
 		return nil, err
@@ -179,11 +196,12 @@ func (f *ChunkedFile) Stat() (os.FileInfo, error) {
 		dir:     baseStat.IsDir(),
 	}
 	if baseStat.IsDir() {
-		info.size = baseStat.Size()
+		info.size = 4096
 	} else {
 		info.size = f.size
 	}
 
+	//fmt.Println("STAT", f.name, time.Since(t), *info)
 	return info, nil
 }
 

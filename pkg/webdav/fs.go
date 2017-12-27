@@ -15,6 +15,11 @@ import (
 type FS struct {
 	Dataset *datasets.Dataset
 	Version string
+	cache   *utils.RequestCache
+}
+
+func NewFS(dataset *datasets.Dataset, version string) webdav.FileSystem {
+	return &FS{Dataset: dataset, Version: version, cache: utils.NewRequestCache()}
 }
 
 func (*FS) Mkdir(ctx context.Context, name string, perm os.FileMode) error {

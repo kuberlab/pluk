@@ -17,6 +17,14 @@ func (api *API) webdav() http.HandlerFunc {
 		name := vars["name"]
 		workspace := vars["workspace"]
 
+		key := workspace + name + version
+		dav := api.cache.GetRaw(key)
+		if dav != nil {
+			davHandler := dav.(*webdav.Handler)
+			davHandler.ServeHTTP(resp, req)
+			return
+		}
+
 		dataset := api.ds.GetDataset(workspace, name)
 		if dataset == nil {
 			resp.WriteHeader(http.StatusNotFound)
@@ -31,7 +39,7 @@ func (api *API) webdav() http.HandlerFunc {
 		}
 		srv := &webdav.Handler{
 			Prefix:     fmt.Sprintf("/webdav/%v/%v/%v", workspace, name, version),
-			FileSystem: &pluk_webdav.FS{Dataset: dataset, Version: version},
+			FileSystem: pluk_webdav.NewFS(dataset, version),
 			LockSystem: webdav.NewMemLS(),
 			Logger: func(r *http.Request, err error) {
 				if err != nil {
@@ -40,6 +48,7 @@ func (api *API) webdav() http.HandlerFunc {
 				//logrus.Printf("WEBDAV: %#s, ERROR: %v", r, err)
 			},
 		}
+		api.cache.SetRaw(key, srv)
 		srv.ServeHTTP(resp, req)
 	}
 }
