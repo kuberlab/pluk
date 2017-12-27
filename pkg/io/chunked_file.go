@@ -30,11 +30,15 @@ type chunk struct {
 }
 
 func NewChunkedFileFromRepo(repo pacakimpl.PacakRepo, ref, path string) (webdav.File, error) {
+	file := &ChunkedFile{name: path, repo: repo, ref: ref}
+
+	if path == "/" {
+		return file, nil
+	}
 	data, err := repo.GetFileDataAtRev(ref, path)
 	if err != nil {
 		return nil, err
 	}
-	file := &ChunkedFile{name: path, repo: repo, ref: ref}
 
 	lines := strings.Split(string(data), "\n")
 	if len(lines) < 2 {
@@ -174,7 +178,11 @@ func (f *ChunkedFile) Stat() (os.FileInfo, error) {
 		name:    baseStat.Name(),
 		dir:     baseStat.IsDir(),
 	}
-	info.size = f.size
+	if baseStat.IsDir() {
+		info.size = baseStat.Size()
+	} else {
+		info.size = f.size
+	}
 
 	return info, nil
 }
