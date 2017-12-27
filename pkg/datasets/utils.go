@@ -1,9 +1,8 @@
 package datasets
 
 import (
-	"time"
-
 	"strings"
+	"time"
 
 	"github.com/gogits/git-module"
 )

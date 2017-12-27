@@ -22,19 +22,8 @@ func (*FS) Mkdir(ctx context.Context, name string, perm os.FileMode) error {
 }
 
 func (fs *FS) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (webdav.File, error) {
-	f, err := os.OpenFile(fs.fullPath(name), flag, perm)
-	if err != nil {
-		return nil, err
-	}
-
-	fi, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-	if fi.IsDir() {
-		return f, nil
-	}
-	return io.NewChunkedFile(f)
+	// TODO: How to pass and apply flag and permissions? Currently read-only
+	return io.NewChunkedFileFromRepo(fs.Dataset.Repo, fs.Version, name)
 }
 
 func (*FS) RemoveAll(ctx context.Context, name string) error {
@@ -46,18 +35,7 @@ func (*FS) Rename(ctx context.Context, oldName, newName string) error {
 }
 
 func (fs *FS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
-	f, err := os.Open(fs.fullPath(name))
-	if err != nil {
-		return nil, err
-	}
-	fi, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-	if fi.IsDir() {
-		return fi, nil
-	}
-	chunked, err := io.NewChunkedFile(f)
+	chunked, err := io.NewChunkedFileFromRepo(fs.Dataset.Repo, fs.Version, name)
 	if err != nil {
 		return nil, err
 	}

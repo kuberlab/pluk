@@ -4,9 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -16,9 +14,9 @@ import (
 )
 
 type ChunkedFile struct {
-	f                  *os.File
-	Root               string
-	Dir                string
+	repo               pacakimpl.PacakRepo
+	ref                string
+	name               string
 	size               int64
 	Chunks             []chunk
 	currentChunk       int
@@ -36,7 +34,7 @@ func NewChunkedFileFromRepo(repo pacakimpl.PacakRepo, ref, path string) (webdav.
 	if err != nil {
 		return nil, err
 	}
-	file := &ChunkedFile{}
+	file := &ChunkedFile{name: path, repo: repo, ref: ref}
 
 	lines := strings.Split(string(data), "\n")
 	if len(lines) < 2 {
@@ -60,38 +58,6 @@ func NewChunkedFileFromRepo(repo pacakimpl.PacakRepo, ref, path string) (webdav.
 		file.Chunks = append(file.Chunks, chunk{chunkPath, info.Size()})
 	}
 	//file.Dir = path.Dir(f.Name())
-	return file, nil
-}
-
-func NewChunkedFile(f *os.File) (webdav.File, error) {
-	file := &ChunkedFile{f: f}
-
-	data, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-	lines := strings.Split(string(data), "\n")
-	if len(lines) < 2 {
-		return f, nil
-		//return nil, fmt.Errorf("Probably corrupted file [name=%v], contained less than 2 lines: %v", f.Name(), string(data))
-	}
-
-	size, err := strconv.ParseInt(lines[0], 10, 64)
-	if err != nil {
-		return f, nil
-		//return nil, err
-	}
-
-	file.size = size
-	file.Chunks = make([]chunk, 0)
-	for _, chunkPath := range lines[1:] {
-		info, err := os.Stat(chunkPath)
-		if err != nil {
-			return nil, err
-		}
-		file.Chunks = append(file.Chunks, chunk{chunkPath, info.Size()})
-	}
-	file.Dir = path.Dir(f.Name())
 	return file, nil
 }
 
@@ -176,31 +142,29 @@ func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
 }
 
 func (f *ChunkedFile) Readdir(count int) ([]os.FileInfo, error) {
-	baseInfos, err := f.f.Readdir(count)
+	infos, err := f.repo.ListFilesAtRev(f.ref)
 	if err != nil {
 		return nil, err
 	}
-	infos := make([]os.FileInfo, 0)
-	for _, baseInfo := range baseInfos {
-		virtualFile, err := os.Open(baseInfo.Name())
-		if err != nil {
-			return nil, err
+
+	// filter infos by path.
+	path := strings.TrimPrefix(f.name, "/")
+
+	res := make([]os.FileInfo, 0)
+	for _, fi := range infos {
+		if strings.HasPrefix(fi.Name(), path) && !strings.Contains(fi.Name(), "/") {
+			res = append(res, fi)
 		}
-		chunked, err := NewChunkedFile(virtualFile)
-		if err != nil {
-			return nil, err
-		}
-		info, err := chunked.Stat()
-		if err != nil {
-			return nil, err
-		}
-		infos = append(infos, info)
 	}
-	return infos, nil
+
+	if count == 0 {
+		count = len(res)
+	}
+	return res[:count], nil
 }
 
 func (f *ChunkedFile) Stat() (os.FileInfo, error) {
-	baseStat, err := f.f.Stat()
+	baseStat, err := f.repo.StatFileAtRev(f.ref, f.name)
 	if err != nil {
 		return nil, err
 	}
