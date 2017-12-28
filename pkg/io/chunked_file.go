@@ -136,7 +136,7 @@ func (f *ChunkedFile) Close() error {
 func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, err error) {
 	reader, err = os.Open(chunkPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if os.IsNotExist(err) && utils.HasMasters() {
 			// Read from master
 			hash := strings.TrimPrefix(chunkPath, utils.DataDir())
 			hash = strings.Replace(hash, "/", "", -1)
