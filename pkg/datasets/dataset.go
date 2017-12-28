@@ -11,6 +11,7 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
+	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
@@ -34,9 +35,9 @@ type HashedFile struct {
 
 type Dataset struct {
 	git       pacakimpl.GitInterface
-	Repo      pacakimpl.PacakRepo
-	Workspace string `json:"workspace"`
-	Name      string `json:"name"`
+	Repo      pacakimpl.PacakRepo `json:"-"`
+	Workspace string              `json:"workspace"`
+	Name      string              `json:"name"`
 }
 
 func (d *Dataset) Save(structure FileStructure, version string, comment string) error {
@@ -80,6 +81,11 @@ func CheckChunk(hash string) bool {
 	return err == nil
 }
 
+func GetChunk(hash string) (io.ReadCloser, error) {
+	filePath := utils.GetHashedFilename(hash)
+	return os.Open(filePath)
+}
+
 func SaveChunk(hash string, data io.ReadCloser) error {
 	filePath := utils.GetHashedFilename(hash)
 
@@ -111,6 +117,34 @@ func SaveChunk(hash string, data io.ReadCloser) error {
 func (d *Dataset) Download(version string, resp *restful.Response) error {
 	// Build archive.
 	return WriteTarGz(d.Repo, version, resp)
+}
+
+func (d *Dataset) GetFSStructure(version string) (*plukio.ChunkedFileFS, error) {
+	gitFiles, err := d.Repo.ListFilesAtRev(version)
+	if err != nil {
+		return nil, err
+	}
+
+	fs := &plukio.ChunkedFileFS{FS: make(map[string]*plukio.ChunkedFile)}
+	for _, gitFile := range gitFiles {
+		chunked, err := plukio.NewInternalChunked(d.Repo, version, gitFile.Name())
+		if err != nil {
+			return nil, err
+		}
+		chunked.Fstat = &plukio.ChunkedFileInfo{
+			FmodTime: gitFile.ModTime(),
+			Fmode:    gitFile.Mode(),
+			Fsize:    chunked.Size,
+			Fname:    chunked.Name,
+			Dir:      gitFile.IsDir(),
+		}
+		if gitFile.IsDir() {
+			chunked.Fstat.Fsize = 4096
+		}
+		fs.FS[gitFile.Name()] = chunked
+	}
+
+	return fs, nil
 }
 
 func (d *Dataset) CheckVersion(version string) (bool, error) {

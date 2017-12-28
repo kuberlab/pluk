@@ -6,6 +6,7 @@ import (
 
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/pluk/pkg/datasets"
+	"io"
 )
 
 func (api *API) saveDataset(req *restful.Request, resp *restful.Response) {
@@ -48,6 +49,27 @@ func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 
 	resp.Header().Add("Content-Type", "application/tar+gzip")
 
+	//resp.Header().Add("Content-Disposition", fmt.Sprintf("attachment;filename=%s-%s.%s.tgz;", workspace, name, version))
+}
+
+func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
+	version := req.PathParameter("version")
+	name := req.PathParameter("name")
+	workspace := req.PathParameter("workspace")
+
+	dataset := api.ds.GetDataset(workspace, name)
+	if dataset == nil {
+		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		return
+	}
+	infos, err := dataset.GetFSStructure(version)
+	if err != nil {
+		WriteStatusError(resp, http.StatusNotFound, err)
+		return
+	}
+
+	resp.WriteEntity(infos)
+	//resp.Header().Add("Content-Type", "application/tar+gzip")
 	//resp.Header().Add("Content-Disposition", fmt.Sprintf("attachment;filename=%s-%s.%s.tgz;", workspace, name, version))
 }
 
@@ -100,6 +122,16 @@ func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
 	exists := datasets.CheckChunk(hash)
 
 	resp.WriteEntity(CheckChunkResponse{Hash: hash, Exists: exists})
+}
+
+func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
+	hash := req.PathParameter("hash")
+	file, err := datasets.GetChunk(hash)
+	if err != nil {
+		WriteStatusError(resp, http.StatusNotFound, err)
+	}
+
+	io.Copy(resp, file)
 }
 
 func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {

@@ -13,24 +13,59 @@ import (
 	"golang.org/x/net/webdav"
 )
 
+type ChunkedFileFS struct {
+	FS map[string]*ChunkedFile
+}
+
+func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error) {
+	// filter infos by prefix.
+	res := make([]os.FileInfo, 0)
+	for _, f := range fs.FS {
+		if strings.HasPrefix(f.Name, prefix) && f.Name != prefix {
+			path := strings.TrimPrefix(f.Name, prefix)
+			if strings.Contains(path, "/") {
+				continue
+			}
+
+			res = append(res, f.Fstat)
+		}
+	}
+
+	if count == 0 {
+		count = len(res)
+	}
+	return res[:count], nil
+}
+
 type ChunkedFile struct {
-	repo               pacakimpl.PacakRepo
-	ref                string
-	name               string
-	size               int64
-	Chunks             []chunk
+	//repo               pacakimpl.PacakRepo
+	Ref                string  `json:"ref"`
+	Name               string  `json:"name"`
+	Size               int64   `json:"size"`
+	Chunks             []chunk `json:"chunks"`
 	currentChunk       int
 	currentChunkReader io.ReadCloser
 	offset             int64 // absolute offset
+
+	Fstat *ChunkedFileInfo `json:"stat"`
+	fs    *ChunkedFileFS
 }
 
 type chunk struct {
-	path string
-	size int64
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+}
+
+func NewInternalChunked(repo pacakimpl.PacakRepo, ref, path string) (*ChunkedFile, error) {
+	chunked, err := NewChunkedFileFromRepo(repo, ref, path)
+	if err != nil {
+		return nil, err
+	}
+	return chunked.(*ChunkedFile), nil
 }
 
 func NewChunkedFileFromRepo(repo pacakimpl.PacakRepo, ref, path string) (webdav.File, error) {
-	file := &ChunkedFile{name: path, repo: repo, ref: ref}
+	file := &ChunkedFile{Name: path, Ref: ref}
 
 	if path == "/" {
 		return file, nil
@@ -43,7 +78,7 @@ func NewChunkedFileFromRepo(repo pacakimpl.PacakRepo, ref, path string) (webdav.
 	lines := strings.Split(string(data), "\n")
 	if len(lines) < 2 {
 		return file, nil
-		//return nil, fmt.Errorf("Probably corrupted file [name=%v], contained less than 2 lines: %v", f.Name(), string(data))
+		//return nil, fmt.Errorf("Probably corrupted file [Name=%v], contained less than 2 lines: %v", f.Name(), string(data))
 	}
 
 	size, err := strconv.ParseInt(lines[0], 10, 64)
@@ -52,7 +87,7 @@ func NewChunkedFileFromRepo(repo pacakimpl.PacakRepo, ref, path string) (webdav.
 		//return nil, err
 	}
 
-	file.size = size
+	file.Size = size
 	file.Chunks = make([]chunk, 0)
 	for _, chunkPath := range lines[1:] {
 		info, err := os.Stat(chunkPath)
@@ -61,7 +96,7 @@ func NewChunkedFileFromRepo(repo pacakimpl.PacakRepo, ref, path string) (webdav.
 		}
 		file.Chunks = append(file.Chunks, chunk{chunkPath, info.Size()})
 	}
-	//file.Dir = path.Dir(f.Name())
+	//file.Dir = Path.Dir(f.Name())
 	return file, nil
 }
 
@@ -78,7 +113,7 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 		if len(f.Chunks) == 0 {
 			return 0, io.EOF
 		}
-		reader, err := os.Open(f.Chunks[f.currentChunk].path)
+		reader, err := os.Open(f.Chunks[f.currentChunk].Path)
 		if err != nil {
 			return read, err
 		}
@@ -94,7 +129,7 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 			// Read more; current chunk is over.
 			f.currentChunkReader.Close()
 			f.currentChunk++
-			reader, err = os.Open(f.Chunks[f.currentChunk].path)
+			reader, err = os.Open(f.Chunks[f.currentChunk].Path)
 			if err != nil {
 				return read, err
 			}
@@ -112,8 +147,8 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 }
 
 func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
-	if (whence == io.SeekStart && offset > f.size) || (whence == io.SeekEnd && offset > 0) {
-		return 0, fmt.Errorf("offset %v more than size of the file", offset)
+	if (whence == io.SeekStart && offset > f.Size) || (whence == io.SeekEnd && offset > 0) {
+		return 0, fmt.Errorf("offset %v more than Size of the file", offset)
 	}
 
 	if whence == io.SeekStart && offset < 0 {
@@ -132,16 +167,16 @@ func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
 	case io.SeekCurrent:
 		absoluteOffset = f.offset + offset
 	case io.SeekEnd:
-		absoluteOffset = f.size - offset
+		absoluteOffset = f.Size - offset
 	}
 
 	ofs := absoluteOffset
 	for i, ch := range f.Chunks {
-		if ofs-ch.size < 0 {
+		if ofs-ch.Size < 0 {
 			f.currentChunk = i
 			break
 		}
-		ofs -= ch.size
+		ofs -= ch.Size
 	}
 	f.offset = absoluteOffset
 
@@ -149,60 +184,31 @@ func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
 }
 
 func (f *ChunkedFile) Readdir(count int) ([]os.FileInfo, error) {
-	infos, err := f.repo.ListFilesAtRev(f.ref)
-	if err != nil {
-		return nil, err
-	}
-
-	// filter infos by path.
-
-	res := make([]os.FileInfo, 0)
-	for _, fi := range infos {
-		if strings.HasPrefix(fi.Name(), f.name) && fi.Name() != f.name {
-			path := strings.TrimPrefix(fi.Name(), f.name)
-			if strings.Contains(path, "/") {
-				continue
-			}
-
-			res = append(
-				res,
-				&ChunkedFileInfo{
-					name:    path,
-					size:    fi.Size(),
-					dir:     fi.IsDir(),
-					mode:    fi.Mode(),
-					modTime: fi.ModTime(),
-				},
-			)
-		}
-	}
-
-	if count == 0 {
-		count = len(res)
-	}
-	return res[:count], nil
+	return f.fs.Readdir(f.Name, count)
 }
 
 func (f *ChunkedFile) Stat() (os.FileInfo, error) {
-	//t := time.Now()
-	baseStat, err := f.repo.StatFileAtRev(f.ref, f.name)
-	if err != nil {
-		return nil, err
-	}
-	info := &ChunkedFileInfo{
-		mode:    baseStat.Mode(),
-		modTime: baseStat.ModTime(),
-		name:    baseStat.Name(),
-		dir:     baseStat.IsDir(),
-	}
-	if baseStat.IsDir() {
-		info.size = 4096
-	} else {
-		info.size = f.size
-	}
+	return f.Fstat, nil
 
-	//fmt.Println("STAT", f.name, time.Since(t), *info)
-	return info, nil
+	//t := time.Now()
+	//baseStat, err := f.repo.StatFileAtRev(f.Ref, f.Name)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//info := &ChunkedFileInfo{
+	//	Fmode:    baseStat.Mode(),
+	//	FmodTime: baseStat.ModTime(),
+	//	Fname:    baseStat.Name(),
+	//	Dir:      baseStat.IsDir(),
+	//}
+	//if baseStat.IsDir() {
+	//	info.Fsize = 4096
+	//} else {
+	//	info.Fsize = f.Size
+	//}
+	//
+	////fmt.Println("STAT", f.Name, time.Since(t), *info)
+	//return info, nil
 }
 
 func (*ChunkedFile) Write(p []byte) (int, error) {
@@ -211,16 +217,16 @@ func (*ChunkedFile) Write(p []byte) (int, error) {
 
 // A ChunkedFileInfo is the implementation of FileInfo returned by Stat and Lstat.
 type ChunkedFileInfo struct {
-	dir     bool
-	name    string
-	size    int64
-	mode    os.FileMode
-	modTime time.Time
+	Dir      bool        `json:"dir"`
+	Fname    string      `json:"name"`
+	Fsize    int64       `json:"size"`
+	Fmode    os.FileMode `json:"mode"`
+	FmodTime time.Time   `json:"modtime"`
 }
 
-func (fs *ChunkedFileInfo) Name() string       { return fs.name }
-func (fs *ChunkedFileInfo) IsDir() bool        { return fs.dir }
-func (fs *ChunkedFileInfo) Size() int64        { return fs.size }
-func (fs *ChunkedFileInfo) Mode() os.FileMode  { return fs.mode }
-func (fs *ChunkedFileInfo) ModTime() time.Time { return fs.modTime }
+func (fs *ChunkedFileInfo) Name() string       { return fs.Fname }
+func (fs *ChunkedFileInfo) IsDir() bool        { return fs.Dir }
+func (fs *ChunkedFileInfo) Size() int64        { return fs.Fsize }
+func (fs *ChunkedFileInfo) Mode() os.FileMode  { return fs.Fmode }
+func (fs *ChunkedFileInfo) ModTime() time.Time { return fs.FmodTime }
 func (fs *ChunkedFileInfo) Sys() interface{}   { return nil }

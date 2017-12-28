@@ -70,10 +70,12 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	ws.Route(ws.DELETE("/datasets/{workspace}/{name}").To(api.deleteDataset))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions").To(api.versions))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}").To(api.getDataset))
+	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/fs").To(api.getDatasetFS))
 	ws.Route(ws.DELETE("/datasets/{workspace}/{name}/versions/{version}").To(api.deleteVersion))
 
 	// Check if chunk exists
 	ws.Route(ws.GET("/chunks/{hash}").To(api.checkChunk))
+	ws.Route(ws.GET("/chunks/{hash}/download").To(api.downloadChunk))
 	// Save hashed file chunk
 	ws.Route(ws.POST("/chunks/{hash}").To(api.saveChunk))
 

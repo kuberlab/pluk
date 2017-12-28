@@ -17,6 +17,7 @@ const (
 	dataVar            = "DATA_DIR"
 	gitVar             = "GIT_BARE_DIR"
 	gitLocalVar        = "GIT_LOCAL_DIR"
+	mastersVar         = "MASTERS"
 	defaultGitDir      = "/git"
 	defaultGitLocalDir = "/git-local"
 	defaultDataDir     = "/data"
@@ -69,6 +70,14 @@ func DataDir() string {
 
 func AuthValidationURL() string {
 	return os.Getenv(authValidationVar)
+}
+
+func Masters() []string {
+	mastersRaw := os.Getenv(mastersVar)
+	if mastersRaw == "" {
+		return make([]string, 0)
+	}
+	return strings.Split(mastersRaw, ",")
 }
 
 func String(s string) *string {
