@@ -4,6 +4,11 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"io"
+	"os"
+	"strings"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/kuberlab/pluk/pkg/utils"
 )
 
 type ChunkedReader struct {
@@ -31,4 +36,43 @@ func (c *ChunkedReader) NextChunk() ([]byte, string, error) {
 		return nil, "", err
 	}
 	return nil, "", io.EOF
+}
+
+func CheckChunk(hash string) bool {
+	filePath := utils.GetHashedFilename(hash)
+	_, err := os.Stat(filePath)
+	return err == nil
+}
+
+func GetChunk(hash string) (io.ReadCloser, error) {
+	filePath := utils.GetHashedFilename(hash)
+	return os.Open(filePath)
+}
+
+func SaveChunk(hash string, data io.ReadCloser) error {
+	filePath := utils.GetHashedFilename(hash)
+
+	splitted := strings.Split(filePath, "/")
+	baseDir := splitted[:len(splitted)-1]
+
+	if err := os.MkdirAll(strings.Join(baseDir, "/"), os.ModePerm); err != nil {
+		return err
+	}
+
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	logrus.Debugf("Created %v", filePath)
+
+	defer file.Close()
+
+	written, err := io.Copy(file, data)
+	if err != nil {
+		return err
+	}
+	data.Close()
+
+	logrus.Debugf("Written %v bytes.", written)
+	return nil
 }

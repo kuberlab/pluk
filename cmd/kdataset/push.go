@@ -9,9 +9,9 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/cmd/kdataset/config"
-	"github.com/kuberlab/pluk/pkg/datasets"
 	chunk_io "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/plukclient"
+	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -74,7 +74,7 @@ func (cmd *pushCmd) run() error {
 		return nil
 	}
 
-	structure := datasets.FileStructure{Files: make([]*datasets.HashedFile, 0)}
+	structure := types.FileStructure{Files: make([]*types.HashedFile, 0)}
 
 	checkAndUpload := func(chunkData []byte, hash string) error {
 		resp, err := client.CheckChunk(hash)
@@ -109,7 +109,7 @@ func (cmd *pushCmd) run() error {
 		}
 		r := chunk_io.NewChunkedReader(cmd.chunkSize, file)
 		// Populate file structure.
-		hashed := &datasets.HashedFile{Path: strings.TrimPrefix(path, cwd+"/")}
+		hashed := &types.HashedFile{Path: strings.TrimPrefix(path, cwd+"/")}
 		var chunkData []byte
 		var hash string
 		for {
@@ -121,6 +121,9 @@ func (cmd *pushCmd) run() error {
 				break
 			}
 			logrus.Debugf("chunk len: %v", len(chunkData))
+			if len(chunkData) == 0 {
+				break
+			}
 			if uploadError := checkAndUpload(chunkData, hash); uploadError != nil {
 				return uploadError
 			}

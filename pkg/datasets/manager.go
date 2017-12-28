@@ -8,6 +8,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
+	"github.com/kuberlab/pluk/pkg/plukclient"
+	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
@@ -34,7 +36,7 @@ func (m *Manager) ListDatasets(workspace string) []*Dataset {
 
 	for _, dir := range dirs {
 		if dir.IsDir() {
-			sets = append(sets, &Dataset{Name: dir.Name(), git: m.git, Workspace: workspace})
+			sets = append(sets, &Dataset{Dataset: types.Dataset{Name: dir.Name(), Workspace: workspace}, git: m.git})
 		}
 	}
 	return sets
@@ -50,11 +52,27 @@ func (m *Manager) GetDataset(workspace, name string) *Dataset {
 			return res
 		}
 	}
+
+	// If none found, that means that it probably on master side.
+	if !utils.HasMasters() {
+		return nil
+	}
+
+	ds, err := plukclient.NewMultiClient().ListDatasets(workspace)
+	if err != nil {
+		return nil
+	}
+	for _, d := range ds.Datasets {
+		if d.Name == name {
+			return &Dataset{Dataset: *d}
+		}
+	}
+
 	return nil
 }
 
 func (m *Manager) NewDataset(workspace, name string) *Dataset {
-	ds := &Dataset{Name: name, Workspace: workspace, git: m.git}
+	ds := &Dataset{Dataset: types.Dataset{Name: name, Workspace: workspace}, git: m.git}
 	ds.InitRepo(true)
 	return ds
 }

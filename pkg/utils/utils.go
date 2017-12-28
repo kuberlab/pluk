@@ -80,6 +80,10 @@ func Masters() []string {
 	return strings.Split(mastersRaw, ",")
 }
 
+func HasMasters() bool {
+	return len(Masters()) > 0
+}
+
 func String(s string) *string {
 	return &s
 }

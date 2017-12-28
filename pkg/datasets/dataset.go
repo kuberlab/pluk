@@ -2,16 +2,14 @@ package datasets
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"strings"
-	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
 	plukio "github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
@@ -21,26 +19,14 @@ const (
 	defaultBranch = "master"
 )
 
-type FileStructure struct {
-	Files []*HashedFile `json:"files"`
-}
-
-type HashedFile struct {
-	Path     string      `json:"path"`
-	Size     uint64      `json:"size"`
-	Hashes   []string    `json:"hashes"`
-	Mode     os.FileMode `json:"mode"`
-	ModeTime time.Time   `json:"mode_time"`
-}
-
 type Dataset struct {
-	git       pacakimpl.GitInterface
-	Repo      pacakimpl.PacakRepo `json:"-"`
-	Workspace string              `json:"workspace"`
-	Name      string              `json:"name"`
+	types.Dataset
+	git  pacakimpl.GitInterface
+	FS   *plukio.ChunkedFileFS `json:"-"`
+	Repo pacakimpl.PacakRepo   `json:"-"`
 }
 
-func (d *Dataset) Save(structure FileStructure, version string, comment string) error {
+func (d *Dataset) Save(structure types.FileStructure, version string, comment string) error {
 	// Make absolute path for hashes and build gitFiles
 	files := make([]pacakimpl.GitFile, 0)
 	for _, f := range structure.Files {
@@ -75,51 +61,39 @@ func (d *Dataset) Save(structure FileStructure, version string, comment string) 
 	return nil
 }
 
-func CheckChunk(hash string) bool {
-	filePath := utils.GetHashedFilename(hash)
-	_, err := os.Stat(filePath)
-	return err == nil
-}
-
-func GetChunk(hash string) (io.ReadCloser, error) {
-	filePath := utils.GetHashedFilename(hash)
-	return os.Open(filePath)
-}
-
-func SaveChunk(hash string, data io.ReadCloser) error {
-	filePath := utils.GetHashedFilename(hash)
-
-	splitted := strings.Split(filePath, "/")
-	baseDir := splitted[:len(splitted)-1]
-
-	if err := os.MkdirAll(strings.Join(baseDir, "/"), os.ModePerm); err != nil {
-		return err
-	}
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	logrus.Debugf("Created %v", filePath)
-
-	defer file.Close()
-
-	written, err := io.Copy(file, data)
-	if err != nil {
-		return err
-	}
-	data.Close()
-
-	logrus.Debugf("Written %v bytes.", written)
-	return nil
-}
-
 func (d *Dataset) Download(version string, resp *restful.Response) error {
 	// Build archive.
-	return WriteTarGz(d.Repo, version, resp)
+	_, err := d.GetFSStructure(version)
+	if err != nil {
+		return err
+	}
+	return WriteTarGz(d.FS, resp)
 }
 
-func (d *Dataset) GetFSStructure(version string) (*plukio.ChunkedFileFS, error) {
+func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err error) {
+	if d.Repo != nil {
+		fs, err = d.getFSStructureFromRepo(version)
+	} else {
+		if !utils.HasMasters() {
+			return nil, fmt.Errorf("Either the current instance has no masters or has corrupted repo")
+		}
+		fs, err = d.getFSStructureFromMaster(version)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	fs.Prepare()
+	d.FS = fs
+	return fs, nil
+}
+
+func (d *Dataset) getFSStructureFromMaster(version string) (*plukio.ChunkedFileFS, error) {
+	return plukio.MasterClient.GetFSStructure(d.Workspace, d.Name, version)
+}
+
+func (d *Dataset) getFSStructureFromRepo(version string) (*plukio.ChunkedFileFS, error) {
 	gitFiles, err := d.Repo.ListFilesAtRev(version)
 	if err != nil {
 		return nil, err
@@ -143,11 +117,23 @@ func (d *Dataset) GetFSStructure(version string) (*plukio.ChunkedFileFS, error) 
 		}
 		fs.FS[gitFile.Name()] = chunked
 	}
-
-	return fs, nil
+	return fs, err
 }
 
 func (d *Dataset) CheckVersion(version string) (bool, error) {
+	if d.Repo == nil {
+		versions, err := plukio.MasterClient.ListVersions(d.Workspace, d.Name)
+		if err != nil {
+			return false, err
+		}
+		for _, v := range versions.Versions {
+			if v == version {
+				return true, nil
+			}
+		}
+		return false, errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
+	}
+
 	if !d.Repo.IsTagExists(version) {
 		return false, errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
 	}
@@ -165,6 +151,13 @@ func (d *Dataset) CheckoutVersion(version string) error {
 }
 
 func (d *Dataset) Versions() ([]string, error) {
+	if d.Repo == nil {
+		vList, err := plukio.MasterClient.ListVersions(d.Workspace, d.Name)
+		if err != nil {
+			return nil, err
+		}
+		return vList.Versions, nil
+	}
 	return d.Repo.TagList()
 }
 

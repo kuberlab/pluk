@@ -1,17 +1,37 @@
 package io
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
+	"github.com/kuberlab/pluk/pkg/types"
+	"github.com/kuberlab/pluk/pkg/utils"
 	"golang.org/x/net/webdav"
 )
+
+type PlukClient interface {
+	ListDatasets(workspace string) (*types.DataSetList, error)
+	ListVersions(workspace, datasetName string) (*types.VersionList, error)
+	CommitFileStructure(structure types.FileStructure, workspace, name, version string) error
+	CheckChunk(hash string) (*types.CheckChunkResponse, error)
+	DownloadChunk(hash string) (io.ReadCloser, error)
+	SaveChunk(hash string, data []byte) error
+	GetFSStructure(workspace, name, version string) (*ChunkedFileFS, error)
+	DownloadDataset(workspace, name, version string, w io.Writer) error
+	DeleteDataset(workspace, name string) error
+	DeleteVersion(workspace, name, version string) error
+}
+
+var MasterClient PlukClient
 
 type ChunkedFileFS struct {
 	FS map[string]*ChunkedFile `json:"fs"`
@@ -113,20 +133,51 @@ func (f *ChunkedFile) Close() error {
 	return nil
 }
 
+func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, err error) {
+	reader, err = os.Open(chunkPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Read from master
+			hash := strings.TrimPrefix(chunkPath, utils.DataDir())
+			hash = strings.Replace(hash, "/", "", -1)
+			reader, err = MasterClient.DownloadChunk(hash)
+
+			if err != nil {
+				return nil, err
+			}
+			data, err := ioutil.ReadAll(reader)
+			if err != nil {
+				return nil, err
+			}
+			if err = SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data))); err != nil {
+				return nil, err
+			}
+			return ioutil.NopCloser(bytes.NewBuffer(data)), nil
+			//reader, err = os.Open(chunkPath)
+			//fmt.Println("READER/ERR", reader, err)
+			//return reader, err
+		} else {
+			return nil, err
+		}
+	}
+	return reader, err
+}
+
 func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 	var read int
+	var reader io.ReadCloser
 	if f.currentChunkReader == nil {
 		if len(f.Chunks) == 0 {
 			return 0, io.EOF
 		}
-		reader, err := os.Open(f.Chunks[f.currentChunk].Path)
+		reader, err = f.getChunkReader(f.Chunks[f.currentChunk].Path)
 		if err != nil {
-			return read, err
+			logrus.Error(err)
+			return read, io.EOF
 		}
 		f.currentChunkReader = reader
 	}
 
-	var reader *os.File
 	var r int
 	for {
 		r, err = f.currentChunkReader.Read(p[read:])
@@ -135,10 +186,7 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 			// Read more; current chunk is over.
 			f.currentChunkReader.Close()
 			f.currentChunk++
-			reader, err = os.Open(f.Chunks[f.currentChunk].Path)
-			if err != nil {
-				return read, err
-			}
+			reader, err = f.getChunkReader(f.Chunks[f.currentChunk].Path)
 			f.currentChunkReader = reader
 			err = nil
 		} else {

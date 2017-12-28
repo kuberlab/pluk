@@ -8,11 +8,10 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
-	"github.com/kuberlab/pacak/pkg/pacakimpl"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 )
 
-func WriteTarGz(repo pacakimpl.PacakRepo, ref string, resp *restful.Response) error {
+func WriteTarGz(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 	// Wrap in gzip writer
 	zipper := gzip.NewWriter(resp)
 
@@ -23,31 +22,34 @@ func WriteTarGz(repo pacakimpl.PacakRepo, ref string, resp *restful.Response) er
 		zipper.Close()
 	}()
 
-	fileInfos, err := repo.ListFilesAtRev(ref)
-	if err != nil {
-		return err
-	}
-	for _, fi := range fileInfos {
-		if strings.HasPrefix(fi.Name(), ".") {
+	//fileInfos, err := repo.ListFilesAtRev(ref)
+	//if err != nil {
+	//	return err
+	//}
+	for _, f := range fs.FS {
+		fi := f.Fstat
+		name := fi.Name()
+		name = strings.TrimPrefix(name, "/")
+		if strings.HasPrefix(name, ".") {
 			continue
 		}
 		if fi.IsDir() {
 			continue
 		}
 
-		logrus.Debugf("Processing file %v", fi.Name())
+		logrus.Debugf("Processing file %v", name)
 
-		chunked, err := plukio.NewChunkedFileFromRepo(repo, ref, fi.Name())
-		if err != nil {
-			return err
-		}
-		size, err := chunked.Seek(0, io.SeekEnd)
-		if err != nil {
-			return err
-		}
-		chunked.Seek(0, io.SeekStart)
+		//chunked, err := plukio.NewChunkedFileFromRepo(repo, ref, name)
+		//if err != nil {
+		//	return err
+		//}
+		size := f.Size
+		//if err != nil {
+		//	return err
+		//}
+		//f.Seek(0, io.SeekStart)
 		h := &tar.Header{
-			Name:    fi.Name(),
+			Name:    name,
 			Mode:    0666,
 			Size:    size,
 			ModTime: fi.ModTime(),
@@ -58,7 +60,7 @@ func WriteTarGz(repo pacakimpl.PacakRepo, ref string, resp *restful.Response) er
 
 		for {
 			buf := make([]byte, 1048576)
-			n, err := chunked.Read(buf)
+			n, err := f.Read(buf)
 			if err == io.EOF {
 				break
 			}

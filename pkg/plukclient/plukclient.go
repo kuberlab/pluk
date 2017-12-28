@@ -14,9 +14,8 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/kuberlab/pluk/pkg/api"
-	"github.com/kuberlab/pluk/pkg/datasets"
 	plukio "github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/types"
 )
 
 type Client struct {
@@ -32,7 +31,7 @@ type AuthOpts struct {
 	Cookie string
 }
 
-func NewClient(baseURL string, auth *AuthOpts) (*Client, error) {
+func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	base, err := url.Parse(baseURL)
 	if err != nil {
@@ -82,14 +81,14 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	return req, nil
 }
 
-func (c *Client) ListDatasets(workspace string) (*api.DataSetList, error) {
+func (c *Client) ListDatasets(workspace string) (*types.DataSetList, error) {
 	u := fmt.Sprintf("/datasets/%v", workspace)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
-	res := new(api.DataSetList)
+	res := new(types.DataSetList)
 	_, err = c.Do(req, res)
 
 	if err != nil {
@@ -99,14 +98,14 @@ func (c *Client) ListDatasets(workspace string) (*api.DataSetList, error) {
 	return res, err
 }
 
-func (c *Client) ListVersions(workspace, datasetName string) (*api.VersionList, error) {
+func (c *Client) ListVersions(workspace, datasetName string) (*types.VersionList, error) {
 	u := fmt.Sprintf("/datasets/%v/%v/versions", workspace, datasetName)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
-	res := new(api.VersionList)
+	res := new(types.VersionList)
 	_, err = c.Do(req, res)
 
 	if err != nil {
@@ -116,7 +115,7 @@ func (c *Client) ListVersions(workspace, datasetName string) (*api.VersionList, 
 	return res, err
 }
 
-func (c *Client) CommitFileStructure(structure datasets.FileStructure, workspace, name, version string) error {
+func (c *Client) CommitFileStructure(structure types.FileStructure, workspace, name, version string) error {
 	u := fmt.Sprintf("/datasets/%v/%v/%v", workspace, name, version)
 
 	req, err := c.NewRequest("POST", u, structure)
@@ -131,14 +130,14 @@ func (c *Client) CommitFileStructure(structure datasets.FileStructure, workspace
 	return nil
 }
 
-func (c *Client) CheckChunk(hash string) (*api.CheckChunkResponse, error) {
+func (c *Client) CheckChunk(hash string) (*types.CheckChunkResponse, error) {
 	u := fmt.Sprintf("/chunks/%v", hash)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
-	res := new(api.CheckChunkResponse)
+	res := new(types.CheckChunkResponse)
 	_, err = c.Do(req, res)
 
 	if err != nil {
@@ -155,8 +154,13 @@ func (c *Client) DownloadChunk(hash string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.Do(req, nil)
+	resp, err := c.Client.Do(req)
 
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err = checkResponse(resp, err)
 	if err != nil {
 		return nil, err
 	}

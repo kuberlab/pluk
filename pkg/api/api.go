@@ -10,6 +10,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
 	"github.com/kuberlab/pluk/pkg/datasets"
+	plukio "github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
@@ -23,6 +25,7 @@ type API struct {
 func Start() {
 	logrus.Info("Starting pluk...")
 	utils.PrintEnvInfo()
+	plukio.MasterClient = plukclient.NewMultiClient()
 	gitIface := pacakimpl.NewGitInterface(utils.GitDir(), utils.GitLocalDir())
 	api := &API{
 		gitInterface: gitIface,
