@@ -2,6 +2,7 @@ package datasets
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
@@ -109,7 +110,7 @@ func (d *Dataset) getFSStructureFromRepo(version string) (*plukio.ChunkedFileFS,
 			FmodTime: gitFile.ModTime(),
 			Fmode:    gitFile.Mode(),
 			Fsize:    chunked.Size,
-			Fname:    chunked.Name,
+			Fname:    path.Base(chunked.Name),
 			Dir:      gitFile.IsDir(),
 		}
 		if gitFile.IsDir() {

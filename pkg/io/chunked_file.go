@@ -38,8 +38,23 @@ type ChunkedFileFS struct {
 }
 
 func (fs *ChunkedFileFS) Prepare() {
+	fs.AddRoot()
 	for _, f := range fs.FS {
 		f.fs = fs
+	}
+}
+
+func (fs *ChunkedFileFS) AddRoot() {
+	fs.FS["/"] = &ChunkedFile{
+		Fstat: &ChunkedFileInfo{
+			Fsize:    4096,
+			Dir:      true,
+			Fname:    "/",
+			Fmode:    os.ModePerm,
+			FmodTime: time.Now().Add(-time.Hour),
+		},
+		Size: 4096,
+		Name: "/",
 	}
 }
 
@@ -49,7 +64,8 @@ func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error
 	for _, f := range fs.FS {
 		if strings.HasPrefix(f.Name, prefix) && f.Name != prefix {
 			path := strings.TrimPrefix(f.Name, prefix)
-			if strings.Contains(path, "/") {
+			// If there is a slash in 1+ position: exclude subdirs
+			if strings.Index(path, "/") > 0 {
 				continue
 			}
 

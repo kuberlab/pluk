@@ -37,6 +37,14 @@ func (api *API) webdav() http.HandlerFunc {
 			resp.Write([]byte(err.Error()))
 			return
 		}
+
+		// Init file system.
+		_, err := dataset.GetFSStructure(version)
+		if err != nil {
+			resp.WriteHeader(http.StatusNotFound)
+			resp.Write([]byte(err.Error()))
+		}
+
 		srv := &webdav.Handler{
 			Prefix:     fmt.Sprintf("/webdav/%v/%v/%v", workspace, name, version),
 			FileSystem: pluk_webdav.NewFS(dataset, version),
