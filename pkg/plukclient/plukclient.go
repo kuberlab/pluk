@@ -16,6 +16,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/api"
 	"github.com/kuberlab/pluk/pkg/datasets"
+	plukio "github.com/kuberlab/pluk/pkg/io"
 )
 
 type Client struct {
@@ -81,23 +82,6 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	return req, nil
 }
 
-func (c *Client) CheckChunk(hash string) (*api.CheckChunkResponse, error) {
-	u := fmt.Sprintf("/chunks/%v", hash)
-
-	req, err := c.NewRequest("GET", u, nil)
-	if err != nil {
-		return nil, err
-	}
-	res := new(api.CheckChunkResponse)
-	_, err = c.Do(req, res)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return res, err
-}
-
 func (c *Client) ListDatasets(workspace string) (*api.DataSetList, error) {
 	u := fmt.Sprintf("/datasets/%v", workspace)
 
@@ -145,6 +129,56 @@ func (c *Client) CommitFileStructure(structure datasets.FileStructure, workspace
 		return err
 	}
 	return nil
+}
+
+func (c *Client) CheckChunk(hash string) (*api.CheckChunkResponse, error) {
+	u := fmt.Sprintf("/chunks/%v", hash)
+
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	res := new(api.CheckChunkResponse)
+	_, err = c.Do(req, res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
+func (c *Client) DownloadChunk(hash string) (io.ReadCloser, error) {
+	u := fmt.Sprintf("/chunks/%v/download", hash)
+
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.Do(req, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Body, err
+}
+
+func (c *Client) GetFSStructure(workspace, name, version string) (*plukio.ChunkedFileFS, error) {
+	u := fmt.Sprintf("/datasets/%v/%v/versions/%v/fs", workspace, name, version)
+
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	fs := new(plukio.ChunkedFileFS)
+	_, err = c.Do(req, fs)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return fs, nil
 }
 
 func (c *Client) SaveChunk(hash string, data []byte) error {
@@ -215,7 +249,7 @@ func (c *Client) DeleteVersion(workspace, name, version string) error {
 // interface, the raw response body will be written to v, without attempting to
 // first decode it.
 func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
-	logrus.Debugf("[go-client] %v %v", req.Method, req.URL)
+	logrus.Debugf("[go-plukclient] %v %v", req.Method, req.URL)
 	resp, err := c.Client.Do(req)
 	if err != nil {
 		if e, ok := err.(*url.Error); ok {

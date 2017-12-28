@@ -14,7 +14,13 @@ import (
 )
 
 type ChunkedFileFS struct {
-	FS map[string]*ChunkedFile
+	FS map[string]*ChunkedFile `json:"fs"`
+}
+
+func (fs *ChunkedFileFS) Prepare() {
+	for _, f := range fs.FS {
+		f.fs = fs
+	}
 }
 
 func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error) {

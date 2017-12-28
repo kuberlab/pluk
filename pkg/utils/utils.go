@@ -101,4 +101,5 @@ func PrintEnvInfo() {
 	fmt.Printf("GIT_LOCAL_DIR = %q\n", GitLocalDir())
 	fmt.Printf("DATA_DIR = %q\n", DataDir())
 	fmt.Printf("AUTH_VALIDATION = %q\n", AuthValidationURL())
+	fmt.Printf("MASTERS = %q\n", Masters())
 }
