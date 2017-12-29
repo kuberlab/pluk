@@ -170,5 +170,8 @@ func (api *API) datasets(req *restful.Request, resp *restful.Response) {
 	for _, d := range sets {
 		ds.Datasets = append(ds.Datasets, &d.Dataset)
 	}
+	if len(ds.Datasets) == 0 {
+		ds.Datasets = make([]*types.Dataset, 0)
+	}
 	resp.WriteEntity(ds)
 }

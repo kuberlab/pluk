@@ -14,6 +14,7 @@ const (
 	InternalPrefix     = "/internal"
 	debug              = "DEBUG"
 	authValidationVar  = "AUTH_VALIDATION"
+	internalKeyVar     = "INTERNAL_KEY"
 	dataVar            = "DATA_DIR"
 	gitVar             = "GIT_BARE_DIR"
 	gitLocalVar        = "GIT_LOCAL_DIR"
@@ -70,6 +71,10 @@ func DataDir() string {
 
 func AuthValidationURL() string {
 	return os.Getenv(authValidationVar)
+}
+
+func InternalKey() string {
+	return os.Getenv(internalKeyVar)
 }
 
 func Masters() []string {

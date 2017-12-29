@@ -10,18 +10,23 @@ import (
 )
 
 type MultiMasterClient struct {
-	Masters []string
+	Masters     []string
+	InternalKey string
 }
 
 func NewMultiClient() plukio.PlukClient {
 	masters := utils.Masters()
-	return &MultiMasterClient{Masters: masters}
+	return &MultiMasterClient{Masters: masters, InternalKey: utils.InternalKey()}
+}
+
+func (c *MultiMasterClient) initBaseClient(baseURL string) (plukio.PlukClient, error) {
+	return NewClient(baseURL, &AuthOpts{InternalKey: c.InternalKey})
 }
 
 func (c *MultiMasterClient) ListDatasets(workspace string) (res *types.DataSetList, err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
-		cl, err = NewClient(base, nil)
+		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return nil, err
 		}
@@ -37,7 +42,7 @@ func (c *MultiMasterClient) ListDatasets(workspace string) (res *types.DataSetLi
 func (c *MultiMasterClient) ListVersions(workspace, datasetName string) (res *types.VersionList, err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
-		cl, err = NewClient(base, nil)
+		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return nil, err
 		}
@@ -53,7 +58,7 @@ func (c *MultiMasterClient) ListVersions(workspace, datasetName string) (res *ty
 func (c *MultiMasterClient) DownloadChunk(hash string) (reader io.ReadCloser, err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
-		cl, err = NewClient(base, nil)
+		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return nil, err
 		}
@@ -69,7 +74,7 @@ func (c *MultiMasterClient) DownloadChunk(hash string) (reader io.ReadCloser, er
 func (c *MultiMasterClient) GetFSStructure(workspace, name, version string) (fs *plukio.ChunkedFileFS, err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
-		cl, err = NewClient(base, nil)
+		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return nil, err
 		}
@@ -85,7 +90,7 @@ func (c *MultiMasterClient) GetFSStructure(workspace, name, version string) (fs 
 func (c *MultiMasterClient) DownloadDataset(workspace, name, version string, w io.Writer) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
-		cl, err = NewClient(base, nil)
+		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return err
 		}
@@ -101,7 +106,7 @@ func (c *MultiMasterClient) DownloadDataset(workspace, name, version string, w i
 func (c *MultiMasterClient) SaveChunk(hash string, data []byte) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
-		cl, err = NewClient(base, nil)
+		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return err
 		}
@@ -117,7 +122,7 @@ func (c *MultiMasterClient) SaveChunk(hash string, data []byte) (err error) {
 func (c *MultiMasterClient) SaveFileStructure(structure types.FileStructure, workspace, name, version string) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
-		cl, err = NewClient(base, nil)
+		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return err
 		}
@@ -133,7 +138,7 @@ func (c *MultiMasterClient) SaveFileStructure(structure types.FileStructure, wor
 func (c *MultiMasterClient) CheckChunk(hash string) (res *types.CheckChunkResponse, err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
-		cl, err = NewClient(base, nil)
+		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return nil, err
 		}
@@ -149,7 +154,7 @@ func (c *MultiMasterClient) CheckChunk(hash string) (res *types.CheckChunkRespon
 func (c *MultiMasterClient) DeleteDataset(workspace, name string) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
-		cl, err = NewClient(base, nil)
+		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return err
 		}
@@ -165,7 +170,7 @@ func (c *MultiMasterClient) DeleteDataset(workspace, name string) (err error) {
 func (c *MultiMasterClient) DeleteVersion(workspace, name, version string) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
-		cl, err = NewClient(base, nil)
+		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return err
 		}

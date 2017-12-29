@@ -27,8 +27,9 @@ type Client struct {
 }
 
 type AuthOpts struct {
-	Token  string
-	Cookie string
+	Token       string
+	Cookie      string
+	InternalKey string
 }
 
 func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
@@ -69,6 +70,9 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 		}
 		if c.auth.Token != "" {
 			req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", c.auth.Token))
+		}
+		if c.auth.InternalKey != "" {
+			req.Header.Set("Internal", c.auth.InternalKey)
 		}
 	}
 

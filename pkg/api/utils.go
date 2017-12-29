@@ -186,6 +186,12 @@ func GetQueryParamDateTime(req *restful.Request, name string, optional bool) *ti
 }
 
 func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *restful.FilterChain) {
+	internal := req.HeaderParameter("Internal")
+	if internal != "" && utils.InternalKey() == internal {
+		filter.ProcessFilter(req, resp)
+		return
+	}
+
 	authURL := utils.AuthValidationURL()
 	if authURL == "" {
 		filter.ProcessFilter(req, resp)
