@@ -115,7 +115,7 @@ func (c *Client) ListVersions(workspace, datasetName string) (*types.VersionList
 	return res, err
 }
 
-func (c *Client) CommitFileStructure(structure types.FileStructure, workspace, name, version string) error {
+func (c *Client) SaveFileStructure(structure types.FileStructure, workspace, name, version string) error {
 	u := fmt.Sprintf("/datasets/%v/%v/%v", workspace, name, version)
 
 	req, err := c.NewRequest("POST", u, structure)

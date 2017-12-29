@@ -3,6 +3,7 @@ package plukclient
 import (
 	"io"
 
+	"github.com/Sirupsen/logrus"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
@@ -106,25 +107,25 @@ func (c *MultiMasterClient) SaveChunk(hash string, data []byte) (err error) {
 		}
 		err = cl.SaveChunk(hash, data)
 		if err != nil {
-			continue
+			logrus.Errorf("Failed save chunk to %v", base)
 		}
-		return err
+		continue
 	}
 	return err
 }
 
-func (c *MultiMasterClient) CommitFileStructure(structure types.FileStructure, workspace, name, version string) (err error) {
+func (c *MultiMasterClient) SaveFileStructure(structure types.FileStructure, workspace, name, version string) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
 		cl, err = NewClient(base, nil)
 		if err != nil {
 			return err
 		}
-		err = cl.CommitFileStructure(structure, workspace, name, version)
+		err = cl.SaveFileStructure(structure, workspace, name, version)
 		if err != nil {
-			continue
+			logrus.Errorf("Failed save FS to %v", base)
 		}
-		return err
+		continue
 	}
 	return err
 }

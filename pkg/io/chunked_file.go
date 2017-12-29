@@ -21,11 +21,11 @@ import (
 type PlukClient interface {
 	ListDatasets(workspace string) (*types.DataSetList, error)
 	ListVersions(workspace, datasetName string) (*types.VersionList, error)
-	CommitFileStructure(structure types.FileStructure, workspace, name, version string) error
 	CheckChunk(hash string) (*types.CheckChunkResponse, error)
 	DownloadChunk(hash string) (io.ReadCloser, error)
 	SaveChunk(hash string, data []byte) error
 	GetFSStructure(workspace, name, version string) (*ChunkedFileFS, error)
+	SaveFileStructure(structure types.FileStructure, workspace, name, version string) error
 	DownloadDataset(workspace, name, version string, w io.Writer) error
 	DeleteDataset(workspace, name string) error
 	DeleteVersion(workspace, name, version string) error

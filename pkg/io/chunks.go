@@ -1,6 +1,7 @@
 package io
 
 import (
+	"bytes"
 	"crypto/sha512"
 	"fmt"
 	"io"
@@ -67,12 +68,24 @@ func SaveChunk(hash string, data io.ReadCloser) error {
 
 	defer file.Close()
 
-	written, err := io.Copy(file, data)
+	buf := bytes.NewBuffer([]byte{})
+	var written int64
+	var writer io.Writer = file
+	if utils.HasMasters() {
+		// If we have masters, then also write to buf in order to use it for further push.
+		writer = io.MultiWriter(writer, buf)
+	}
+	written, err = io.Copy(writer, data)
 	if err != nil {
 		return err
 	}
 	data.Close()
 
 	logrus.Debugf("Written %v bytes.", written)
+
+	if utils.HasMasters() {
+		// TODO: decide whether it can go in async
+		MasterClient.SaveChunk(hash, buf.Bytes())
+	}
 	return nil
 }

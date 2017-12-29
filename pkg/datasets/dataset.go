@@ -59,6 +59,11 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 	}
 	logrus.Infof("Created tag %v.", version)
 
+	if utils.HasMasters() {
+		// TODO: decide whether it can go in async
+		plukio.MasterClient.SaveFileStructure(structure, d.Workspace, d.Name, version)
+	}
+
 	return nil
 }
 

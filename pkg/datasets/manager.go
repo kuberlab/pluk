@@ -73,7 +73,6 @@ func (m *Manager) GetDataset(workspace, name string) *Dataset {
 
 func (m *Manager) NewDataset(workspace, name string) *Dataset {
 	ds := &Dataset{Dataset: types.Dataset{Name: name, Workspace: workspace}, git: m.git}
-	ds.InitRepo(true)
 	return ds
 }
 

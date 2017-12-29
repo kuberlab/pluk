@@ -83,7 +83,7 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	ws.Route(ws.POST("/chunks/{hash}").To(api.saveChunk))
 
 	// Save file structure for version.
-	ws.Route(ws.POST("/datasets/{workspace}/{name}/{version}").To(api.saveDataset))
+	ws.Route(ws.POST("/datasets/{workspace}/{name}/{version}").To(api.saveFS))
 	container.Add(ws)
 	return container
 }

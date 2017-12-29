@@ -55,6 +55,6 @@ func (cmd *datasetDeleteCmd) run() (err error) {
 		return nil
 	}
 
-	logrus.Infof("Dataset %v successfully deleted.")
+	logrus.Infof("Dataset %v successfully deleted.", cmd.name)
 	return
 }

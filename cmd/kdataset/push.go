@@ -141,7 +141,7 @@ func (cmd *pushCmd) run() error {
 
 	// finally, commit file structure.
 	logrus.Debugf("File structure: %v", structure)
-	if err = client.CommitFileStructure(structure, cmd.workspace, cmd.name, cmd.version); err != nil {
+	if err = client.SaveFileStructure(structure, cmd.workspace, cmd.name, cmd.version); err != nil {
 		logrus.Error(err)
 		return nil
 	}

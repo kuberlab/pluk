@@ -10,28 +10,6 @@ import (
 	"github.com/kuberlab/pluk/pkg/types"
 )
 
-func (api *API) saveDataset(req *restful.Request, resp *restful.Response) {
-	comment := req.HeaderParameter("Comment")
-	version := req.PathParameter("version")
-	name := req.PathParameter("name")
-	workspace := req.PathParameter("workspace")
-
-	structure := types.FileStructure{}
-	err := req.ReadEntity(&structure)
-	if err != nil {
-		WriteStatusError(resp, http.StatusBadRequest, err)
-	}
-
-	dataset := api.ds.NewDataset(workspace, name)
-	err = dataset.Save(structure, version, comment)
-	if err != nil {
-		WriteStatusError(resp, http.StatusInternalServerError, err)
-		return
-	}
-
-	resp.Write([]byte("Ok!\n"))
-}
-
 func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 	version := req.PathParameter("version")
 	name := req.PathParameter("name")
@@ -134,6 +112,32 @@ func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
 
 	if err := plukio.SaveChunk(hash, req.Request.Body); err != nil {
+		WriteStatusError(resp, http.StatusInternalServerError, err)
+		return
+	}
+
+	resp.Write([]byte("Ok!\n"))
+}
+
+func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
+	comment := req.HeaderParameter("Comment")
+	version := req.PathParameter("version")
+	name := req.PathParameter("name")
+	workspace := req.PathParameter("workspace")
+
+	structure := types.FileStructure{}
+	err := req.ReadEntity(&structure)
+	if err != nil {
+		WriteStatusError(resp, http.StatusBadRequest, err)
+	}
+
+	dataset := api.ds.NewDataset(workspace, name)
+	if err = dataset.InitRepo(true); err != nil {
+		WriteStatusError(resp, http.StatusInternalServerError, err)
+		return
+	}
+	err = dataset.Save(structure, version, comment)
+	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
