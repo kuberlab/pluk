@@ -20,14 +20,14 @@ imports:
 - name: github.com/jinzhu/inflection
   version: 1c35d901db3da928c72a72d8458480cc9ade058f
 - name: github.com/kuberlab/lib
-  version: 48bdb9bd71d100a534685fbdaca70e55df554907
+  version: a61141e1d2da1e591cc66dd731aebdba0e8c8e86
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/errors
   - pkg/types
   - pkg/utils
 - name: github.com/kuberlab/pacak
-  version: f4948643f5b94957556d508cd86bb13d80c7b7a1
+  version: b3825f31a2b8c9c5e7af790844ee6f2fe0c061aa
   repo: ssh://git@github.com/kuberlab/pacak.git
   subpackages:
   - pkg/errors
