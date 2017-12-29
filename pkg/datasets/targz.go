@@ -28,7 +28,7 @@ func WriteTarGz(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 	//}
 	for _, f := range fs.FS {
 		fi := f.Fstat
-		name := fi.Name()
+		name := f.Name
 		name = strings.TrimPrefix(name, "/")
 		if strings.HasPrefix(name, ".") {
 			continue
