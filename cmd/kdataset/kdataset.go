@@ -8,6 +8,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/cmd/kdataset/config"
 	"github.com/spf13/cobra"
+	"strings"
 )
 
 const (
@@ -25,7 +26,7 @@ var (
 func initConfig(cmd *cobra.Command, args []string) error {
 	initLogging()
 	// Expand the path
-	path, err := exec.Command("sh", "-c", fmt.Sprintf("echo -n %v", configPath)).Output()
+	path, err := exec.Command("sh", "-c", fmt.Sprintf("echo %v", configPath)).Output()
 	if err != nil {
 		return err
 	}
@@ -38,16 +39,16 @@ func initConfig(cmd *cobra.Command, args []string) error {
 			config.Config.PlukURL = defaultBaseURL
 		}
 	}
-
-	_, err = os.Stat(string(path))
+	upath := strings.TrimSuffix(string(path),"\n")
+	_, err = os.Stat(upath)
 	if err != nil && os.IsNotExist(err) {
-		logrus.Error(err)
+		logrus.Errorln(err)
 		config.Config = &config.DealerConfig{}
 		overridePlukURL()
 		return nil
 	}
 
-	err = config.InitConfig(string(path))
+	err = config.InitConfig(upath)
 	if err != nil {
 		return err
 	}
