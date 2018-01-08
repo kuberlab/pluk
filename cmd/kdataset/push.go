@@ -13,6 +13,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/spf13/cobra"
+	"gopkg.in/cheggaaa/pb.v1"
 )
 
 type pushCmd struct {
@@ -91,6 +92,27 @@ func (cmd *pushCmd) run() error {
 	}
 
 	logrus.Debug("Run push...")
+	var totalSize int64 = 0
+
+	// Populate all files size.
+	err = filepath.Walk(cwd, func(path string, f os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if strings.HasPrefix(f.Name(), ".") {
+			return nil
+		}
+		if f.IsDir() {
+			return nil
+		}
+		totalSize += f.Size()
+		return nil
+	})
+
+	bar := pb.New64(totalSize).SetUnits(pb.U_BYTES)
+	bar.SetMaxWidth(100)
+	bar.Start()
+
 	err = filepath.Walk(cwd, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -129,12 +151,14 @@ func (cmd *pushCmd) run() error {
 			}
 			hashed.Size += uint64(len(chunkData))
 			hashed.Hashes = append(hashed.Hashes, hash)
+			bar.Add(len(chunkData))
 		}
 		logrus.Debugf("Whole file size = %v", hashed.Size)
 		structure.Files = append(structure.Files, hashed)
 		return nil
 	})
 	if err != nil {
+		bar.Finish()
 		logrus.Error(err)
 		return nil
 	}
@@ -142,8 +166,12 @@ func (cmd *pushCmd) run() error {
 	// finally, commit file structure.
 	logrus.Debugf("File structure: %v", structure)
 	if err = client.SaveFileStructure(structure, cmd.workspace, cmd.name, cmd.version); err != nil {
+		bar.Finish()
 		logrus.Error(err)
 		return nil
+	}
+	if !bar.IsFinished() {
+		bar.Finish()
 	}
 	logrus.Info("Successfully uploaded.")
 

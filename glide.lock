@@ -1,5 +1,5 @@
-hash: 6480c5bacb728e13b949135e87846de0051d90145f3a3deb128447d8474a01c0
-updated: 2018-01-08T13:55:11.62238935+03:00
+hash: b2a8a3a0fa9abfc85dd70d3e93fe8c7030ee0db40962b30f54060df443cab625
+updated: 2018-01-08T14:23:47.64650388+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -35,6 +35,8 @@ imports:
   - pkg/process
   - pkg/sync
   - pkg/util
+- name: github.com/mattn/go-runewidth
+  version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/mcuadros/go-version
   version: 88e56e02bea1c203c99222c365fa52a69996ccac
 - name: github.com/patrickmn/go-cache
@@ -55,8 +57,14 @@ imports:
   - context
   - webdav
   - webdav/internal/xml
+- name: golang.org/x/sys
+  version: 1792d66dc88e503d3cb2400578221cdf1f7fe26f
+  subpackages:
+  - unix
 - name: gopkg.in/cheggaaa/pb.v1
   version: 18d384da9bdc1e5a08fc2a62a494c321d9ae74ea
+- name: gopkg.in/cheggaaa/pb.v2
+  version: c112833d014c77e8bde723fd0158e3156951639f
 - name: gopkg.in/robfig/cron.v2
   version: be2e0b0deed5a68ffee390b4583a13aff8321535
 - name: gopkg.in/yaml.v2
