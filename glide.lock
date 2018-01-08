@@ -1,5 +1,5 @@
-hash: 9a0f0ec14b32aaa9ace4238d912417502a37b1c88c9a968b6b50b74853d51fbc
-updated: 2017-12-25T15:35:45.511643356+03:00
+hash: 6480c5bacb728e13b949135e87846de0051d90145f3a3deb128447d8474a01c0
+updated: 2018-01-08T13:55:11.62238935+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -20,14 +20,14 @@ imports:
 - name: github.com/jinzhu/inflection
   version: 1c35d901db3da928c72a72d8458480cc9ade058f
 - name: github.com/kuberlab/lib
-  version: a61141e1d2da1e591cc66dd731aebdba0e8c8e86
+  version: 48bdb9bd71d100a534685fbdaca70e55df554907
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/errors
   - pkg/types
   - pkg/utils
 - name: github.com/kuberlab/pacak
-  version: b3825f31a2b8c9c5e7af790844ee6f2fe0c061aa
+  version: f4948643f5b94957556d508cd86bb13d80c7b7a1
   repo: ssh://git@github.com/kuberlab/pacak.git
   subpackages:
   - pkg/errors
@@ -42,7 +42,7 @@ imports:
 - name: github.com/pborman/uuid
   version: e790cca94e6cc75c7064b1332e63811d4aae1a53
 - name: github.com/Sirupsen/logrus
-  version: 3ec0642a7fb6488f65b06f9040adc67e3990296a
+  version: 55eb11d21d2a31a3cc93838241d04800f52e823d
 - name: github.com/spf13/cobra
   version: 7be4beda01ec05d0b93d80b3facd2b6f44080d94
 - name: github.com/spf13/pflag
@@ -50,15 +50,13 @@ imports:
 - name: github.com/Unknwon/com
   version: 7677a1d7c1137cd3dd5ba7a076d0c898a1ef4520
 - name: golang.org/x/net
-  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
+  version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
   subpackages:
   - context
   - webdav
   - webdav/internal/xml
-- name: golang.org/x/sys
-  version: 7ddbeae9ae08c6a06a59597f0c9edbc5ff2444ce
-  subpackages:
-  - unix
+- name: gopkg.in/cheggaaa/pb.v1
+  version: 18d384da9bdc1e5a08fc2a62a494c321d9ae74ea
 - name: gopkg.in/robfig/cron.v2
   version: be2e0b0deed5a68ffee390b4583a13aff8321535
 - name: gopkg.in/yaml.v2
