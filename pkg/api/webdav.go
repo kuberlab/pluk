@@ -17,6 +17,14 @@ func (api *API) webdav() http.HandlerFunc {
 		name := vars["name"]
 		workspace := vars["workspace"]
 
+		user, pass, _ := req.BasicAuth()
+		if user != "" && pass != "" && false {
+			resp.Header().Set("WWW-Authenticate", `Basic realm="enter password"`)
+			resp.WriteHeader(401)
+			resp.Write([]byte("Unauthorized.\n"))
+			return
+		}
+
 		key := workspace + name + version
 		dav := api.cache.GetRaw(key)
 		if dav != nil {
