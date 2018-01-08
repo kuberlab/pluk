@@ -8,6 +8,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/cmd/kdataset/config"
 	"github.com/spf13/cobra"
+	"net/url"
 	"strings"
 )
 
@@ -21,6 +22,7 @@ var (
 	configPath string
 	baseURL    string
 	logLevel   string
+	debug      bool
 )
 
 func initConfig(cmd *cobra.Command, args []string) error {
@@ -35,11 +37,20 @@ func initConfig(cmd *cobra.Command, args []string) error {
 		if baseURL != "" {
 			config.Config.PlukURL = baseURL
 		}
+		if config.Config.BaseURL != "" && config.Config.PlukURL == "" {
+			u, err := url.Parse(config.Config.BaseURL)
+			if err != nil {
+				config.Config.PlukURL = defaultBaseURL
+			} else {
+				config.Config.PlukURL = fmt.Sprintf("%v://%v/pluk/v1", u.Scheme, u.Host)
+			}
+		}
 		if baseURL == "" && config.Config.PlukURL == "" {
 			config.Config.PlukURL = defaultBaseURL
 		}
+
 	}
-	upath := strings.TrimSuffix(string(path),"\n")
+	upath := strings.TrimSuffix(string(path), "\n")
 	_, err = os.Stat(upath)
 	if err != nil && os.IsNotExist(err) {
 		logrus.Errorln(err)
@@ -60,6 +71,9 @@ func initConfig(cmd *cobra.Command, args []string) error {
 func initLogging() {
 	logrus.SetFormatter(&logrus.TextFormatter{TimestampFormat: "2006-01-02 15:04:05", FullTimestamp: true})
 
+	if debug {
+		logLevel = "debug"
+	}
 	lvl, err := logrus.ParseLevel(logLevel)
 	if err != nil {
 		logrus.SetLevel(logrus.DebugLevel)
@@ -79,6 +93,7 @@ func newRootCmd() *cobra.Command {
 	p := rootCmd.PersistentFlags()
 	// Declare common arguments.
 	p.StringVar(&logLevel, "log-level", defaultLogLevel, "Logging level. One of (debug, info, warning, error)")
+	p.BoolVarP(&debug, "debug", "", false, "Enable debug level (shortcut for --log-level=debug).")
 	p.StringVarP(&configPath, "config", "", defaultConfigPath, "Path to config file")
 	p.StringVar(&baseURL, "url", "", "Base url to pluk.")
 

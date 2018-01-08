@@ -10,7 +10,7 @@ import (
 
 const (
 	ApiVersion         = "v1"
-	ApiPrefix          = "/" + ApiVersion
+	ApiPrefix          = "/pluk/" + ApiVersion
 	InternalPrefix     = "/internal"
 	debug              = "DEBUG"
 	authValidationVar  = "AUTH_VALIDATION"
