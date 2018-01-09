@@ -50,7 +50,7 @@ func GetChunk(hash string) (io.ReadCloser, error) {
 	return os.Open(filePath)
 }
 
-func SaveChunk(hash string, data io.ReadCloser) error {
+func SaveChunk(hash string, data io.ReadCloser, sendToMaster bool) error {
 	filePath := utils.GetHashedFilename(hash)
 
 	splitted := strings.Split(filePath, "/")
@@ -83,7 +83,7 @@ func SaveChunk(hash string, data io.ReadCloser) error {
 
 	logrus.Debugf("Written %v bytes.", written)
 
-	if utils.HasMasters() {
+	if utils.HasMasters() && sendToMaster {
 		// TODO: decide whether it can go in async
 		MasterClient.SaveChunk(hash, buf.Bytes())
 	}

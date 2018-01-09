@@ -6,9 +6,67 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+	plukio "github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/utils"
 	pluk_webdav "github.com/kuberlab/pluk/pkg/webdav"
 	"golang.org/x/net/webdav"
 )
+
+func (api *API) webdavAuth() http.HandlerFunc {
+	writeUnauthorized := func(resp http.ResponseWriter) {
+		resp.Header().Set("WWW-Authenticate", `Basic realm="enter password"`)
+		resp.WriteHeader(http.StatusUnauthorized)
+		resp.Write([]byte("Unauthorized.\n"))
+	}
+
+	return func(resp http.ResponseWriter, req *http.Request) {
+		user, pass, _ := req.BasicAuth()
+		key := user + pass
+
+		authURL := utils.AuthValidationURL()
+		if authURL == "" && !utils.HasMasters() {
+			// Skip.
+			api.webdav().ServeHTTP(resp, req)
+			return
+		}
+
+		if api.cache.Get(key) {
+			api.webdav().ServeHTTP(resp, req)
+			return
+		}
+
+		if authURL != "" {
+			authHeader := fmt.Sprintf("Bearer %v", pass)
+			request, _ := http.NewRequest("GET", authURL, nil)
+			//request.Header.Add("Cookie", cookie)
+			request.Header.Add("Authorization", authHeader)
+
+			logrus.Debugf("GET %v", request.URL)
+			r, err := api.client.Do(request)
+			if err != nil {
+				http.Error(resp, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			logrus.Debugf("Got %v", r.StatusCode)
+			if r.StatusCode >= 400 {
+				logrus.Error(fmt.Sprintf("Invalid auth to %v", authURL))
+				writeUnauthorized(resp)
+				return
+			}
+		} else if utils.HasMasters() {
+			yes, err := plukio.MasterClient.WebdavAuth(user, pass, req.URL.Path)
+			if err != nil || !yes {
+				logrus.Errorf("Invalid auth to master: %v", err)
+				writeUnauthorized(resp)
+				return
+			}
+		}
+
+		api.cache.Set(key, true)
+
+		api.webdav().ServeHTTP(resp, req)
+	}
+}
 
 func (api *API) webdav() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
@@ -16,14 +74,6 @@ func (api *API) webdav() http.HandlerFunc {
 		version := vars["version"]
 		name := vars["name"]
 		workspace := vars["workspace"]
-
-		user, pass, _ := req.BasicAuth()
-		if user != "" && pass != "" && false {
-			resp.Header().Set("WWW-Authenticate", `Basic realm="enter password"`)
-			resp.WriteHeader(401)
-			resp.Write([]byte("Unauthorized.\n"))
-			return
-		}
 
 		key := workspace + name + version
 		dav := api.cache.GetRaw(key)

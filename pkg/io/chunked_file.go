@@ -29,6 +29,7 @@ type PlukClient interface {
 	DownloadDataset(workspace, name, version string, w io.Writer) error
 	DeleteDataset(workspace, name string) error
 	DeleteVersion(workspace, name, version string) error
+	WebdavAuth(user, pass, path string) (bool, error)
 }
 
 var MasterClient PlukClient
@@ -165,7 +166,7 @@ func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, er
 			if err != nil {
 				return nil, err
 			}
-			if err = SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data))); err != nil {
+			if err = SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false); err != nil {
 				return nil, err
 			}
 			return ioutil.NopCloser(bytes.NewBuffer(data)), nil

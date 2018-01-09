@@ -182,3 +182,19 @@ func (c *MultiMasterClient) DeleteVersion(workspace, name, version string) (err 
 	}
 	return err
 }
+
+func (c *MultiMasterClient) WebdavAuth(user, pass, path string) (yes bool, err error) {
+	var cl plukio.PlukClient
+	for _, base := range c.Masters {
+		cl, err = c.initBaseClient(base)
+		if err != nil {
+			return false, err
+		}
+		yes, err = cl.WebdavAuth(user, pass, path)
+		if err != nil {
+			continue
+		}
+		return yes, err
+	}
+	return yes, err
+}

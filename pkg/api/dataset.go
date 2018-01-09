@@ -111,7 +111,7 @@ func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
 func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
 
-	if err := plukio.SaveChunk(hash, req.Request.Body); err != nil {
+	if err := plukio.SaveChunk(hash, req.Request.Body, true); err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}

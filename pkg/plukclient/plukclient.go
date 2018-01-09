@@ -251,6 +251,23 @@ func (c *Client) DeleteVersion(workspace, name, version string) error {
 	return nil
 }
 
+func (c *Client) WebdavAuth(user, pass, path string) (bool, error) {
+	u := path
+
+	req, err := c.NewRequest("OPTIONS", u, nil)
+	if err != nil {
+		return false, err
+	}
+	req.URL.Path = u
+	req.SetBasicAuth(user, pass)
+
+	_, err = c.Do(req, nil)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // Do sends an API request and returns the API response.  The API response is
 // JSON decoded and stored in the value pointed to by v, or returned as an
 // error if an API error has occurred.  If v implements the io.Writer
