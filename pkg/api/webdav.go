@@ -10,6 +10,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/utils"
 	pluk_webdav "github.com/kuberlab/pluk/pkg/webdav"
 	"golang.org/x/net/webdav"
+	"net/url"
 )
 
 func (api *API) webdavAuth() http.HandlerFunc {
@@ -35,13 +36,19 @@ func (api *API) webdavAuth() http.HandlerFunc {
 			return
 		}
 
-		if authURL != "" {
-			authHeader := fmt.Sprintf("Bearer %v", pass)
-			request, _ := http.NewRequest("GET", authURL, nil)
-			//request.Header.Add("Cookie", cookie)
-			request.Header.Add("Authorization", authHeader)
+		vars := mux.Vars(req)
+		workspace := vars["workspace"]
 
-			logrus.Debugf("GET %v", request.URL)
+		if authURL != "" {
+			u, err := url.Parse(authURL)
+			if err != nil {
+				http.Error(resp, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			workspaceValidationUrl := fmt.Sprintf("%v://%v/api/v0.2/workspace/%v/secret/%v", u.Scheme, u.Host, workspace, pass)
+			request, _ := http.NewRequest("GET", workspaceValidationUrl, nil)
+
+			logrus.Debugf("GET %v://%v/[redacted]", request.URL.Scheme, request.URL.Host)
 			r, err := api.client.Do(request)
 			if err != nil {
 				http.Error(resp, err.Error(), http.StatusInternalServerError)
@@ -49,7 +56,7 @@ func (api *API) webdavAuth() http.HandlerFunc {
 			}
 			logrus.Debugf("Got %v", r.StatusCode)
 			if r.StatusCode >= 400 {
-				logrus.Error(fmt.Sprintf("Invalid auth to %v", authURL))
+				logrus.Error(fmt.Sprintf("Invalid auth to %v://%v/[redacted]", request.URL.Scheme, request.URL.Host))
 				writeUnauthorized(resp)
 				return
 			}
