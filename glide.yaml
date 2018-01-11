@@ -29,3 +29,4 @@ import:
   version: 1792d66dc88e503d3cb2400578221cdf1f7fe26f
   subpackages:
   - unix
+- package: github.com/Masterminds/semver

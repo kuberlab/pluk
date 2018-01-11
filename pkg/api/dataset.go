@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/Masterminds/semver"
 	"github.com/emicklei/go-restful"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
@@ -129,6 +130,13 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	err := req.ReadEntity(&structure)
 	if err != nil {
 		WriteStatusError(resp, http.StatusBadRequest, err)
+		return
+	}
+
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		WriteStatusError(resp, http.StatusBadRequest, fmt.Errorf("%v: %v", version, err.Error()))
+		return
 	}
 
 	dataset := api.ds.NewDataset(workspace, name)
@@ -136,7 +144,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
-	err = dataset.Save(structure, version, comment)
+	err = dataset.Save(structure, v.String(), comment)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return

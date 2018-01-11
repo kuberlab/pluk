@@ -1,5 +1,5 @@
-hash: b2a8a3a0fa9abfc85dd70d3e93fe8c7030ee0db40962b30f54060df443cab625
-updated: 2018-01-08T14:23:47.64650388+03:00
+hash: 107fd0e6697a13f599c990c81805325d6adc57040aad72fc0e89550d7f762c4e
+updated: 2018-01-11T15:00:58.471927294+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -20,14 +20,14 @@ imports:
 - name: github.com/jinzhu/inflection
   version: 1c35d901db3da928c72a72d8458480cc9ade058f
 - name: github.com/kuberlab/lib
-  version: 48bdb9bd71d100a534685fbdaca70e55df554907
+  version: fe1fb57f05d441da7bfde5bf0eb7a7de730c9a12
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/errors
   - pkg/types
   - pkg/utils
 - name: github.com/kuberlab/pacak
-  version: f4948643f5b94957556d508cd86bb13d80c7b7a1
+  version: 1eec0ecf62138c4b6294f4f9f3edf402296eb84f
   repo: ssh://git@github.com/kuberlab/pacak.git
   subpackages:
   - pkg/errors
@@ -35,6 +35,8 @@ imports:
   - pkg/process
   - pkg/sync
   - pkg/util
+- name: github.com/Masterminds/semver
+  version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/mattn/go-runewidth
   version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/mcuadros/go-version
@@ -44,7 +46,7 @@ imports:
 - name: github.com/pborman/uuid
   version: e790cca94e6cc75c7064b1332e63811d4aae1a53
 - name: github.com/Sirupsen/logrus
-  version: 55eb11d21d2a31a3cc93838241d04800f52e823d
+  version: 3ec0642a7fb6488f65b06f9040adc67e3990296a
 - name: github.com/spf13/cobra
   version: 7be4beda01ec05d0b93d80b3facd2b6f44080d94
 - name: github.com/spf13/pflag
@@ -52,7 +54,7 @@ imports:
 - name: github.com/Unknwon/com
   version: 7677a1d7c1137cd3dd5ba7a076d0c898a1ef4520
 - name: golang.org/x/net
-  version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
+  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
   - context
   - webdav
