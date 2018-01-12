@@ -15,15 +15,21 @@ docker run -it --rm kuberlab/pluk:latest
 
 ### Using this git repo
 
-Prerequisites:
- * git
- * go (1.7/1.8/1.9)
- * golang-glide (see https://github.com/Masterminds/glide or just run `curl https://glide.sh/get | sh` to install)
+**Prerequisites:**
 
-* clone repository
+   * git
+   * go (1.7/1.8/1.9)
+   * golang-glide (see https://github.com/Masterminds/glide or just run `curl https://glide.sh/get | sh` to install)
+
+**Installation steps:**
+
+* clone the repository:
 * run `glide install -v`
 * run `go install -v ./...`
 * binaries are saved in `$GOPATH/bin` and named **pluk** and **kdataset**
+
+**Note**: Paths marked as env variables `GIT_BARE_DIR`,`GIT_LOCAL_DIR` and `DATA_DIR`
+ (by default `/git`, `/git-local` and `/data` accordingly, see below) must be available for write.
 
 ## Configuration variables
 
@@ -51,9 +57,27 @@ Once you have installed CLI, you will have `kdataset` entry in you `PATH` so it 
 To see the help, type `kdataset --help`.
 
 `kdataset` provides the following commands:
- * `kdataset push`
- * `kdataset pull`
- * `kdataset dataset-list`
- * `kdataset version-list`
- * `kdataset dataset-delete`
- * `kdataset version-delete`
+ * `kdataset push <workspace> <dataset-name>:<version>`
+ * `kdataset pull <workspace> <dataset-name>:<version>`
+ * `kdataset dataset-list <workspace>`
+ * `kdataset version-list <workspace> <dataset-name>`
+ * `kdataset dataset-delete <workspace> <dataset-name>`
+ * `kdataset version-delete <workspace> <dataset-name>:<version>`
+
+### CLI Configuration
+
+In order to pass authentication on server and get the right pluk url, there must be a config file located at `~/.kuberlab/config`
+by default. If a config file doesn't exist, it needs to be created. It contains simple yaml with the following values:
+
+```yaml
+base_url: https://go.kuberlab.io/api/v0.2
+token: <your-user-token>
+# pluk_url: https://go.kuberlab.io/pluk/v1 (optional, need in case you want to use another pluk instance)
+```
+
+By default, Pluk URL is calculated automatically using `base_url` from yaml config. Also, pluk url can be passed to CLI via:
+* config value `pluk_url`
+* `--url` parameter of `kdataset` CLI, e.g. `kdataset --url http://host:port/pluk/v1 push workspace dataset:1.0.0`
+
+**Note**: `--url` parameter takes precedence over config value.
+
