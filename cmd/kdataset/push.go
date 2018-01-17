@@ -183,6 +183,10 @@ func (cmd *pushCmd) run() error {
 		structure.Files = append(structure.Files, hashed)
 		return nil
 	})
+
+	// Wait for all.
+	sem.Acquire(ctx, cmd.concurrency)
+
 	if err != nil {
 		bar.Finish()
 		logrus.Error(err)
