@@ -1,5 +1,5 @@
-hash: 107fd0e6697a13f599c990c81805325d6adc57040aad72fc0e89550d7f762c4e
-updated: 2018-01-11T15:00:58.471927294+03:00
+hash: 9d35dd122cdc61f55903a31d2d3e8aa68ad1153b334373c9d587180877e10fab
+updated: 2018-01-17T16:28:46.06399065+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -20,7 +20,7 @@ imports:
 - name: github.com/jinzhu/inflection
   version: 1c35d901db3da928c72a72d8458480cc9ade058f
 - name: github.com/kuberlab/lib
-  version: fe1fb57f05d441da7bfde5bf0eb7a7de730c9a12
+  version: 7cc13f864e65f7d02f2f0bacef3f55c1170cd502
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/errors
@@ -59,12 +59,16 @@ imports:
   - context
   - webdav
   - webdav/internal/xml
+- name: golang.org/x/sync
+  version: fd80eb99c8f653c847d294a001bdf2a3a6f768f5
+  subpackages:
+  - semaphore
 - name: golang.org/x/sys
   version: 1792d66dc88e503d3cb2400578221cdf1f7fe26f
   subpackages:
   - unix
 - name: gopkg.in/cheggaaa/pb.v1
-  version: 18d384da9bdc1e5a08fc2a62a494c321d9ae74ea
+  version: 43d64de27312b32812ca7e994fa0bb03ccf08fdf
 - name: gopkg.in/cheggaaa/pb.v2
   version: c112833d014c77e8bde723fd0158e3156951639f
 - name: gopkg.in/robfig/cron.v2

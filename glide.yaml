@@ -30,3 +30,4 @@ import:
   subpackages:
   - unix
 - package: github.com/Masterminds/semver
+- package: golang.org/x/sync/semaphore

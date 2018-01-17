@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
+
+	"gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/cmd/kdataset/config"
@@ -13,14 +18,15 @@ import (
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/spf13/cobra"
-	"gopkg.in/cheggaaa/pb.v1"
+	"golang.org/x/sync/semaphore"
 )
 
 type pushCmd struct {
-	workspace string
-	name      string
-	version   string
-	chunkSize int
+	workspace   string
+	name        string
+	version     string
+	chunkSize   int
+	concurrency int64
 }
 
 func NewPushCmd() *cobra.Command {
@@ -55,11 +61,19 @@ func NewPushCmd() *cobra.Command {
 		10485760,
 		"Chunk-size for scanning",
 	)
+	f.Int64VarP(
+		&push.concurrency,
+		"concurrency",
+		"c",
+		int64(runtime.NumCPU()),
+		"Number of concurrent request to server.",
+	)
 
 	return cmd
 }
 
 func (cmd *pushCmd) run() error {
+	logrus.Debugf("Concurrency is set to %v.", cmd.concurrency)
 	cwd, err := os.Getwd()
 	if err != nil {
 		logrus.Error(err)
@@ -76,20 +90,6 @@ func (cmd *pushCmd) run() error {
 	}
 
 	structure := types.FileStructure{Files: make([]*types.HashedFile, 0)}
-
-	checkAndUpload := func(chunkData []byte, hash string) error {
-		resp, err := client.CheckChunk(hash)
-		if err != nil {
-			return err
-		}
-		if !resp.Exists {
-			// Upload chunk.
-			if err = client.SaveChunk(hash, chunkData); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
 
 	logrus.Debug("Run push...")
 	var totalSize int64 = 0
@@ -109,9 +109,34 @@ func (cmd *pushCmd) run() error {
 		return nil
 	})
 
+	sem := semaphore.NewWeighted(cmd.concurrency)
+	lock := &sync.RWMutex{}
+	ctx := context.TODO()
 	bar := pb.New64(totalSize).SetUnits(pb.U_BYTES)
 	bar.SetMaxWidth(100)
 	bar.Start()
+
+	checkAndUpload := func(chunkData []byte, hash string) error {
+		defer func() {
+			lock.Lock()
+			bar.Add(len(chunkData))
+			lock.Unlock()
+			sem.Release(1)
+		}()
+		resp, err := client.CheckChunk(hash)
+		if err != nil {
+			logrus.Errorf("Failed to check chunk: %v", err)
+			os.Exit(1)
+		}
+		if !resp.Exists {
+			// Upload chunk.
+			if err = client.SaveChunk(hash, chunkData); err != nil {
+				logrus.Errorf("Failed to upload chunk: %v", err)
+				os.Exit(1)
+			}
+		}
+		return nil
+	}
 
 	err = filepath.Walk(cwd, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
@@ -146,12 +171,13 @@ func (cmd *pushCmd) run() error {
 			if len(chunkData) == 0 {
 				break
 			}
-			if uploadError := checkAndUpload(chunkData, hash); uploadError != nil {
-				return uploadError
-			}
+
+			sem.Acquire(ctx, 1)
+			go checkAndUpload(chunkData, hash)
+
 			hashed.Size += uint64(len(chunkData))
 			hashed.Hashes = append(hashed.Hashes, hash)
-			bar.Add(len(chunkData))
+
 		}
 		logrus.Debugf("Whole file size = %v", hashed.Size)
 		structure.Files = append(structure.Files, hashed)
