@@ -27,7 +27,7 @@ imports:
   - pkg/types
   - pkg/utils
 - name: github.com/kuberlab/pacak
-  version: 1eec0ecf62138c4b6294f4f9f3edf402296eb84f
+  version: d3e16937f070ef9d3e9ab15740e0a0afe8095e51
   repo: ssh://git@github.com/kuberlab/pacak.git
   subpackages:
   - pkg/errors
