@@ -61,14 +61,20 @@ func (fs *ChunkedFileFS) AddRoot() {
 
 func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error) {
 	// filter infos by prefix.
+	if !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+	}
+	//logrus.Debugf("Search by prefix %v", prefix)
 	res := make([]os.FileInfo, 0)
 	for _, f := range fs.FS {
 		if strings.HasPrefix(f.Name, prefix) && f.Name != prefix {
 			path := strings.TrimPrefix(f.Name, prefix)
 			// If there is a slash in 1+ position: exclude subdirs
+			//logrus.Debugf("path = %v, index = %v", path, strings.Index(strings.TrimPrefix(path, "/"), "/"))
 			if strings.Index(strings.TrimPrefix(path, "/"), "/") > 0 {
 				continue
 			}
+			//logrus.Debugf("Include %v [name=%v]", f.Name, f.Fstat.Name())
 
 			res = append(res, f.Fstat)
 		}
