@@ -107,6 +107,7 @@ func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
 	}
 
 	io.Copy(resp, file)
+	file.Close()
 }
 
 func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {

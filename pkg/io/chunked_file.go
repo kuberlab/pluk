@@ -38,6 +38,12 @@ type ChunkedFileFS struct {
 	FS map[string]*ChunkedFile `json:"fs"`
 }
 
+type Dir struct {
+}
+
+type File struct {
+}
+
 func (fs *ChunkedFileFS) Prepare() {
 	fs.AddRoot()
 	for _, f := range fs.FS {

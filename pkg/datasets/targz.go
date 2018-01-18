@@ -69,6 +69,7 @@ func WriteTarGz(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 			}
 			resp.Flush()
 		}
+		f.Close()
 	}
 
 	return nil
