@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
@@ -10,7 +11,6 @@ import (
 	"github.com/kuberlab/pluk/pkg/utils"
 	pluk_webdav "github.com/kuberlab/pluk/pkg/webdav"
 	"golang.org/x/net/webdav"
-	"net/url"
 )
 
 func (api *API) webdavAuth() http.HandlerFunc {
@@ -104,11 +104,13 @@ func (api *API) webdav() http.HandlerFunc {
 		}
 
 		// Init file system.
-		_, err := dataset.GetFSStructure(version)
+		fs, err := api.getFS(dataset, version)
 		if err != nil {
 			resp.WriteHeader(http.StatusNotFound)
 			resp.Write([]byte(err.Error()))
+			return
 		}
+		dataset.FS = fs
 
 		srv := &webdav.Handler{
 			Prefix:     fmt.Sprintf("/webdav/%v/%v/%v", workspace, name, version),

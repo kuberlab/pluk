@@ -19,6 +19,7 @@ type API struct {
 	gitInterface pacakimpl.GitInterface
 	ds           *datasets.Manager
 	cache        *utils.RequestCache
+	fsCache      *utils.RequestCache
 	client       *http.Client
 }
 
@@ -30,6 +31,7 @@ func Start() {
 	api := &API{
 		gitInterface: gitIface,
 		cache:        utils.NewRequestCache(),
+		fsCache:      utils.NewRequestCache(),
 		client:       &http.Client{Timeout: time.Minute},
 		ds:           datasets.NewManager(gitIface),
 	}

@@ -2,13 +2,16 @@ package io
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -16,6 +19,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 	"golang.org/x/net/webdav"
+	"golang.org/x/sync/semaphore"
 )
 
 type PlukClient interface {
@@ -35,13 +39,52 @@ type PlukClient interface {
 var MasterClient PlukClient
 
 type ChunkedFileFS struct {
-	FS map[string]*ChunkedFile `json:"fs"`
+	lock *sync.RWMutex
+	FS   map[string]*ChunkedFile `json:"fs"`
 }
 
 type Dir struct {
 }
 
 type File struct {
+}
+
+func InitChunkedFSFromRepo(repo pacakimpl.PacakRepo, version string, gitFiles []os.FileInfo) (*ChunkedFileFS, error) {
+	fs := &ChunkedFileFS{FS: make(map[string]*ChunkedFile), lock: &sync.RWMutex{}}
+
+	var n int64 = utils.ReadConcurrency()
+	sem := semaphore.NewWeighted(n)
+	ctx := context.TODO()
+
+	//errChan := make(chan error, 1000)
+	addFile := func(gitFile os.FileInfo) {
+		chunked, err := NewInternalChunked(repo, version, gitFile.Name())
+		if err != nil {
+			//errChan <- err
+			logrus.Error(err)
+		}
+		chunked.Fstat = &ChunkedFileInfo{
+			FmodTime: gitFile.ModTime(),
+			Fmode:    gitFile.Mode(),
+			Fsize:    chunked.Size,
+			Fname:    path.Base(chunked.Name),
+			Dir:      gitFile.IsDir(),
+		}
+		if gitFile.IsDir() {
+			chunked.Fstat.Fsize = 4096
+		}
+		fs.lock.Lock()
+		fs.FS[gitFile.Name()] = chunked
+		fs.lock.Unlock()
+		sem.Release(1)
+	}
+
+	for _, gitFile := range gitFiles {
+		sem.Acquire(ctx, 1)
+		go addFile(gitFile)
+	}
+	sem.Acquire(ctx, n)
+	return fs, nil
 }
 
 func (fs *ChunkedFileFS) Prepare() {

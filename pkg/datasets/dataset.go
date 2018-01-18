@@ -2,7 +2,6 @@ package datasets
 
 import (
 	"fmt"
-	"path"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
@@ -67,12 +66,7 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 	return nil
 }
 
-func (d *Dataset) Download(version string, resp *restful.Response) error {
-	// Build archive.
-	_, err := d.GetFSStructure(version)
-	if err != nil {
-		return err
-	}
+func (d *Dataset) Download(resp *restful.Response) error {
 	return WriteTarGz(d.FS, resp)
 }
 
@@ -105,25 +99,7 @@ func (d *Dataset) getFSStructureFromRepo(version string) (*plukio.ChunkedFileFS,
 		return nil, err
 	}
 
-	fs := &plukio.ChunkedFileFS{FS: make(map[string]*plukio.ChunkedFile)}
-	for _, gitFile := range gitFiles {
-		chunked, err := plukio.NewInternalChunked(d.Repo, version, gitFile.Name())
-		if err != nil {
-			return nil, err
-		}
-		chunked.Fstat = &plukio.ChunkedFileInfo{
-			FmodTime: gitFile.ModTime(),
-			Fmode:    gitFile.Mode(),
-			Fsize:    chunked.Size,
-			Fname:    path.Base(chunked.Name),
-			Dir:      gitFile.IsDir(),
-		}
-		if gitFile.IsDir() {
-			chunked.Fstat.Fsize = 4096
-		}
-		fs.FS[gitFile.Name()] = chunked
-	}
-	return fs, err
+	return plukio.InitChunkedFSFromRepo(d.Repo, version, gitFiles)
 }
 
 func (d *Dataset) CheckVersion(version string) (bool, error) {

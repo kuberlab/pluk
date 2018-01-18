@@ -6,9 +6,13 @@ import (
 	"net/http"
 
 	"github.com/Masterminds/semver"
+	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
+	"github.com/kuberlab/lib/pkg/errors"
+	"github.com/kuberlab/pluk/pkg/datasets"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
+	"github.com/kuberlab/pluk/pkg/utils"
 )
 
 func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
@@ -21,7 +25,13 @@ func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
 	}
-	err := dataset.Download(version, resp)
+	fs, err := api.getFS(dataset, version)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
+	dataset.FS = fs
+	err = dataset.Download(resp)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
@@ -42,13 +52,13 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
 	}
-	infos, err := dataset.GetFSStructure(version)
+	fs, err := api.getFS(dataset, version)
 	if err != nil {
-		WriteStatusError(resp, http.StatusNotFound, err)
+		WriteError(resp, err)
 		return
 	}
 
-	resp.WriteEntity(infos)
+	resp.WriteEntity(fs)
 	//resp.Header().Add("Content-Type", "application/tar+gzip")
 	//resp.Header().Add("Content-Disposition", fmt.Sprintf("attachment;filename=%s-%s.%s.tgz;", workspace, name, version))
 }
@@ -168,6 +178,9 @@ func (api *API) versions(req *restful.Request, resp *restful.Response) {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
+
+	// Cache last 3 versions.
+	go api.cacheFS(dataset, utils.GetFirstN(versions, 3))
 	resp.WriteEntity(types.VersionList{Versions: versions})
 }
 
@@ -183,4 +196,34 @@ func (api *API) datasets(req *restful.Request, resp *restful.Response) {
 		ds.Datasets = make([]*types.Dataset, 0)
 	}
 	resp.WriteEntity(ds)
+}
+
+func (api API) fsCacheKey(dataset *datasets.Dataset, version string) string {
+	return dataset.Workspace + dataset.Name + version + "-fs"
+}
+
+func (api API) getFS(dataset *datasets.Dataset, version string) (fs *plukio.ChunkedFileFS, err error) {
+	fsRaw := api.fsCache.GetRaw(api.fsCacheKey(dataset, version))
+	if fsRaw == nil {
+		fs, err = dataset.GetFSStructure(version)
+		if err != nil {
+			return nil, errors.NewStatus(http.StatusNotFound, err.Error())
+		}
+	} else {
+		fs = fsRaw.(*plukio.ChunkedFileFS)
+	}
+	api.fsCache.SetRaw(api.fsCacheKey(dataset, version), fs)
+	return fs, err
+}
+
+func (api API) cacheFS(dataset *datasets.Dataset, versions []string) {
+	for _, v := range versions {
+		logrus.Infof("Caching FS %v:%v...", dataset.Name, v)
+		_, err := api.getFS(dataset, v)
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
+		logrus.Infof("Successfully cached FS %v:%v.", dataset.Name, v)
+	}
 }

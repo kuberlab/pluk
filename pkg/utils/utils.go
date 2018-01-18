@@ -4,6 +4,7 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -15,6 +16,7 @@ const (
 	debug              = "DEBUG"
 	authValidationVar  = "AUTH_VALIDATION"
 	internalKeyVar     = "INTERNAL_KEY"
+	readConcurrencyVar = "READ_CONCURRENCY"
 	dataVar            = "DATA_DIR"
 	gitVar             = "GIT_BARE_DIR"
 	gitLocalVar        = "GIT_LOCAL_DIR"
@@ -77,6 +79,15 @@ func InternalKey() string {
 	return os.Getenv(internalKeyVar)
 }
 
+func ReadConcurrency() int64 {
+	raw := os.Getenv(readConcurrencyVar)
+	c, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		return 5
+	}
+	return c
+}
+
 func Masters() []string {
 	mastersRaw := os.Getenv(mastersVar)
 	if mastersRaw == "" {
@@ -111,4 +122,12 @@ func PrintEnvInfo() {
 	fmt.Printf("DATA_DIR = %q\n", DataDir())
 	fmt.Printf("AUTH_VALIDATION = %q\n", AuthValidationURL())
 	fmt.Printf("MASTERS = %q\n", Masters())
+	fmt.Printf("READ_CONCURRENCY = %v\n", ReadConcurrency())
+}
+
+func GetFirstN(s []string, n int) []string {
+	if n > len(s) {
+		n = len(s) - 1
+	}
+	return s[:n]
 }
