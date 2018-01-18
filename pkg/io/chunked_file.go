@@ -221,6 +221,7 @@ func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, er
 			if err != nil {
 				return nil, err
 			}
+			reader.Close()
 			if err = SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false); err != nil {
 				return nil, err
 			}
