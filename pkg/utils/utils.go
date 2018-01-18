@@ -83,7 +83,7 @@ func ReadConcurrency() int64 {
 	raw := os.Getenv(readConcurrencyVar)
 	c, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
-		return 5
+		return 4
 	}
 	return c
 }
