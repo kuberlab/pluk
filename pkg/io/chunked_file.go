@@ -66,7 +66,7 @@ func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error
 		if strings.HasPrefix(f.Name, prefix) && f.Name != prefix {
 			path := strings.TrimPrefix(f.Name, prefix)
 			// If there is a slash in 1+ position: exclude subdirs
-			if strings.Index(path, "/") > 0 {
+			if strings.Index(strings.TrimPrefix(path, "/"), "/") > 0 {
 				continue
 			}
 
