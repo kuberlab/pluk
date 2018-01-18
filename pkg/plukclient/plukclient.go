@@ -38,6 +38,9 @@ func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(base.Path) < 2 {
+		base.Path = "/pluk/v1"
+	}
 	baseClient := &http.Client{Timeout: time.Minute * 10}
 	return &Client{
 		BaseURL:   base,
