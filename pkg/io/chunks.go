@@ -51,6 +51,8 @@ func GetChunk(hash string) (io.ReadCloser, error) {
 }
 
 func SaveChunk(hash string, data io.ReadCloser, sendToMaster bool) error {
+	//logrus.Debugf("Save")
+	//t := time.Now()
 	filePath := utils.GetHashedFilename(hash)
 
 	splitted := strings.Split(filePath, "/")
@@ -71,7 +73,7 @@ func SaveChunk(hash string, data io.ReadCloser, sendToMaster bool) error {
 	buf := bytes.NewBuffer([]byte{})
 	var written int64
 	var writer io.Writer = file
-	if utils.HasMasters() {
+	if utils.HasMasters() && sendToMaster {
 		// If we have masters, then also write to buf in order to use it for further push.
 		writer = io.MultiWriter(writer, buf)
 	}
@@ -87,5 +89,6 @@ func SaveChunk(hash string, data io.ReadCloser, sendToMaster bool) error {
 		// TODO: decide whether it can go in async
 		MasterClient.SaveChunk(hash, buf.Bytes())
 	}
+	//logrus.Debugf("Save complete! %v", time.Since(t))
 	return nil
 }

@@ -37,7 +37,7 @@ func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	resp.Header().Add("Content-Type", "application/tar+gzip")
+	resp.Header().Add("Content-Type", "application/tar")
 
 	//resp.Header().Add("Content-Disposition", fmt.Sprintf("attachment;filename=%s-%s.%s.tgz;", workspace, name, version))
 }

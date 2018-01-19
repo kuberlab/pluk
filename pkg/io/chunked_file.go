@@ -1,7 +1,6 @@
 package io
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"bytes"
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
 	"github.com/kuberlab/pluk/pkg/types"
@@ -212,6 +212,8 @@ func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, er
 			// Read from master
 			hash := strings.TrimPrefix(chunkPath, utils.DataDir())
 			hash = strings.Replace(hash, "/", "", -1)
+			//logrus.Debugf("download")
+			//t := time.Now()
 			reader, err = MasterClient.DownloadChunk(hash)
 
 			if err != nil {
@@ -221,10 +223,9 @@ func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, er
 			if err != nil {
 				return nil, err
 			}
+			//logrus.Debugf("download complete! %v", time.Since(t))
 			reader.Close()
-			if err = SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false); err != nil {
-				return nil, err
-			}
+			go SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
 			return ioutil.NopCloser(bytes.NewBuffer(data)), nil
 			//reader, err = os.Open(chunkPath)
 			//fmt.Println("READER/ERR", reader, err)

@@ -2,7 +2,6 @@ package datasets
 
 import (
 	"archive/tar"
-	"compress/gzip"
 	"io"
 	"strings"
 
@@ -13,19 +12,15 @@ import (
 
 func WriteTarGz(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 	// Wrap in gzip writer
-	zipper := gzip.NewWriter(resp)
+	//zipper := gzip.NewWriter(resp)
 
 	// Wrap in tar writer
-	twriter := tar.NewWriter(zipper)
+	twriter := tar.NewWriter(resp)
 	defer func() {
 		twriter.Close()
-		zipper.Close()
+		//zipper.Close()
 	}()
 
-	//fileInfos, err := repo.ListFilesAtRev(ref)
-	//if err != nil {
-	//	return err
-	//}
 	for _, f := range fs.FS {
 		fi := f.Fstat
 		name := f.Name
@@ -39,15 +34,7 @@ func WriteTarGz(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 
 		logrus.Debugf("Processing file %v", name)
 
-		//chunked, err := plukio.NewChunkedFileFromRepo(repo, ref, name)
-		//if err != nil {
-		//	return err
-		//}
 		size := f.Size
-		//if err != nil {
-		//	return err
-		//}
-		//f.Seek(0, io.SeekStart)
 		h := &tar.Header{
 			Name:    name,
 			Mode:    0666,

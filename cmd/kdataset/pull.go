@@ -22,7 +22,7 @@ type pullCmd struct {
 func NewPullCmd() *cobra.Command {
 	pull := &pullCmd{}
 	cmd := &cobra.Command{
-		Use:   "pull <workspace> <dataset-name>:<version> [-O output-file.tar.gz]",
+		Use:   "pull <workspace> <dataset-name>:<version> [-O output-file.tar]",
 		Short: "Download the dataset archive.",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			// Validation
@@ -40,7 +40,7 @@ func NewPullCmd() *cobra.Command {
 			pull.version = nameVersion[1]
 
 			if pull.output == "" {
-				pull.output = fmt.Sprintf("%v-%v.%v.tgz", workspace, pull.name, pull.version)
+				pull.output = fmt.Sprintf("%v-%v.%v.tar", workspace, pull.name, pull.version)
 			}
 
 			return pull.run()
