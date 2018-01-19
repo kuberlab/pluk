@@ -14,6 +14,7 @@ import (
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/lib/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"net/url"
 )
 
 type LogRecordHandler struct {
@@ -200,28 +201,53 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 
 	authHeader := req.HeaderParameter("Authorization")
 	cookie := req.HeaderParameter("Cookie")
-	key := authHeader + cookie
+	secret := req.HeaderParameter("X-Workspace-Secret")
+	ws := req.HeaderParameter("X-Workspace-Name")
+	key := authHeader + cookie + ws + secret
 
 	if api.cache.Get(key) {
 		filter.ProcessFilter(req, resp)
 		return
 	} else {
-		request, _ := http.NewRequest("GET", authURL, nil)
-		request.Header.Add("Cookie", cookie)
-		request.Header.Add("Authorization", authHeader)
+		if ws != "" && secret != "" {
+			u, err := url.Parse(authURL)
+			if err != nil {
+				WriteError(resp, err)
+				return
+			}
+			validationURL := fmt.Sprintf("%v://%v/api/v0.2/workspace/%v/secret/%v", u.Scheme, u.Host, ws, secret)
+			request, _ := http.NewRequest("GET", validationURL, nil)
+			logrus.Debugf("GET %v://%v/[redacted]", request.URL.Scheme, request.URL.Host)
+			r, err := api.client.Do(request)
+			if err != nil {
+				http.Error(resp, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			logrus.Debugf("Got %v", r.StatusCode)
+			if r.StatusCode >= 400 {
+				logrus.Error(fmt.Sprintf("Invalid auth to %v://%v/[redacted]", request.URL.Scheme, request.URL.Host))
+				WriteErrorString(resp, http.StatusUnauthorized, "Unauthorized.")
+				return
+			}
+		} else {
+			request, _ := http.NewRequest("GET", authURL, nil)
+			request.Header.Add("Cookie", cookie)
+			request.Header.Add("Authorization", authHeader)
 
-		logrus.Debugf("GET %v", request.URL)
+			logrus.Debugf("GET %v", request.URL)
 
-		r, err := api.client.Do(request)
-		if err != nil {
-			WriteStatusError(resp, http.StatusInternalServerError, err)
-			return
+			r, err := api.client.Do(request)
+			if err != nil {
+				WriteStatusError(resp, http.StatusInternalServerError, err)
+				return
+			}
+			logrus.Debugf("Got %v", r.StatusCode)
+			if r.StatusCode >= 400 {
+				WriteStatusError(resp, r.StatusCode, fmt.Errorf("Cannot authenticate to %v", authURL))
+				return
+			}
 		}
-		logrus.Debugf("Got %v", r.StatusCode)
-		if r.StatusCode >= 400 {
-			WriteStatusError(resp, r.StatusCode, fmt.Errorf("Cannot authenticate to %v", authURL))
-			return
-		}
+
 		api.cache.Set(key, true)
 	}
 
