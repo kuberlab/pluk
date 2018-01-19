@@ -10,6 +10,8 @@ import (
 	"github.com/kuberlab/pluk/cmd/kdataset/config"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/spf13/cobra"
+	"gopkg.in/cheggaaa/pb.v1"
+	"io"
 )
 
 type pullCmd struct {
@@ -77,11 +79,19 @@ func (cmd *pullCmd) run() (err error) {
 	}
 	defer f.Close()
 
-	err = client.DownloadDataset(cmd.workspace, cmd.name, cmd.version, f)
+	bar := pb.New64(0).SetUnits(pb.U_BYTES)
+	w := io.MultiWriter(f, bar)
+
+	bar.SetMaxWidth(100)
+	bar.Start()
+
+	err = client.DownloadDataset(cmd.workspace, cmd.name, cmd.version, w)
 	if err != nil {
-		fmt.Println(err.Error())
+		bar.Finish()
+		logrus.Error(err)
 		return nil
 	}
+	bar.Finish()
 
 	logrus.Infof("Successfully downloaded dataset to %v.", cmd.output)
 	return

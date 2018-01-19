@@ -61,7 +61,8 @@ func InitChunkedFSFromRepo(repo pacakimpl.PacakRepo, version string, gitFiles []
 		chunked, err := NewInternalChunked(repo, version, gitFile.Name())
 		if err != nil {
 			//errChan <- err
-			logrus.Error(err)
+			logrus.Errorf("Read %v: %v", gitFile.Name(), err)
+			return
 		}
 		chunked.Fstat = &ChunkedFileInfo{
 			FmodTime: gitFile.ModTime(),
