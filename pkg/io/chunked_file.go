@@ -58,6 +58,7 @@ func InitChunkedFSFromRepo(repo pacakimpl.PacakRepo, version string, gitFiles []
 
 	//errChan := make(chan error, 1000)
 	addFile := func(gitFile os.FileInfo) {
+		defer sem.Release(1)
 		chunked, err := NewInternalChunked(repo, version, gitFile.Name())
 		if err != nil {
 			//errChan <- err
@@ -77,7 +78,6 @@ func InitChunkedFSFromRepo(repo pacakimpl.PacakRepo, version string, gitFiles []
 		fs.lock.Lock()
 		fs.FS[gitFile.Name()] = chunked
 		fs.lock.Unlock()
-		sem.Release(1)
 	}
 
 	for _, gitFile := range gitFiles {
@@ -268,6 +268,12 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 			// either nothing to read or
 			// all chunks are over or
 			// buffer is full
+			if err == io.EOF && f.currentChunk >= len(f.Chunks)-1 {
+				f.currentChunkReader.Close()
+				f.currentChunk = 0
+				f.currentChunkReader = nil
+				return 0, io.EOF
+			}
 			break
 		}
 	}
