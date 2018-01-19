@@ -95,6 +95,27 @@ func (fs *ChunkedFileFS) Prepare() {
 	}
 }
 
+func (fs *ChunkedFileFS) Clone() *ChunkedFileFS {
+	cloned := &ChunkedFileFS{
+		lock: &sync.RWMutex{},
+		FS: make(map[string]*ChunkedFile),
+	}
+	for _, f := range fs.FS {
+		cloned.FS[f.Name] = &ChunkedFile{
+			Name: f.Name,
+			currentChunkReader: nil,
+			currentChunk: 0,
+			Chunks: f.Chunks,
+			Fstat: f.Fstat,
+			fs: cloned,
+			offset: 0,
+			Ref: f.Ref,
+			Size: f.Size,
+		}
+	}
+	return cloned
+}
+
 func (fs *ChunkedFileFS) AddRoot() {
 	fs.FS["/"] = &ChunkedFile{
 		Fstat: &ChunkedFileInfo{

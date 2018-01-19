@@ -213,7 +213,7 @@ func (api API) getFS(dataset *datasets.Dataset, version string) (fs *plukio.Chun
 		fs = fsRaw.(*plukio.ChunkedFileFS)
 	}
 	api.fsCache.SetRaw(api.fsCacheKey(dataset, version), fs)
-	return fs, err
+	return fs.Clone(), err
 }
 
 func (api API) cacheFS(dataset *datasets.Dataset, versions []string) {
