@@ -83,6 +83,7 @@ func (cmd *pullCmd) run() (err error) {
 	w := io.MultiWriter(f, bar)
 
 	bar.SetMaxWidth(100)
+	bar.ShowSpeed = true
 	bar.Start()
 
 	err = client.DownloadDataset(cmd.workspace, cmd.name, cmd.version, w)

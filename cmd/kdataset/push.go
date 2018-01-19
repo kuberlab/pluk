@@ -114,6 +114,7 @@ func (cmd *pushCmd) run() error {
 	ctx := context.TODO()
 	bar := pb.New64(totalSize).SetUnits(pb.U_BYTES)
 	bar.SetMaxWidth(100)
+	bar.ShowSpeed = true
 	bar.Start()
 
 	checkAndUpload := func(chunkData []byte, hash string) error {
