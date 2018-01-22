@@ -60,6 +60,7 @@ func (m *Manager) GetDataset(workspace, name string) *Dataset {
 
 	ds, err := plukclient.NewMultiClient().ListDatasets(workspace)
 	if err != nil {
+		logrus.Errorf("From master: %v", err)
 		return nil
 	}
 	for _, d := range ds.Datasets {
