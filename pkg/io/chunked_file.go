@@ -98,19 +98,19 @@ func (fs *ChunkedFileFS) Prepare() {
 func (fs *ChunkedFileFS) Clone() *ChunkedFileFS {
 	cloned := &ChunkedFileFS{
 		lock: &sync.RWMutex{},
-		FS: make(map[string]*ChunkedFile),
+		FS:   make(map[string]*ChunkedFile),
 	}
 	for _, f := range fs.FS {
 		cloned.FS[f.Name] = &ChunkedFile{
-			Name: f.Name,
+			Name:               f.Name,
 			currentChunkReader: nil,
-			currentChunk: 0,
-			Chunks: f.Chunks,
-			Fstat: f.Fstat,
-			fs: cloned,
-			offset: 0,
-			Ref: f.Ref,
-			Size: f.Size,
+			currentChunk:       0,
+			Chunks:             f.Chunks,
+			Fstat:              f.Fstat,
+			fs:                 cloned,
+			offset:             0,
+			Ref:                f.Ref,
+			Size:               f.Size,
 		}
 	}
 	return cloned
@@ -247,7 +247,7 @@ func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, er
 			}
 			//logrus.Debugf("download complete! %v", time.Since(t))
 			reader.Close()
-			go SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
+			SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
 			return ioutil.NopCloser(bytes.NewBuffer(data)), nil
 			//reader, err = os.Open(chunkPath)
 			//fmt.Println("READER/ERR", reader, err)
