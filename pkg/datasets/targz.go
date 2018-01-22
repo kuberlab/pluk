@@ -46,7 +46,7 @@ func WriteTarGz(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 		}
 
 		for {
-			buf := make([]byte, 1048576)
+			buf := make([]byte, 100000)
 			n, err := f.Read(buf)
 			if err == io.EOF {
 				break
