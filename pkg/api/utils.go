@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/lib/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
-	"net/url"
 )
 
 type LogRecordHandler struct {

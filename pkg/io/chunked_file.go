@@ -1,6 +1,7 @@
 package io
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -13,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"bytes"
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
 	"github.com/kuberlab/pluk/pkg/types"
