@@ -11,6 +11,9 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"os"
+	"path"
+	"time"
 )
 
 const (
@@ -45,6 +48,14 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 		content := fmt.Sprintf("%v\n%v", f.Size, strings.Join(paths, "\n"))
 		files = append(files, pacakimpl.GitFile{Path: f.Path, Data: []byte(content)})
 	}
+
+	if exists(path.Join(utils.GitLocalDir(), d.Workspace, d.Name)) {
+		logrus.Debugf("Cleaning data for %v/%v:%v...", d.Workspace, d.Name, version)
+		if _, err := d.Repo.CleanPush(getCommitter(), "Clean FS before push", defaultBranch); err != nil {
+			return err
+		}
+	}
+
 	logrus.Infof("Saving data for %v/%v:%v...", d.Workspace, d.Name, version)
 
 	commit, err := d.Repo.Save(getCommitter(), buildMessage(version, comment), defaultBranch, defaultBranch, files)
@@ -177,4 +188,16 @@ func (d *Dataset) InitRepo(create bool) error {
 
 func buildMessage(version, comment string) string {
 	return fmt.Sprintf("Version: %v\nComment: %v", version, comment)
+}
+
+// exists returns whether the given file or directory exists or not
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
 }
