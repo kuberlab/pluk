@@ -24,6 +24,7 @@ import (
 type pushCmd struct {
 	workspace   string
 	name        string
+	create      bool
 	version     string
 	chunkSize   int
 	concurrency int64
@@ -67,6 +68,13 @@ func NewPushCmd() *cobra.Command {
 		"c",
 		int64(runtime.NumCPU()),
 		"Number of concurrent request to server.",
+	)
+	f.BoolVarP(
+		&push.create,
+		"create",
+		"",
+		false,
+		"Create dataset in cloud-dealer if not exists.",
 	)
 
 	return cmd
@@ -196,7 +204,7 @@ func (cmd *pushCmd) run() error {
 
 	// finally, commit file structure.
 	logrus.Debugf("File structure: %v", structure)
-	if err = client.SaveFileStructure(structure, cmd.workspace, cmd.name, cmd.version); err != nil {
+	if err = client.SaveFileStructure(structure, cmd.workspace, cmd.name, cmd.version, cmd.create); err != nil {
 		bar.Finish()
 		logrus.Error(err)
 		return nil

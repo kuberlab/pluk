@@ -28,7 +28,7 @@ type Dataset struct {
 	Repo pacakimpl.PacakRepo   `json:"-"`
 }
 
-func (d *Dataset) Save(structure types.FileStructure, version string, comment string) error {
+func (d *Dataset) Save(structure types.FileStructure, version string, comment string, create bool) error {
 	// Make absolute path for hashes and build gitFiles
 	files := make([]pacakimpl.GitFile, 0)
 	for _, f := range structure.Files {
@@ -70,7 +70,7 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 
 	if utils.HasMasters() {
 		// TODO: decide whether it can go in async
-		plukio.MasterClient.SaveFileStructure(structure, d.Workspace, d.Name, version)
+		plukio.MasterClient.SaveFileStructure(structure, d.Workspace, d.Name, version, create)
 	}
 
 	return nil

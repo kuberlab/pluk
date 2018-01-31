@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/Masterminds/semver"
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/datasets"
+	"github.com/kuberlab/pluk/pkg/dealerclient"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
@@ -133,6 +135,8 @@ func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {
 
 func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	comment := req.HeaderParameter("Comment")
+	createRaw := req.QueryParameter("create")
+	create, _ := strconv.ParseBool(createRaw)
 	version := req.PathParameter("version")
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
@@ -149,16 +153,31 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		WriteStatusError(resp, http.StatusBadRequest, fmt.Errorf("%v: %v", version, err.Error()))
 		return
 	}
+	if v.String() != version {
+		WriteStatusError(
+			resp,
+			http.StatusBadRequest,
+			fmt.Errorf("Version must be a valid semantic version. Given %v, try to save as version %v", version, v.String()),
+		)
+		return
+	}
 
 	dataset := api.ds.NewDataset(workspace, name)
 	if err = dataset.InitRepo(true); err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
-	err = dataset.Save(structure, v.String(), comment)
+	err = dataset.Save(structure, v.String(), comment, create)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
+	}
+
+	if create {
+		if err = api.createDatasetOnDealer(req, workspace, name); err != nil {
+			WriteStatusError(resp, http.StatusInternalServerError, err)
+			return
+		}
 	}
 
 	resp.Write([]byte("Ok!\n"))
@@ -202,7 +221,7 @@ func (api API) fsCacheKey(dataset *datasets.Dataset, version string) string {
 	return dataset.Workspace + dataset.Name + version + "-fs"
 }
 
-func (api API) getFS(dataset *datasets.Dataset, version string) (fs *plukio.ChunkedFileFS, err error) {
+func (api *API) getFS(dataset *datasets.Dataset, version string) (fs *plukio.ChunkedFileFS, err error) {
 	fsRaw := api.fsCache.GetRaw(api.fsCacheKey(dataset, version))
 	if fsRaw == nil {
 		fs, err = dataset.GetFSStructure(version)
@@ -216,7 +235,7 @@ func (api API) getFS(dataset *datasets.Dataset, version string) (fs *plukio.Chun
 	return fs.Clone(), err
 }
 
-func (api API) cacheFS(dataset *datasets.Dataset, versions []string) {
+func (api *API) cacheFS(dataset *datasets.Dataset, versions []string) {
 	for _, v := range versions {
 		logrus.Infof("Caching FS %v:%v...", dataset.Name, v)
 		_, err := api.getFS(dataset, v)
@@ -226,4 +245,28 @@ func (api API) cacheFS(dataset *datasets.Dataset, versions []string) {
 		}
 		logrus.Infof("Successfully cached FS %v:%v.", dataset.Name, v)
 	}
+}
+
+func (api *API) createDatasetOnDealer(req *restful.Request, ws, name string) error {
+	if utils.AuthValidationURL() == "" {
+		return nil
+	}
+
+	dealer, err := dealerclient.NewClient(utils.AuthValidationURL(), &dealerclient.AuthOpts{Headers: req.Request.Header})
+	if err != nil {
+		return err
+	}
+
+	dealerDatasets, err := dealer.ListDatasets(ws)
+	if err != nil {
+		return err
+	}
+	for _, ds := range dealerDatasets {
+		if ds.Name == name {
+			// Already exists
+			return nil
+		}
+	}
+
+	return dealer.CreateDataset(ws, name)
 }

@@ -122,8 +122,11 @@ func (c *Client) ListVersions(workspace, datasetName string) (*types.VersionList
 	return res, err
 }
 
-func (c *Client) SaveFileStructure(structure types.FileStructure, workspace, name, version string) error {
+func (c *Client) SaveFileStructure(structure types.FileStructure, workspace, name, version string, create bool) error {
 	u := fmt.Sprintf("/datasets/%v/%v/%v", workspace, name, version)
+	if create {
+		u += "?create=true"
+	}
 
 	req, err := c.NewRequest("POST", u, structure)
 	if err != nil {

@@ -29,7 +29,7 @@ type PlukClient interface {
 	DownloadChunk(hash string) (io.ReadCloser, error)
 	SaveChunk(hash string, data []byte) error
 	GetFSStructure(workspace, name, version string) (*ChunkedFileFS, error)
-	SaveFileStructure(structure types.FileStructure, workspace, name, version string) error
+	SaveFileStructure(structure types.FileStructure, workspace, name, version string, create bool) error
 	DownloadDataset(workspace, name, version string, w io.Writer) error
 	DeleteDataset(workspace, name string) error
 	DeleteVersion(workspace, name, version string) error
@@ -41,12 +41,6 @@ var MasterClient PlukClient
 type ChunkedFileFS struct {
 	lock *sync.RWMutex
 	FS   map[string]*ChunkedFile `json:"fs"`
-}
-
-type Dir struct {
-}
-
-type File struct {
 }
 
 func InitChunkedFSFromRepo(repo pacakimpl.PacakRepo, version string, gitFiles []os.FileInfo) (*ChunkedFileFS, error) {
