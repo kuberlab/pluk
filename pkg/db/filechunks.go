@@ -4,6 +4,7 @@ type FileChunkMgr interface {
 	CreateFileChunk(file *FileChunk) error
 	GetFileChunk(fileID uint, chunkID uint) (*FileChunk, error)
 	ListFileChunks(filter FileChunk) ([]*FileChunk, error)
+	DeleteFileChunk(fileID, chunkID uint) error
 }
 
 type FileChunk struct {
@@ -25,4 +26,8 @@ func (mgr *DatabaseMgr) ListFileChunks(filter FileChunk) ([]*FileChunk, error) {
 	var fileChunks = make([]*FileChunk, 0)
 	err := mgr.db.Find(&fileChunks, filter).Error
 	return fileChunks, err
+}
+
+func (mgr *DatabaseMgr) DeleteFileChunk(fileID, chunkID uint) error {
+	return mgr.db.Delete(FileChunk{}, FileChunk{FileID: fileID, ChunkID: chunkID}).Error
 }

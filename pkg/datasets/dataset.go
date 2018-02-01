@@ -2,7 +2,6 @@ package datasets
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"strings"
 
@@ -29,7 +28,7 @@ type Dataset struct {
 	Repo pacakimpl.PacakRepo   `json:"-"`
 }
 
-func (d *Dataset) Save(structure types.FileStructure, version string, comment string, create bool) error {
+func (d *Dataset) Save(structure types.FileStructure, version string, comment string, create bool, masterSave bool) error {
 	// Make absolute path for hashes and build gitFiles
 	files := make([]pacakimpl.GitFile, 0)
 	for _, f := range structure.Files {
@@ -49,7 +48,7 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 		files = append(files, pacakimpl.GitFile{Path: f.Path, Data: []byte(content)})
 	}
 
-	if exists(path.Join(utils.GitLocalDir(), d.Workspace, d.Name)) {
+	if utils.Exists(path.Join(utils.GitLocalDir(), d.Workspace, d.Name)) {
 		logrus.Debugf("Cleaning data for %v/%v:%v...", d.Workspace, d.Name, version)
 		if _, err := d.Repo.CleanPush(getCommitter(), "Clean FS before push", defaultBranch); err != nil {
 			return err
@@ -73,7 +72,7 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 		return err
 	}
 
-	if utils.HasMasters() {
+	if utils.HasMasters() && masterSave {
 		// TODO: decide whether it can go in async
 		plukio.MasterClient.SaveFileStructure(structure, d.Workspace, d.Name, version, create)
 	}
@@ -94,13 +93,17 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 	}()
 
 	for _, f := range structure.Files {
+		var fPath = f.Path
+		//if !strings.HasPrefix(fPath, "/") {
+		//	fPath = "/" + fPath
+		//}
 		fileDB := &db.File{
 			Size:           int64(f.Size),
-			Path:           f.Path,
+			Path:           fPath,
 			RepositoryPath: repoPath,
 			Version:        version,
 		}
-		if existing, errD := tx.GetFile(f.Path, repoPath, version); errD != nil {
+		if existing, errD := tx.GetFile(fPath, repoPath, version); errD != nil {
 			// Create
 			err = tx.CreateFile(fileDB)
 			if err != nil {
@@ -144,11 +147,25 @@ func (d *Dataset) Download(resp *restful.Response) error {
 }
 
 func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err error) {
+	var versions []string
+	var found = false
 	if d.Repo != nil {
-		fs, err = d.getFSStructureFromRepo(version)
+		versions, err = d.Repo.TagList()
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range versions {
+			if v == version {
+				found = true
+			}
+		}
+	}
+
+	if d.Repo != nil && found {
+		fs, err = d.GetFSStructureFromRepo(version)
 	} else {
 		if !utils.HasMasters() {
-			return nil, fmt.Errorf("Either the current instance has no masters or has corrupted repo")
+			return nil, fmt.Errorf("Either the current instance has no masters or version does not exist.")
 		}
 		fs, err = d.getFSStructureFromMaster(version)
 	}
@@ -163,10 +180,42 @@ func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err 
 }
 
 func (d *Dataset) getFSStructureFromMaster(version string) (*plukio.ChunkedFileFS, error) {
-	return plukio.MasterClient.GetFSStructure(d.Workspace, d.Name, version)
+	fs, err := plukio.MasterClient.GetFSStructure(d.Workspace, d.Name, version)
+
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		if err := d.SaveFSLocally(fs, version); err != nil {
+			logrus.Errorf("Unable save FS: %v", err)
+		}
+	}()
+	return fs, err
 }
 
-func (d *Dataset) getFSStructureFromRepo(version string) (*plukio.ChunkedFileFS, error) {
+func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error {
+	d.InitRepo(true)
+	dest := types.FileStructure{}
+	for _, f := range src.FS {
+		if f.Fstat.Dir {
+			continue
+		}
+		file := types.HashedFile{
+			Path:   strings.TrimPrefix(f.Name, "/"),
+			Size:   uint64(f.Size),
+			Hashes: make([]string, 0),
+		}
+		for _, chunkPath := range f.Chunks {
+			hash := utils.GetHashFromPath(chunkPath.Path)
+			file.Hashes = append(file.Hashes, hash)
+		}
+		dest.Files = append(dest.Files, &file)
+	}
+
+	return d.Save(dest, version, "", false, false)
+}
+
+func (d *Dataset) GetFSStructureFromRepo(version string) (*plukio.ChunkedFileFS, error) {
 	gitFiles, err := d.Repo.ListFilesAtRev(version)
 	if err != nil {
 		return nil, err
@@ -250,16 +299,4 @@ func (d *Dataset) InitRepo(create bool) error {
 
 func buildMessage(version, comment string) string {
 	return fmt.Sprintf("Version: %v\nComment: %v", version, comment)
-}
-
-// exists returns whether the given file or directory exists or not
-func exists(path string) bool {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true
-	}
-	if os.IsNotExist(err) {
-		return false
-	}
-	return true
 }

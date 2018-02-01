@@ -15,6 +15,8 @@ RUN apt-get install git curl -y
 COPY --from=0 $GOPATH/src/github.com/kuberlab/pluk/pluksrv $GOPATH/bin/pluksrv
 COPY --from=0 $GOPATH/src/github.com/kuberlab/pluk/kdataset $GOPATH/bin/kdataset
 
+VOLUME "/pluk"
+
 CMD [ "pluksrv" ]
 
 EXPOSE 8082

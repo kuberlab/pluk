@@ -167,7 +167,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
-	err = dataset.Save(structure, v.String(), comment, create)
+	err = dataset.Save(structure, v.String(), comment, create, true)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return

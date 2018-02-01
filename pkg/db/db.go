@@ -13,6 +13,7 @@ type DataMgr interface {
 	ChunkMgr
 	FileMgr
 	FileChunkMgr
+	DB() *gorm.DB
 	Begin() *DatabaseMgr
 	Commit() *DatabaseMgr
 	Rollback() *DatabaseMgr
@@ -36,6 +37,10 @@ func NewMainDatabaseMgr() *DatabaseMgr {
 }
 func NewFakeDatabaseMgr() *DatabaseMgr {
 	return NewDatabaseMgr(db.InitFake(CreateTables))
+}
+
+func (mgr *DatabaseMgr) DB() *gorm.DB {
+	return mgr.db
 }
 
 func (mgr *DatabaseMgr) Begin() *DatabaseMgr {

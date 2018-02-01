@@ -65,7 +65,7 @@ func (m *Manager) GetDataset(workspace, name string) *Dataset {
 	}
 	for _, d := range ds.Datasets {
 		if d.Name == name {
-			return &Dataset{Dataset: *d}
+			return &Dataset{Dataset: *d, git: m.git}
 		}
 	}
 

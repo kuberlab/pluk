@@ -6,12 +6,14 @@ import (
 	"os"
 	"strings"
 
+	"gopkg.in/cheggaaa/pb.v1"
+
+	"io"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/cmd/kdataset/config"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/spf13/cobra"
-	"gopkg.in/cheggaaa/pb.v1"
-	"io"
 )
 
 type pullCmd struct {

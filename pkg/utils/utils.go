@@ -115,6 +115,12 @@ func GetHashedFilename(hash string) string {
 	return fmt.Sprintf("%v/%v/%v", DataDir(), hashDir, hashFile)
 }
 
+func GetHashFromPath(path string) string {
+	hash := strings.TrimPrefix(path, DataDir())
+	hash = strings.Replace(hash, "/", "", -1)
+	return hash
+}
+
 func PrintEnvInfo() {
 	fmt.Printf("DEBUG = %v\n", DebugEnabled())
 	fmt.Printf("GIT_BARE_DIR = %q\n", GitDir())
@@ -127,7 +133,19 @@ func PrintEnvInfo() {
 
 func GetFirstN(s []string, n int) []string {
 	if n > len(s) {
-		n = len(s) - 1
+		n = len(s)
 	}
 	return s[:n]
+}
+
+// exists returns whether the given file or directory exists or not
+func Exists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
 }

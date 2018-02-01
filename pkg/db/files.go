@@ -5,15 +5,17 @@ type FileMgr interface {
 	UpdateFile(file *File) (*File, error)
 	GetFile(path, repository, version string) (*File, error)
 	ListFiles(filter File) ([]*File, error)
+	DeleteFile(id uint) error
 }
 
 type File struct {
 	BaseModel
-	ID             uint   `sql:"AUTO_INCREMENT" gorm:"primary_key"`
-	Path           string `json:"path" gorm:"index:idx_repo_version_path"`
-	Size           int64  `json:"size"`
-	RepositoryPath string `json:"repository_path" gorm:"index:idx_repo_version_path"`
-	Version        string `json:"version" gorm:"index:idx_repo_version_path"`
+	ID             uint    `sql:"AUTO_INCREMENT" gorm:"primary_key"`
+	Path           string  `json:"path" gorm:"index:idx_repo_version_path"`
+	Size           int64   `json:"size"`
+	RepositoryPath string  `json:"repository_path" gorm:"index:idx_repo_version_path"`
+	Version        string  `json:"version" gorm:"index:idx_repo_version_path"`
+	Chunks         []Chunk `gorm:"-"`
 }
 
 func (mgr *DatabaseMgr) CreateFile(file *File) error {
@@ -35,4 +37,8 @@ func (mgr *DatabaseMgr) ListFiles(filter File) ([]*File, error) {
 	var files = make([]*File, 0)
 	err := mgr.db.Find(&files, filter).Error
 	return files, err
+}
+
+func (mgr *DatabaseMgr) DeleteFile(id uint) error {
+	return mgr.db.Delete(File{}, File{ID: id}).Error
 }

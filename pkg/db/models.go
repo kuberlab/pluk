@@ -35,5 +35,11 @@ func CreateAll(db *gorm.DB) error {
 		return err
 	}
 
+	if err := db.Debug().Model(&File{}).AddIndex(
+		"idx_repo",
+		"repository_path").Error; err != nil {
+		return err
+	}
+
 	return nil
 }

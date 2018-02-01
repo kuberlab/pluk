@@ -75,6 +75,9 @@ func InitChunkedFSFromRepo(repo pacakimpl.PacakRepo, version string, gitFiles []
 	}
 
 	for _, gitFile := range gitFiles {
+		if gitFile.Name() == "/.gitignore" {
+			continue
+		}
 		sem.Acquire(ctx, 1)
 		go addFile(gitFile)
 	}
@@ -226,8 +229,7 @@ func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, er
 	if err != nil {
 		if os.IsNotExist(err) && utils.HasMasters() {
 			// Read from master
-			hash := strings.TrimPrefix(chunkPath, utils.DataDir())
-			hash = strings.Replace(hash, "/", "", -1)
+			hash := utils.GetHashFromPath(chunkPath)
 			//logrus.Debugf("download")
 			//t := time.Now()
 			reader, err = MasterClient.DownloadChunk(hash)
