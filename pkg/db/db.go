@@ -12,6 +12,7 @@ type DataMgr interface {
 	// All models DB interfaces here.
 	ChunkMgr
 	FileMgr
+	FileChunkMgr
 	Begin() *DatabaseMgr
 	Commit() *DatabaseMgr
 	Rollback() *DatabaseMgr

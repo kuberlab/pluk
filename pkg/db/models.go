@@ -23,6 +23,7 @@ func CreateTables(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&File{},
 		&Chunk{},
+		&FileChunk{},
 	).Error
 }
 

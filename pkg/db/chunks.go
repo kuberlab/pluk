@@ -3,7 +3,7 @@ package db
 type ChunkMgr interface {
 	CreateChunk(chunk *Chunk) error
 	UpdateChunk(chunk *Chunk) (*Chunk, error)
-	GetChunk(chunkID uint) (*Chunk, error)
+	GetChunk(hash string) (*Chunk, error)
 	ListChunks(filter Chunk) ([]*Chunk, error)
 }
 
@@ -12,7 +12,6 @@ type Chunk struct {
 	ID    uint   `sql:"AUTO_INCREMENT" gorm:"primary_key"`
 	Index uint   `json:"index"`
 	Hash  string `json:"hash" gorm:"index:idx_hash"`
-	Files []File `gorm:"many2many:file_chunks;"`
 }
 
 func (mgr *DatabaseMgr) CreateChunk(chunk *Chunk) error {
@@ -20,16 +19,13 @@ func (mgr *DatabaseMgr) CreateChunk(chunk *Chunk) error {
 }
 
 func (mgr *DatabaseMgr) UpdateChunk(chunk *Chunk) (*Chunk, error) {
-	if _, err := mgr.GetChunk(chunk.ID); err != nil {
-		return nil, err
-	}
 	err := mgr.db.Save(chunk).Error
 	return chunk, err
 }
 
-func (mgr *DatabaseMgr) GetChunk(chunkID uint) (*Chunk, error) {
+func (mgr *DatabaseMgr) GetChunk(hash string) (*Chunk, error) {
 	var chunk = Chunk{}
-	err := mgr.db.First(&chunk, Chunk{ID: chunkID}).Error
+	err := mgr.db.First(&chunk, Chunk{Hash: hash}).Error
 	return &chunk, err
 }
 

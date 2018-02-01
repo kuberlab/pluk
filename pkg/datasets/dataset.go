@@ -10,6 +10,7 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pacak/pkg/pacakimpl"
+	"github.com/kuberlab/pluk/pkg/db"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
@@ -68,11 +69,73 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 	}
 	logrus.Infof("Created tag %v.", version)
 
+	if err = d.SaveFSToDB(structure, version); err != nil {
+		return err
+	}
+
 	if utils.HasMasters() {
 		// TODO: decide whether it can go in async
 		plukio.MasterClient.SaveFileStructure(structure, d.Workspace, d.Name, version, create)
 	}
 
+	return nil
+}
+
+func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err error) {
+	repoPath := path.Join(utils.GitLocalDir(), d.Workspace, d.Name)
+
+	tx := db.DbMgr.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	for _, f := range structure.Files {
+		fileDB := &db.File{
+			Size:           int64(f.Size),
+			Path:           f.Path,
+			RepositoryPath: repoPath,
+			Version:        version,
+		}
+		if existing, errD := tx.GetFile(f.Path, repoPath, version); errD != nil {
+			// Create
+			err = tx.CreateFile(fileDB)
+			if err != nil {
+				return err
+			}
+		} else {
+			// Update
+			fileDB.ID = existing.ID
+			if existing.Size != fileDB.Size {
+				_, err = tx.UpdateFile(fileDB)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		for _, hash := range f.Hashes {
+			chunk := &db.Chunk{Hash: hash}
+			if eChunk, errD := tx.GetChunk(hash); errD != nil {
+				if err = tx.CreateChunk(chunk); err != nil {
+					return err
+				}
+			} else {
+				chunk.ID = eChunk.ID
+			}
+			// Create connection
+			fileChunk := &db.FileChunk{ChunkID: chunk.ID, FileID: fileDB.ID}
+
+			if _, errD := tx.GetFileChunk(fileDB.ID, chunk.ID); errD != nil {
+				if err = tx.CreateFileChunk(fileChunk); err != nil {
+					return err
+				}
+			}
+		}
+	}
 	return nil
 }
 
