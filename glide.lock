@@ -1,5 +1,5 @@
 hash: 9d35dd122cdc61f55903a31d2d3e8aa68ad1153b334373c9d587180877e10fab
-updated: 2018-01-17T16:28:46.06399065+03:00
+updated: 2018-02-01T12:38:09.155210504+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -17,17 +17,19 @@ imports:
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jinzhu/gorm
   version: 5174cc5c242a728b435ea2be8a2f7f998e15429b
+  subpackages:
+  - dialects/sqlite
 - name: github.com/jinzhu/inflection
   version: 1c35d901db3da928c72a72d8458480cc9ade058f
 - name: github.com/kuberlab/lib
-  version: 7cc13f864e65f7d02f2f0bacef3f55c1170cd502
+  version: 5f42ee1145c4ac4744c587e77db9534ac2a25878
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/errors
   - pkg/types
   - pkg/utils
 - name: github.com/kuberlab/pacak
-  version: 05bc58143b66147ea57ec9cb407ef44673aaa3ae
+  version: cb0e3e4b4bba85904096e21675be18e36dbde41f
   repo: ssh://git@github.com/kuberlab/pacak.git
   subpackages:
   - pkg/errors
@@ -39,6 +41,8 @@ imports:
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/mattn/go-runewidth
   version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
+- name: github.com/mattn/go-sqlite3
+  version: 2d44decb4941c9cdf72c22297b7890faf7da9bcb
 - name: github.com/mcuadros/go-version
   version: 88e56e02bea1c203c99222c365fa52a69996ccac
 - name: github.com/patrickmn/go-cache
