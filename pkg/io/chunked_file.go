@@ -28,12 +28,15 @@ type PlukClient interface {
 	CheckChunk(hash string) (*types.CheckChunkResponse, error)
 	DownloadChunk(hash string) (io.ReadCloser, error)
 	SaveChunk(hash string, data []byte) error
+	SaveChunkWebsocket(hash string, data []byte) error
 	GetFSStructure(workspace, name, version string) (*ChunkedFileFS, error)
 	SaveFileStructure(structure types.FileStructure, workspace, name, version string, create bool) error
 	DownloadDataset(workspace, name, version string, w io.Writer) error
 	DeleteDataset(workspace, name string) error
 	DeleteVersion(workspace, name, version string) error
 	WebdavAuth(user, pass, path string) (bool, error)
+	PrepareWebsocket() error
+	Close() error
 }
 
 var MasterClient PlukClient

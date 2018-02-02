@@ -1,5 +1,5 @@
-hash: 9d35dd122cdc61f55903a31d2d3e8aa68ad1153b334373c9d587180877e10fab
-updated: 2018-02-01T12:38:09.155210504+03:00
+hash: 0bf4047a3790fe82f39b8791bd5435d692214a44b2f3d3f77377cb2e04fe3c83
+updated: 2018-02-02T12:42:44.100481215+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -13,6 +13,8 @@ imports:
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/mux
   version: 392c28fe23e1c45ddba891b0320b3b5df220beea
+- name: github.com/gorilla/websocket
+  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jinzhu/gorm
@@ -22,14 +24,14 @@ imports:
 - name: github.com/jinzhu/inflection
   version: 1c35d901db3da928c72a72d8458480cc9ade058f
 - name: github.com/kuberlab/lib
-  version: 5f42ee1145c4ac4744c587e77db9534ac2a25878
+  version: b13ac0acfcfb1de90e7fd6cac1913a0f320322f2
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/errors
   - pkg/types
   - pkg/utils
 - name: github.com/kuberlab/pacak
-  version: cb0e3e4b4bba85904096e21675be18e36dbde41f
+  version: de19f5a0c787aa0a95acf98aeae7b8ee29b54c43
   repo: ssh://git@github.com/kuberlab/pacak.git
   subpackages:
   - pkg/errors

@@ -2,11 +2,15 @@ package utils
 
 import (
 	"crypto/sha512"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/kuberlab/lib/pkg/types"
 )
 
 const (
@@ -148,4 +152,21 @@ func Exists(path string) bool {
 		return false
 	}
 	return true
+}
+
+func WriteMessage(ws *websocket.Conn, sType, id string, content interface{}) error {
+	msg := types.Message{
+		Type:    sType,
+		ID:      id,
+		Content: content,
+	}
+	return ws.WriteJSON(msg)
+}
+
+func LoadAsJson(m map[string]interface{}, v interface{}) error {
+	data, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, v)
 }

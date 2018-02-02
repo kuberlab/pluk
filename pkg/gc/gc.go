@@ -2,16 +2,16 @@ package gc
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/utils"
-	"io/ioutil"
-	"path/filepath"
 )
 
 const (

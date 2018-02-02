@@ -12,6 +12,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/datasets"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/plukclient"
+	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
@@ -21,6 +22,7 @@ type API struct {
 	cache        *utils.RequestCache
 	fsCache      *utils.RequestCache
 	client       *http.Client
+	hub          *types.Hub
 }
 
 func Start() {
@@ -34,6 +36,7 @@ func Start() {
 		fsCache:      utils.NewRequestCache(),
 		client:       &http.Client{Timeout: time.Minute},
 		ds:           datasets.NewManager(gitIface),
+		hub:          types.NewHub(),
 	}
 
 	r := mux.NewRouter()
@@ -86,6 +89,10 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 
 	// Save file structure for version.
 	ws.Route(ws.POST("/datasets/{workspace}/{name}/{version}").To(api.saveFS))
+
+	// Websocket
+	ws.Route(ws.GET("/websocket").To(api.websocket))
+
 	container.Add(ws)
 	return container
 }

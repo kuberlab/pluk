@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/gorilla/websocket"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 )
@@ -24,6 +25,8 @@ type Client struct {
 	UserAgent string
 
 	auth *AuthOpts
+	conn *websocket.Conn
+	ws   *types.WebsocketClient
 }
 
 type AuthOpts struct {
@@ -48,6 +51,31 @@ func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
 		UserAgent: "go-plukclient/1",
 		auth:      auth,
 	}, nil
+}
+
+func (c *Client) PrepareWebsocket() error {
+	dialer := websocket.Dialer{}
+	urlStr := "/websocket"
+
+	var scheme string
+	switch c.BaseURL.Scheme {
+	case "http":
+		scheme = "ws"
+	case "https":
+		scheme = "wss"
+	}
+	u := fmt.Sprintf("%v://%v/%v", scheme, c.BaseURL.Host, strings.TrimPrefix(c.BaseURL.Path, "/"))
+	u = strings.TrimSuffix(u, "/") + urlStr
+	logrus.Debugf("Connect to %v", u)
+	conn, resp, err := dialer.Dial(u, make(http.Header))
+
+	if err != nil {
+		return err
+	}
+	c.conn = conn
+	id := resp.Header.Get("Sec-Websocket-Accept")
+	c.ws = types.NewWebsocketClient(conn, id)
+	return nil
 }
 
 func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Request, error) {
@@ -210,6 +238,18 @@ func (c *Client) SaveChunk(hash string, data []byte) error {
 	}
 
 	return err
+}
+
+func (c *Client) SaveChunkWebsocket(hash string, data []byte) error {
+	chunkData := types.ChunkData{Data: data, Hash: hash}
+	return c.ws.WriteMessage(chunkData.Type(), chunkData)
+}
+
+func (c *Client) Close() error {
+	if c.conn != nil {
+		return c.conn.Close()
+	}
+	return nil
 }
 
 func (c *Client) DownloadDataset(workspace, name, version string, w io.Writer) error {

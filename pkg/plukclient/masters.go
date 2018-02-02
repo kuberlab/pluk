@@ -23,6 +23,18 @@ func (c *MultiMasterClient) initBaseClient(baseURL string) (plukio.PlukClient, e
 	return NewClient(baseURL, &AuthOpts{InternalKey: c.InternalKey})
 }
 
+func (c *MultiMasterClient) PrepareWebsocket() error {
+	return nil
+}
+
+func (c *MultiMasterClient) SaveChunkWebsocket(hash string, data []byte) (err error) {
+	return
+}
+
+func (c *MultiMasterClient) Close() error {
+	return nil
+}
+
 func (c *MultiMasterClient) ListDatasets(workspace string) (res *types.DataSetList, err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
