@@ -10,6 +10,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"io/ioutil"
+	"path/filepath"
 )
 
 const (
@@ -29,6 +31,7 @@ func Start() {
 }
 
 func goGC() {
+	logrus.Info("Starting garbage collector...")
 	mgr := db.DbMgr
 	reps := make([]*db.File, 0)
 
@@ -38,27 +41,45 @@ func goGC() {
 		return
 	}
 
+	tx := mgr.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	deleted := 0
+	var files []*db.File
+
 	// First: check if repo exists.
 	for _, r := range reps {
 		if !utils.Exists(r.RepositoryPath) {
 			// Delete all files within this repo
-			files, err := mgr.ListFiles(db.File{RepositoryPath: r.RepositoryPath})
+			files, err = tx.ListFiles(db.File{RepositoryPath: r.RepositoryPath})
 			if err != nil {
 				logrus.Error(err)
 				return
 			}
 
 			for _, f := range files {
-				checkAndDeleteFile(mgr, f, false)
+				if checkAndDeleteFile(tx, f, false) {
+					deleted++
+				}
+				if deleted%100 == 0 {
+					logrus.Infof("Deleted %v objects", deleted)
+				}
 			}
 		}
 	}
 
 	// Second: Iterate over files and see if the corresponding file for
 	// specific version exists: smth. like 'git show <version>:<path>'
+	logrus.Infof("Done garbage collecting. Deleted %v objects.", deleted)
 }
 
-func checkAndDeleteFile(mgr db.DataMgr, f *db.File, checkFile bool) {
+func checkAndDeleteFile(mgr db.DataMgr, f *db.File, checkFile bool) bool {
 	if checkFile {
 		// Check if file for this version exists
 		cmd := exec.Command(
@@ -72,7 +93,7 @@ func checkAndDeleteFile(mgr db.DataMgr, f *db.File, checkFile bool) {
 			logrus.Debugf("git show output: %v", err)
 		} else {
 			// File exists
-			return
+			return false
 		}
 	}
 	mgr.DeleteFile(f.ID)
@@ -80,16 +101,17 @@ func checkAndDeleteFile(mgr db.DataMgr, f *db.File, checkFile bool) {
 	chunkIDs, err := mgr.ListFileChunks(db.FileChunk{FileID: f.ID})
 	if err != nil {
 		logrus.Error(err)
-		return
+		return false
 	}
 	for _, chunkID := range chunkIDs {
 		chunk, err := mgr.GetChunkByID(chunkID.ChunkID)
 		if err != nil {
 			logrus.Error(err)
-			return
+			return false
 		}
 		checkAndDeleteChunk(mgr, chunk, f)
 	}
+	return true
 }
 
 func checkAndDeleteChunk(mgr db.DataMgr, chunk *db.Chunk, f *db.File) {
@@ -106,5 +128,17 @@ func checkAndDeleteChunk(mgr db.DataMgr, chunk *db.Chunk, f *db.File) {
 		path := utils.GetHashedFilename(chunk.Hash)
 		mgr.DeleteChunk(chunk.ID)
 		os.Remove(path)
+
+		dirName := filepath.Dir(path)
+		remainFiles, err := ioutil.ReadDir(dirName)
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
+
+		// If there are no files in this directory, delete it.
+		if len(remainFiles) == 0 {
+			os.RemoveAll(dirName)
+		}
 	}
 }
