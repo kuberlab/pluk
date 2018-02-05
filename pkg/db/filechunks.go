@@ -32,7 +32,6 @@ func (mgr *DatabaseMgr) DeleteFileChunk(fileID, chunkID uint) error {
 	return mgr.db.Delete(FileChunk{}, FileChunk{FileID: fileID, ChunkID: chunkID}).Error
 }
 
-
 /*
 SELECT
   file_id,
@@ -46,7 +45,7 @@ FROM file_chunks fc
   INNER JOIN files f
     ON f.id = fc.file_id AND repository_path = '/git-local/kuberlab-demo/many' AND version = '1.0.0'
   INNER JOIN chunks ON fc.chunk_id = chunks.id
- */
+*/
 func (mgr *DatabaseMgr) GetFS(repo, version string) {
 
 }

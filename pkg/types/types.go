@@ -41,8 +41,8 @@ type HashedFile struct {
 }
 
 type ChunkCheck struct {
-	Hash string `json:"hash"`
-	Exists bool `json:"exists"`
+	Hash   string `json:"hash"`
+	Exists bool   `json:"exists"`
 }
 
 func (c *ChunkCheck) Type() string {
