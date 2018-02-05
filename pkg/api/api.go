@@ -8,8 +8,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/gorilla/mux"
-	"github.com/kuberlab/pacak/pkg/pacakimpl"
 	"github.com/kuberlab/pluk/pkg/datasets"
+	"github.com/kuberlab/pluk/pkg/db"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
@@ -17,26 +17,26 @@ import (
 )
 
 type API struct {
-	gitInterface pacakimpl.GitInterface
-	ds           *datasets.Manager
-	cache        *utils.RequestCache
-	fsCache      *utils.RequestCache
-	client       *http.Client
-	hub          *types.Hub
+	//gitInterface pacakimpl.GitInterface
+	ds      *datasets.Manager
+	cache   *utils.RequestCache
+	fsCache *utils.RequestCache
+	client  *http.Client
+	hub     *types.Hub
 }
 
 func Start() {
 	logrus.Info("Starting pluk...")
 	utils.PrintEnvInfo()
 	plukio.MasterClient = plukclient.NewMultiClient()
-	gitIface := pacakimpl.NewGitInterface(utils.GitDir(), utils.GitLocalDir())
+	//gitIface := pacakimpl.NewGitInterface(utils.GitDir(), utils.GitLocalDir())
 	api := &API{
-		gitInterface: gitIface,
-		cache:        utils.NewRequestCache(),
-		fsCache:      utils.NewRequestCache(),
-		client:       &http.Client{Timeout: time.Minute},
-		ds:           datasets.NewManager(gitIface),
-		hub:          types.NewHub(),
+		//gitInterface: gitIface,
+		cache:   utils.NewRequestCache(),
+		fsCache: utils.NewRequestCache(),
+		client:  &http.Client{Timeout: time.Minute},
+		ds:      datasets.NewManager(db.DbMgr),
+		hub:     types.NewHub(),
 	}
 
 	r := mux.NewRouter()

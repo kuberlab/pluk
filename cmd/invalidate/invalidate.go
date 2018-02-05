@@ -22,7 +22,7 @@ func main() {
 
 	db.DbMgr = db.NewMainDatabaseMgr()
 	gitIface := pacakimpl.NewGitInterface(utils.GitDir(), utils.GitLocalDir())
-	dsManager := datasets2.NewManager(gitIface)
+	dsManager := datasets2.NewManager(gitIface, db.DbMgr)
 
 	datasets := make([]*datasets2.Dataset, 0)
 	for _, wsName := range wsNames {

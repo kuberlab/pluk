@@ -37,6 +37,10 @@ func InitMain(postCreate postCreateFunc) *gorm.DB {
 	if err != nil {
 		logrus.Panic("Can't create sqlite database: ", err)
 	}
+	_, err = db.DB().Exec("PRAGMA journal_mode=WAL")
+	if err != nil {
+		logrus.Panic(err)
+	}
 	db.DB().SetMaxIdleConns(10)
 	db.DB().SetMaxOpenConns(100)
 	if err != nil {

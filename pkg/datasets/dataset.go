@@ -7,8 +7,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
-	"github.com/kuberlab/lib/pkg/errors"
-	"github.com/kuberlab/pacak/pkg/pacakimpl"
 	"github.com/kuberlab/pluk/pkg/db"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
@@ -22,53 +20,54 @@ const (
 )
 
 type Dataset struct {
-	types.Dataset
-	git  pacakimpl.GitInterface
-	FS   *plukio.ChunkedFileFS `json:"-"`
-	Repo pacakimpl.PacakRepo   `json:"-"`
+	*db.Dataset
+	//git  pacakimpl.GitInterface
+	mgr db.DataMgr
+	FS  *plukio.ChunkedFileFS `json:"-"`
+	//Repo pacakimpl.PacakRepo   `json:"-"`
 }
 
 func (d *Dataset) Save(structure types.FileStructure, version string, comment string, create bool, masterSave bool) error {
 	// Make absolute path for hashes and build gitFiles
-	files := make([]pacakimpl.GitFile, 0)
-	for _, f := range structure.Files {
-		paths := make([]string, 0)
-		for _, h := range f.Hashes {
-			filePath := utils.GetHashedFilename(h)
-			paths = append(paths, filePath)
-		}
-		// Virtual file structure:
-		// <size (uint64)>
-		// <chunk path1>
-		// <chunk path2>
-		// ..
-		// <chunk pathN>
-		//
-		content := fmt.Sprintf("%v\n%v", f.Size, strings.Join(paths, "\n"))
-		files = append(files, pacakimpl.GitFile{Path: f.Path, Data: []byte(content)})
-	}
+	//files := make([]pacakimpl.GitFile, 0)
+	//for _, f := range structure.Files {
+	//	paths := make([]string, 0)
+	//	for _, h := range f.Hashes {
+	//		filePath := utils.GetHashedFilename(h)
+	//		paths = append(paths, filePath)
+	//	}
+	//	// Virtual file structure:
+	//	// <size (uint64)>
+	//	// <chunk path1>
+	//	// <chunk path2>
+	//	// ..
+	//	// <chunk pathN>
+	//	//
+	//	content := fmt.Sprintf("%v\n%v", f.Size, strings.Join(paths, "\n"))
+	//	files = append(files, pacakimpl.GitFile{Path: f.Path, Data: []byte(content)})
+	//}
 
-	if utils.Exists(path.Join(utils.GitLocalDir(), d.Workspace, d.Name)) {
-		logrus.Debugf("Cleaning data for %v/%v:%v...", d.Workspace, d.Name, version)
-		if _, err := d.Repo.CleanPush(getCommitter(), "Clean FS before push", defaultBranch); err != nil {
-			return err
-		}
-	}
+	//if utils.Exists(path.Join(utils.GitLocalDir(), d.Workspace, d.Name)) {
+	//	logrus.Debugf("Cleaning data for %v/%v:%v...", d.Workspace, d.Name, version)
+	//	if _, err := d.Repo.CleanPush(getCommitter(), "Clean FS before push", defaultBranch); err != nil {
+	//		return err
+	//	}
+	//}
 
 	logrus.Infof("Saving data for %v/%v:%v...", d.Workspace, d.Name, version)
 
-	commit, err := d.Repo.Save(getCommitter(), buildMessage(version, comment), defaultBranch, defaultBranch, files)
-	if err != nil {
-		return err
-	}
-	logrus.Infof("Saved as commit %v.", commit)
+	//commit, err := d.Repo.Save(getCommitter(), buildMessage(version, comment), defaultBranch, defaultBranch, files)
+	//if err != nil {
+	//	return err
+	//}
+	//logrus.Infof("Saved as commit %v.", commit)
+	//
+	//if err = d.Repo.PushTag(version, commit, true); err != nil {
+	//	return err
+	//}
+	//logrus.Infof("Created tag %v.", version)
 
-	if err = d.Repo.PushTag(version, commit, true); err != nil {
-		return err
-	}
-	logrus.Infof("Created tag %v.", version)
-
-	if err = d.SaveFSToDB(structure, version); err != nil {
+	if err := d.SaveFSToDB(structure, version); err != nil {
 		return err
 	}
 
@@ -92,6 +91,16 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 		}
 	}()
 
+	_, err = tx.GetDatasetVersion(d.Workspace, d.Name, version)
+	if err != nil {
+		err = nil
+		errD := tx.CreateDatasetVersion(&db.DatasetVersion{Name: d.Name, Workspace: d.Workspace, Version: version})
+		if errD != nil {
+			err = errD
+			return
+		}
+	}
+
 	for _, f := range structure.Files {
 		var fPath = f.Path
 		//if !strings.HasPrefix(fPath, "/") {
@@ -102,6 +111,8 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 			Path:           fPath,
 			RepositoryPath: repoPath,
 			Version:        version,
+			Workspace:      d.Workspace,
+			DatasetName:    d.Name,
 		}
 		if existing, errD := tx.GetFile(fPath, repoPath, version); errD != nil {
 			// Create
@@ -147,22 +158,23 @@ func (d *Dataset) Download(resp *restful.Response) error {
 }
 
 func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err error) {
-	var versions []string
-	var found = false
-	if d.Repo != nil {
-		versions, err = d.Repo.TagList()
-		if err != nil {
-			return nil, err
-		}
-		for _, v := range versions {
-			if v == version {
-				found = true
-			}
-		}
-	}
+	//var versions []string
+	//var found = false
+	//if d.Repo != nil {
+	//	versions, err = d.Repo.TagList()
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	for _, v := range versions {
+	//		if v == version {
+	//			found = true
+	//		}
+	//	}
+	//}
+	dsv, _ := d.mgr.GetDatasetVersion(d.Workspace, d.Name, version)
 
-	if d.Repo != nil && found {
-		fs, err = d.GetFSStructureFromRepo(version)
+	if dsv != nil {
+		fs, err = d.GetFSFromDB(version)
 	} else {
 		if !utils.HasMasters() {
 			return nil, fmt.Errorf("Either the current instance has no masters or version does not exist.")
@@ -216,84 +228,116 @@ func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error
 }
 
 func (d *Dataset) GetFSStructureFromRepo(version string) (*plukio.ChunkedFileFS, error) {
-	gitFiles, err := d.Repo.ListFilesAtRev(version)
-	if err != nil {
-		return nil, err
-	}
+	//gitFiles, err := d.Repo.ListFilesAtRev(version)
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	return plukio.InitChunkedFSFromRepo(d.Repo, version, gitFiles)
+	//return plukio.InitChunkedFSFromRepo(d.Repo, version, gitFiles)
+	return nil, nil
+}
+
+func (d *Dataset) GetFSFromDB(version string) (*plukio.ChunkedFileFS, error) {
+	return d.mgr.GetFS(d.Workspace, d.Name, version)
+
+	return nil, nil
 }
 
 func (d *Dataset) CheckVersion(version string) (bool, error) {
-	if d.Repo == nil {
-		versions, err := plukio.MasterClient.ListVersions(d.Workspace, d.Name)
-		if err != nil {
-			return false, err
+	versions, err := d.Versions()
+	if err != nil {
+		return false, err
+	}
+	for _, v := range versions {
+		if v == version {
+			return true, nil
 		}
-		for _, v := range versions.Versions {
-			if v == version {
-				return true, nil
-			}
-		}
-		return false, errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
 	}
+	return false, nil
 
-	if !d.Repo.IsTagExists(version) {
-		return false, errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
-	}
-	return true, nil
-}
-
-func (d *Dataset) CheckoutVersion(version string) error {
-	logrus.Infof("Checkout tag %v.", version)
-
-	if !d.Repo.IsTagExists(version) {
-		return errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
-	}
-
-	return d.Repo.Checkout(version)
+	//if d.Repo == nil {
+	//	versions, err := plukio.MasterClient.ListVersions(d.Workspace, d.Name)
+	//	if err != nil {
+	//		return false, err
+	//	}
+	//	for _, v := range versions.Versions {
+	//		if v == version {
+	//			return true, nil
+	//		}
+	//	}
+	//	return false, errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
+	//}
+	//
+	//if !d.Repo.IsTagExists(version) {
+	//	return false, errors.NewStatus(404, fmt.Sprintf("Version %v not found for dataset %v.", version, d.Name))
+	//}
+	//return true, nil
 }
 
 func (d *Dataset) Versions() ([]string, error) {
-	if d.Repo == nil {
+	dsvs, err := d.mgr.ListDatasetVersions(db.DatasetVersion{Workspace: d.Workspace, Name: d.Name})
+	if err != nil {
+		return nil, err
+	}
+	versionMap := make(map[string]bool)
+	for _, dsv := range dsvs {
+		versionMap[dsv.Version] = true
+	}
+	if utils.HasMasters() {
 		vList, err := plukio.MasterClient.ListVersions(d.Workspace, d.Name)
 		if err != nil {
 			return nil, err
 		}
-		return vList.Versions, nil
+
+		for _, v := range vList.Versions {
+			versionMap[v] = true
+		}
 	}
-	return d.Repo.TagList()
+	result := make([]string, 0)
+	for v := range versionMap {
+		result = append(result, v)
+	}
+
+	return result, nil
 }
 
-func (d *Dataset) Delete() error {
-	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
-
-	return d.git.DeleteRepository(repo)
-}
+//func (d *Dataset) Delete() error {
+//	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
+//
+//	return d.git.DeleteRepository(repo)
+//}
 
 func (d *Dataset) DeleteVersion(version string) error {
-	return d.Repo.DeleteTag(version)
+	dsv, err := d.mgr.GetDatasetVersion(d.Workspace, d.Name, version)
+	if err != nil {
+		return err
+	}
+	dsv.Deleted = true
+	if _, err = d.mgr.UpdateDatasetVersion(dsv); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (d *Dataset) InitRepo(create bool) error {
-	repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
-	pacakRepo, err := d.git.GetRepository(repo)
-	if err != nil {
-		if !create {
-			return err
-		}
-		if err = d.git.InitRepository(getCommitter(), repo, []pacakimpl.GitFile{}); err != nil {
-			return err
-		}
-	}
-
-	if pacakRepo == nil {
-		pacakRepo, err = d.git.GetRepository(repo)
-		if err != nil {
-			return err
-		}
-	}
-	d.Repo = pacakRepo
+	//repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
+	//pacakRepo, err := d.git.GetRepository(repo)
+	//if err != nil {
+	//	if !create {
+	//		return err
+	//	}
+	//	if err = d.git.InitRepository(getCommitter(), repo, []pacakimpl.GitFile{}); err != nil {
+	//		return err
+	//	}
+	//}
+	//
+	//if pacakRepo == nil {
+	//	pacakRepo, err = d.git.GetRepository(repo)
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
+	//d.Repo = pacakRepo
 	return nil
 }
 

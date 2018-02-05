@@ -69,15 +69,9 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
 
-	dataset := api.ds.GetDataset(workspace, name)
-	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
-		return
-	}
-
-	err := dataset.Delete()
+	err := api.ds.DeleteDataset(workspace, name)
 	if err != nil {
-		WriteStatusError(resp, http.StatusInternalServerError, err)
+		WriteError(resp, err)
 		return
 	}
 
@@ -162,7 +156,11 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	dataset := api.ds.NewDataset(workspace, name)
+	dataset, err := api.ds.NewDataset(workspace, name)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
 	if err = dataset.InitRepo(true); err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
@@ -209,7 +207,7 @@ func (api *API) datasets(req *restful.Request, resp *restful.Response) {
 	sets := api.ds.ListDatasets(workspace)
 	ds := types.DataSetList{}
 	for _, d := range sets {
-		ds.Datasets = append(ds.Datasets, &d.Dataset)
+		ds.Datasets = append(ds.Datasets, &types.Dataset{Name: d.Name, Workspace: d.Workspace})
 	}
 	if len(ds.Datasets) == 0 {
 		ds.Datasets = make([]*types.Dataset, 0)

@@ -163,7 +163,7 @@ type ChunkedFile struct {
 	Ref                string  `json:"ref"`
 	Name               string  `json:"name"`
 	Size               int64   `json:"size"`
-	Chunks             []chunk `json:"chunks"`
+	Chunks             []Chunk `json:"chunks"`
 	currentChunk       int
 	currentChunkReader io.ReadCloser
 	offset             int64 // absolute offset
@@ -172,7 +172,7 @@ type ChunkedFile struct {
 	fs    *ChunkedFileFS
 }
 
-type chunk struct {
+type Chunk struct {
 	Path string `json:"path"`
 	Size int64  `json:"size"`
 }
@@ -209,13 +209,13 @@ func NewChunkedFileFromRepo(repo pacakimpl.PacakRepo, ref, path string) (webdav.
 	}
 
 	file.Size = size
-	file.Chunks = make([]chunk, 0)
+	file.Chunks = make([]Chunk, 0)
 	for _, chunkPath := range lines[1:] {
 		info, err := os.Stat(chunkPath)
 		if err != nil {
 			return nil, err
 		}
-		file.Chunks = append(file.Chunks, chunk{chunkPath, info.Size()})
+		file.Chunks = append(file.Chunks, Chunk{chunkPath, info.Size()})
 	}
 	//file.Dir = Path.Dir(f.Name())
 	return file, nil

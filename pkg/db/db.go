@@ -13,6 +13,8 @@ type DataMgr interface {
 	ChunkMgr
 	FileMgr
 	FileChunkMgr
+	DatasetMgr
+	DatasetVersionVersionMgr
 	DB() *gorm.DB
 	Begin() *DatabaseMgr
 	Commit() *DatabaseMgr

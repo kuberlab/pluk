@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/kuberlab/pacak/pkg/pacakimpl"
 	"github.com/kuberlab/pluk/pkg/datasets"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/io"
@@ -37,14 +34,16 @@ func Start() {
 func goGC() {
 	logrus.Info("Starting garbage collector...")
 	mgr := db.DbMgr
-	reps := make([]*db.File, 0)
 
-	err := mgr.DB().Raw("SELECT DISTINCT repository_path from files").Scan(&reps).Error
+	vDatasets, err := mgr.ListDatasets(db.Dataset{Deleted: true})
 	if err != nil {
 		logrus.Error(err)
 		return
 	}
 
+	// TODO: sqlite allows only 1 transaction at a time.
+	// TODO: So, if we create transaction here, all another requests
+	// TODO: (like list dataset or versions) will hang until transaction is completed
 	tx := mgr.Begin()
 	var needCloseTx = true
 	endTx := func() {
@@ -64,28 +63,26 @@ func goGC() {
 	var files []*db.File
 
 	// First: check if repo exists.
-	for _, r := range reps {
-		if !utils.Exists(r.RepositoryPath) {
-			// Delete all files within this repo
-			files, err = tx.ListFiles(db.File{RepositoryPath: r.RepositoryPath})
-			if err != nil {
-				logrus.Error(err)
-				return
-			}
+	for _, ds := range vDatasets {
+		// Delete all files within this repo
+		files, err = tx.ListFiles(db.File{Workspace: ds.Workspace, DatasetName: ds.Name})
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
 
-			for _, f := range files {
-				if checkAndDeleteFile(tx, f, false) {
-					deleted++
-				}
-				if deleted%100 == 0 {
-					logrus.Infof("Deleted %v objects", deleted)
-				}
+		for _, f := range files {
+			if checkAndDeleteFile(tx, f) {
+				deleted++
+			}
+			if deleted%100 == 0 {
+				logrus.Infof("Deleted %v objects", deleted)
 			}
 		}
+		deleteDataset(tx, ds)
 	}
 
-	// Second: Iterate over files and see if the corresponding file for
-	// specific version exists: smth. like 'git show <version>:<path>'
+	// Second: Iterate over versions and see if the corresponding version deleted.
 	// TODO: ^^
 	endTx()
 
@@ -93,28 +90,22 @@ func goGC() {
 	// but exist on slave.
 	if utils.HasMasters() {
 		// Sync with master and delete obsolete datasets.
-		gcFromMasters(mgr, reps)
+		gcFromMasters(mgr)
 	}
 	logrus.Infof("Done garbage collecting. Deleted %v objects.", deleted)
 }
 
-func checkAndDeleteFile(mgr db.DataMgr, f *db.File, checkFile bool) bool {
-	if checkFile {
-		// Check if file for this version exists
-		cmd := exec.Command(
-			"git",
-			"show",
-			fmt.Sprintf("%v:%v", f.Version, strings.TrimPrefix(f.Path, "/")),
-		)
-		cmd.Dir = f.RepositoryPath
-		_, err := cmd.Output()
-		if err != nil {
-			logrus.Debugf("git show output: %v", err)
-		} else {
-			// File exists
-			return false
-		}
+func deleteDataset(mgr db.DataMgr, d *db.Dataset) {
+	sql := fmt.Sprintf("DELETE FROM dataset_versions WHERE workspace='%v' AND name='%v'", d.Workspace, d.Name)
+	err := mgr.DB().Exec(sql).Error
+	if err != nil {
+		logrus.Error(err)
+		return
 	}
+	mgr.DeleteDataset(d.ID)
+}
+
+func checkAndDeleteFile(mgr db.DataMgr, f *db.File) bool {
 	mgr.DeleteFile(f.ID)
 
 	chunkIDs, err := mgr.ListFileChunks(db.FileChunk{FileID: f.ID})
@@ -152,7 +143,7 @@ func checkAndDeleteChunk(mgr db.DataMgr, chunk *db.Chunk, f *db.File) {
 		remainFiles, err := ioutil.ReadDir(dirName)
 		if err != nil {
 			logrus.Error(err)
-			return
+
 		}
 
 		// If there are no files in this directory, delete it.
@@ -162,38 +153,41 @@ func checkAndDeleteChunk(mgr db.DataMgr, chunk *db.Chunk, f *db.File) {
 	}
 }
 
-func gcFromMasters(mgr db.DataMgr, existingReps []*db.File) {
-	gitIface := pacakimpl.NewGitInterface(utils.GitDir(), utils.GitLocalDir())
-	dsManager := datasets.NewManager(gitIface)
-	//var needCloseTx = true
+func gcFromMasters(mgr db.DataMgr) {
+	//gitIface := pacakimpl.NewGitInterface(utils.GitDir(), utils.GitLocalDir())
+	var needCloseTx = true
 	var err error
-	//tx := mgr.Begin()
-	//endTx := func() {
-	//	if !needCloseTx {
-	//		return
-	//	}
-	//	if err != nil {
-	//		tx.Rollback()
-	//	} else {
-	//		tx.Commit()
-	//	}
-	//	needCloseTx = false
-	//}
-	//defer endTx()
+	tx := mgr.Begin()
+	endTx := func() {
+		if !needCloseTx {
+			return
+		}
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+		needCloseTx = false
+	}
+	defer endTx()
+
+	dsManager := datasets.NewManager(tx)
+	vDatasets, err := tx.ListDatasets(db.Dataset{})
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
 
 	// Get list of available slaveDatasets: map[workspace][]dataset_name
 	localDatasets := make(map[string]map[string]bool, 0)
-	for _, r := range existingReps {
-		if !utils.Exists(r.RepositoryPath) {
+	for _, ds := range vDatasets {
+		if ds.Deleted {
 			continue
 		}
-		splitted := strings.Split(r.RepositoryPath, "/")
-		name := splitted[len(splitted)-1]
-		workspace := splitted[len(splitted)-2]
-		if _, ok := localDatasets[workspace]; ok {
-			localDatasets[workspace][name] = true
+		if _, ok := localDatasets[ds.Workspace]; ok {
+			localDatasets[ds.Workspace][ds.Name] = true
 		} else {
-			localDatasets[workspace] = map[string]bool{name: true}
+			localDatasets[ds.Workspace] = map[string]bool{ds.Name: true}
 		}
 	}
 

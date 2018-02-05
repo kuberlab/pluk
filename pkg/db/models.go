@@ -5,6 +5,7 @@ to migrate database state.
 package db
 
 import (
+	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"github.com/kuberlab/lib/pkg/types"
 )
@@ -24,6 +25,8 @@ func CreateTables(db *gorm.DB) error {
 		&File{},
 		&Chunk{},
 		&FileChunk{},
+		&Dataset{},
+		&DatasetVersion{},
 	).Error
 }
 
@@ -38,7 +41,12 @@ func CreateAll(db *gorm.DB) error {
 	if err := db.Debug().Model(&File{}).AddIndex(
 		"idx_repo",
 		"repository_path").Error; err != nil {
-		return err
+		logrus.Error(err)
+	}
+	if err := db.Debug().Model(&File{}).AddIndex(
+		"idx_path",
+		"path").Error; err != nil {
+		logrus.Error(err)
 	}
 
 	return nil
