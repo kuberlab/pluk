@@ -26,6 +26,7 @@ type PlukClient interface {
 	ListDatasets(workspace string) (*types.DataSetList, error)
 	ListVersions(workspace, datasetName string) (*types.VersionList, error)
 	CheckChunk(hash string) (*types.CheckChunkResponse, error)
+	CheckChunkWebsocket(hash string) (res *types.ChunkCheck, err error)
 	DownloadChunk(hash string) (io.ReadCloser, error)
 	SaveChunk(hash string, data []byte) error
 	SaveChunkWebsocket(hash string, data []byte) error

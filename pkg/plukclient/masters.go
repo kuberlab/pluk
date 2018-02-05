@@ -31,6 +31,10 @@ func (c *MultiMasterClient) SaveChunkWebsocket(hash string, data []byte) (err er
 	return
 }
 
+func (c *MultiMasterClient) CheckChunkWebsocket(hash string) (res *types.ChunkCheck, err error) {
+	return
+}
+
 func (c *MultiMasterClient) Close() error {
 	return nil
 }

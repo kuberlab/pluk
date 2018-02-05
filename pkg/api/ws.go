@@ -59,24 +59,37 @@ func (api *API) wsReader(client *types.WebsocketClient) {
 			break
 		}
 
-		if message.Type != "chunkData" {
-			break
-		}
-		chunk := types.ChunkData{}
-		err = utils.LoadAsJson(message.Content.(map[string]interface{}), &chunk)
-		if err != nil {
-			logrus.Error(err)
-			break
+		switch message.Type {
+		case "chunkData":
+			chunk := types.ChunkData{}
+			err = utils.LoadAsJson(message.Content.(map[string]interface{}), &chunk)
+			if err != nil {
+				logrus.Error(err)
+				return
+			}
+
+			err = plukio.SaveChunk(
+				chunk.Hash,
+				ioutil.NopCloser(bytes.NewReader(chunk.Data)),
+				true,
+			)
+			if err != nil {
+				logrus.Error(err)
+				return
+			}
+		case "chunkCheck":
+			check := types.ChunkCheck{}
+			err = utils.LoadAsJson(message.Content.(map[string]interface{}), &check)
+			if err != nil {
+				logrus.Error(err)
+				return
+			}
+			exists := plukio.CheckChunk(check.Hash)
+			check.Exists = exists
+			if err := client.WriteMessage(check.Type(), check); err != nil {
+				return
+			}
 		}
 
-		err = plukio.SaveChunk(
-			chunk.Hash,
-			ioutil.NopCloser(bytes.NewReader(chunk.Data)),
-			true,
-		)
-		if err != nil {
-			logrus.Error(err)
-			break
-		}
 	}
 }

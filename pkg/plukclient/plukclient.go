@@ -15,8 +15,10 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
+	libtypes "github.com/kuberlab/lib/pkg/types"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
+	"github.com/kuberlab/pluk/pkg/utils"
 )
 
 type Client struct {
@@ -243,6 +245,26 @@ func (c *Client) SaveChunk(hash string, data []byte) error {
 func (c *Client) SaveChunkWebsocket(hash string, data []byte) error {
 	chunkData := types.ChunkData{Data: data, Hash: hash}
 	return c.ws.WriteMessage(chunkData.Type(), chunkData)
+}
+
+func (c *Client) CheckChunkWebsocket(hash string) (*types.ChunkCheck, error) {
+	chunkCheck := types.ChunkCheck{Hash: hash}
+	err := c.ws.WriteMessage(chunkCheck.Type(), chunkCheck)
+	if err != nil {
+		return nil, err
+	}
+	msg := libtypes.Message{}
+	if err = c.ws.Ws.ReadJSON(&msg); err != nil {
+		return nil, err
+	}
+	if msg.Type != "chunkCheck" {
+		return nil, fmt.Errorf("Wrong message type: %v", msg.Type)
+	}
+	if err = utils.LoadAsJson(msg.Content.(map[string]interface{}), &chunkCheck); err != nil {
+		return nil, err
+	}
+
+	return &chunkCheck, nil
 }
 
 func (c *Client) Close() error {

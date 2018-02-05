@@ -40,6 +40,15 @@ type HashedFile struct {
 	ModeTime time.Time   `json:"mode_time"`
 }
 
+type ChunkCheck struct {
+	Hash string `json:"hash"`
+	Exists bool `json:"exists"`
+}
+
+func (c *ChunkCheck) Type() string {
+	return "chunkCheck"
+}
+
 type ChunkData struct {
 	Data []byte `json:"data"`
 	Hash string `json:"hash"`

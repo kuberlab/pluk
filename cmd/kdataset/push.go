@@ -59,7 +59,7 @@ func NewPushCmd() *cobra.Command {
 		&push.chunkSize,
 		"chunk-size",
 		"",
-		10485760,
+		512000,
 		"Chunk-size for scanning",
 	)
 	f.Int64VarP(
@@ -97,6 +97,11 @@ func (cmd *pushCmd) run() error {
 		return nil
 	}
 
+	//if err = client.PrepareWebsocket(); err != nil {
+	//	logrus.Error(err)
+	//	return nil
+	//}
+
 	structure := types.FileStructure{Files: make([]*types.HashedFile, 0)}
 
 	logrus.Debug("Run push...")
@@ -118,6 +123,7 @@ func (cmd *pushCmd) run() error {
 	})
 
 	sem := semaphore.NewWeighted(cmd.concurrency)
+	//sem := semaphore.NewWeighted(1)
 	lock := &sync.RWMutex{}
 	ctx := context.TODO()
 	bar := pb.New64(totalSize).SetUnits(pb.U_BYTES)
@@ -173,10 +179,8 @@ func (cmd *pushCmd) run() error {
 			if err != nil && err != io.EOF {
 				return err
 			}
-			if err == io.EOF {
-				break
-			}
-			logrus.Debugf("chunk len: %v", len(chunkData))
+
+			//logrus.Debugf("chunk len: %v", len(chunkData))
 			if len(chunkData) == 0 {
 				break
 			}
@@ -188,6 +192,7 @@ func (cmd *pushCmd) run() error {
 			hashed.Hashes = append(hashed.Hashes, hash)
 
 		}
+		file.Close()
 		logrus.Debugf("Whole file size = %v", hashed.Size)
 		structure.Files = append(structure.Files, hashed)
 		return nil
@@ -195,6 +200,7 @@ func (cmd *pushCmd) run() error {
 
 	// Wait for all.
 	sem.Acquire(ctx, cmd.concurrency)
+	//sem.Acquire(ctx, 1)
 
 	if err != nil {
 		bar.Finish()
