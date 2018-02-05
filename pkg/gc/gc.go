@@ -10,7 +10,11 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/kuberlab/pacak/pkg/pacakimpl"
+	"github.com/kuberlab/pluk/pkg/datasets"
 	"github.com/kuberlab/pluk/pkg/db"
+	"github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
@@ -42,13 +46,19 @@ func goGC() {
 	}
 
 	tx := mgr.Begin()
-	defer func() {
+	var needCloseTx = true
+	endTx := func() {
+		if !needCloseTx {
+			return
+		}
 		if err != nil {
 			tx.Rollback()
 		} else {
 			tx.Commit()
 		}
-	}()
+		needCloseTx = false
+	}
+	defer endTx()
 
 	deleted := 0
 	var files []*db.File
@@ -76,6 +86,15 @@ func goGC() {
 
 	// Second: Iterate over files and see if the corresponding file for
 	// specific version exists: smth. like 'git show <version>:<path>'
+	// TODO: ^^
+	endTx()
+
+	// Third: See if there deleted dataset on master; delete those which don't exist on master
+	// but exist on slave.
+	if utils.HasMasters() {
+		// Sync with master and delete obsolete datasets.
+		gcFromMasters(mgr, reps)
+	}
 	logrus.Infof("Done garbage collecting. Deleted %v objects.", deleted)
 }
 
@@ -139,6 +158,71 @@ func checkAndDeleteChunk(mgr db.DataMgr, chunk *db.Chunk, f *db.File) {
 		// If there are no files in this directory, delete it.
 		if len(remainFiles) == 0 {
 			os.RemoveAll(dirName)
+		}
+	}
+}
+
+func gcFromMasters(mgr db.DataMgr, existingReps []*db.File) {
+	gitIface := pacakimpl.NewGitInterface(utils.GitDir(), utils.GitLocalDir())
+	dsManager := datasets.NewManager(gitIface)
+	//var needCloseTx = true
+	var err error
+	//tx := mgr.Begin()
+	//endTx := func() {
+	//	if !needCloseTx {
+	//		return
+	//	}
+	//	if err != nil {
+	//		tx.Rollback()
+	//	} else {
+	//		tx.Commit()
+	//	}
+	//	needCloseTx = false
+	//}
+	//defer endTx()
+
+	// Get list of available slaveDatasets: map[workspace][]dataset_name
+	localDatasets := make(map[string]map[string]bool, 0)
+	for _, r := range existingReps {
+		if !utils.Exists(r.RepositoryPath) {
+			continue
+		}
+		splitted := strings.Split(r.RepositoryPath, "/")
+		name := splitted[len(splitted)-1]
+		workspace := splitted[len(splitted)-2]
+		if _, ok := localDatasets[workspace]; ok {
+			localDatasets[workspace][name] = true
+		} else {
+			localDatasets[workspace] = map[string]bool{name: true}
+		}
+	}
+
+	candidates := make([]types.Dataset, 0)
+	for ws, slaveDatasets := range localDatasets {
+		remoteDatasets, err := io.MasterClient.ListDatasets(ws)
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
+		masterDatasetMap := make(map[string]bool)
+		for _, ds := range remoteDatasets.Datasets {
+			masterDatasetMap[ds.Name] = true
+		}
+		// Check if master has specific dataset on slave.
+		// If it doesn't exists, then it was probably deleted.
+		// Then we delete it as well on the slave.
+		for slaveName := range slaveDatasets {
+			if _, ok := masterDatasetMap[slaveName]; !ok {
+				candidates = append(candidates, types.Dataset{Name: slaveName, Workspace: ws})
+			}
+		}
+	}
+
+	for _, candidate := range candidates {
+		logrus.Infof("Delete dataset %v/%v from slave", candidate.Workspace, candidate.Name)
+		if err = dsManager.DeleteDataset(candidate.Workspace, candidate.Name); err != nil {
+			logrus.Error(err)
+			return
 		}
 	}
 }
