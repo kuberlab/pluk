@@ -120,7 +120,7 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 			}
 		}
 
-		for _, hash := range f.Hashes {
+		for i, hash := range f.Hashes {
 			chunk := &db.Chunk{Hash: hash}
 			if eChunk, errD := tx.GetChunk(hash); errD != nil {
 				if err = tx.CreateChunk(chunk); err != nil {
@@ -130,9 +130,9 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 				chunk.ID = eChunk.ID
 			}
 			// Create connection
-			fileChunk := &db.FileChunk{ChunkID: chunk.ID, FileID: fileDB.ID}
+			fileChunk := &db.FileChunk{ChunkID: chunk.ID, FileID: fileDB.ID, ChunkIndex: uint(i)}
 
-			if _, errD := tx.GetFileChunk(fileDB.ID, chunk.ID); errD != nil {
+			if _, errD := tx.GetFileChunk(fileDB.ID, chunk.ID, i); errD != nil {
 				if err = tx.CreateFileChunk(fileChunk); err != nil {
 					return err
 				}

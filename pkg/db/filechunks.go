@@ -2,23 +2,28 @@ package db
 
 type FileChunkMgr interface {
 	CreateFileChunk(file *FileChunk) error
-	GetFileChunk(fileID uint, chunkID uint) (*FileChunk, error)
+	GetFileChunk(fileID uint, chunkID uint, index int) (*FileChunk, error)
 	ListFileChunks(filter FileChunk) ([]*FileChunk, error)
 	DeleteFileChunk(fileID, chunkID uint) error
 }
 
 type FileChunk struct {
-	FileID  uint `gorm:"index:file_id"`
-	ChunkID uint `gorm:"index:chunk_id"`
+	FileID     uint `gorm:"index:file_id" json:"file_id"`
+	ChunkID    uint `gorm:"index:chunk_id" json:"chunk_id"`
+	ChunkIndex uint `json:"chunk_index"`
 }
 
 func (mgr *DatabaseMgr) CreateFileChunk(file *FileChunk) error {
 	return mgr.db.Create(file).Error
 }
 
-func (mgr *DatabaseMgr) GetFileChunk(fileID uint, chunkID uint) (*FileChunk, error) {
+func (mgr *DatabaseMgr) GetFileChunk(fileID uint, chunkID uint, index int) (*FileChunk, error) {
 	var fileChunk = FileChunk{}
-	err := mgr.db.First(&fileChunk, FileChunk{FileID: fileID, ChunkID: chunkID}).Error
+	filter := FileChunk{FileID: fileID, ChunkID: chunkID}
+	if index != -1 {
+		filter.ChunkIndex = uint(index)
+	}
+	err := mgr.db.First(&fileChunk, filter).Error
 	return &fileChunk, err
 }
 

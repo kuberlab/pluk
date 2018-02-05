@@ -11,9 +11,8 @@ type ChunkMgr interface {
 
 type Chunk struct {
 	BaseModel
-	ID    uint   `sql:"AUTO_INCREMENT" gorm:"primary_key"`
-	Index uint   `json:"index"`
-	Hash  string `json:"hash" gorm:"index:idx_hash"`
+	ID   uint   `sql:"AUTO_INCREMENT" gorm:"primary_key"`
+	Hash string `json:"hash" gorm:"index:idx_hash"`
 }
 
 func (mgr *DatabaseMgr) CreateChunk(chunk *Chunk) error {

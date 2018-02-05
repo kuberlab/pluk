@@ -40,6 +40,11 @@ func main() {
 		}
 	}
 
+	// Delete all trash.
+	db.DbMgr.DB().Exec("DELETE FROM files")
+	db.DbMgr.DB().Exec("DELETE FROM chunks")
+	db.DbMgr.DB().Exec("DELETE FROM file_chunks")
+
 	for _, ds := range datasets {
 		versions, err := ds.Versions()
 		if err != nil {
