@@ -42,17 +42,22 @@ func WriteTarGz(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 			return err
 		}
 
-		for {
-			buf := make([]byte, 30000)
-			n, err := f.Read(buf)
-			if err == io.EOF {
-				break
-			}
-			if _, err := twriter.Write(buf[:n]); err != nil {
-				return err
-			}
-			resp.Flush()
+		_, err := io.Copy(twriter, f)
+		if err != nil {
+			return err
 		}
+		resp.Flush()
+		//for {
+		//	buf := make([]byte, 65536*2)
+		//	n, err := f.Read(buf)
+		//	if err == io.EOF {
+		//		break
+		//	}
+		//	if _, err := twriter.Write(buf[:n]); err != nil {
+		//		return err
+		//	}
+		//	resp.Flush()
+		//}
 		f.Close()
 	}
 

@@ -69,7 +69,7 @@ func (c *Client) PrepareWebsocket() error {
 	u := fmt.Sprintf("%v://%v/%v", scheme, c.BaseURL.Host, strings.TrimPrefix(c.BaseURL.Path, "/"))
 	u = strings.TrimSuffix(u, "/") + urlStr
 	logrus.Debugf("Connect to %v", u)
-	conn, resp, err := dialer.Dial(u, make(http.Header))
+	conn, resp, err := dialer.Dial(u, c.authHeaders())
 
 	if err != nil {
 		return err
@@ -98,14 +98,8 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 		return nil, err
 	}
 	if c.auth != nil {
-		if c.auth.Cookie != "" {
-			req.Header.Set("Cookie", c.auth.Cookie)
-		}
-		if c.auth.Token != "" {
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", c.auth.Token))
-		}
-		if c.auth.InternalKey != "" {
-			req.Header.Set("Internal", c.auth.InternalKey)
+		for k, v := range c.authHeaders() {
+			req.Header.Set(k, v[0])
 		}
 	}
 
@@ -116,6 +110,20 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 		req.Header.Set("User-Agent", c.UserAgent)
 	}
 	return req, nil
+}
+
+func (c *Client) authHeaders() http.Header {
+	h := make(http.Header)
+	if c.auth.Cookie != "" {
+		h.Set("Cookie", c.auth.Cookie)
+	}
+	if c.auth.Token != "" {
+		h.Set("Authorization", fmt.Sprintf("Bearer %v", c.auth.Token))
+	}
+	if c.auth.InternalKey != "" {
+		h.Set("Internal", c.auth.InternalKey)
+	}
+	return h
 }
 
 func (c *Client) ListDatasets(workspace string) (*types.DataSetList, error) {
