@@ -1,5 +1,5 @@
-hash: 0bf4047a3790fe82f39b8791bd5435d692214a44b2f3d3f77377cb2e04fe3c83
-updated: 2018-02-02T12:42:44.100481215+03:00
+hash: b838d275adfda35c68841e9d1964e2c6c654d6abc5c2a77411b7de18275cface
+updated: 2018-02-06T12:21:55.037746021+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -30,23 +30,12 @@ imports:
   - pkg/errors
   - pkg/types
   - pkg/utils
-- name: github.com/kuberlab/pacak
-  version: cd6d834182417336c5e4617368aeb1f8138e0243
-  repo: ssh://git@github.com/kuberlab/pacak.git
-  subpackages:
-  - pkg/errors
-  - pkg/pacakimpl
-  - pkg/process
-  - pkg/sync
-  - pkg/util
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/mattn/go-runewidth
   version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/mattn/go-sqlite3
   version: 2d44decb4941c9cdf72c22297b7890faf7da9bcb
-- name: github.com/mcuadros/go-version
-  version: 88e56e02bea1c203c99222c365fa52a69996ccac
 - name: github.com/patrickmn/go-cache
   version: a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0
 - name: github.com/pborman/uuid
@@ -57,8 +46,6 @@ imports:
   version: 7be4beda01ec05d0b93d80b3facd2b6f44080d94
 - name: github.com/spf13/pflag
   version: 5ccb023bc27df288a957c5e994cd44fd19619465
-- name: github.com/Unknwon/com
-  version: 7677a1d7c1137cd3dd5ba7a076d0c898a1ef4520
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:

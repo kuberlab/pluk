@@ -44,6 +44,7 @@ func goGC() {
 	// TODO: sqlite allows only 1 transaction at a time.
 	// TODO: So, if we create transaction here, all another requests
 	// TODO: (like list dataset or versions) will hang until transaction is completed
+	// Done: Using WAL mode (Write ahead log) for SQLite.
 	tx := mgr.Begin()
 	var needCloseTx = true
 	endTx := func() {
@@ -154,7 +155,6 @@ func checkAndDeleteChunk(mgr db.DataMgr, chunk *db.Chunk, f *db.File) {
 }
 
 func gcFromMasters(mgr db.DataMgr) {
-	//gitIface := pacakimpl.NewGitInterface(utils.GitDir(), utils.GitLocalDir())
 	var needCloseTx = true
 	var err error
 	tx := mgr.Begin()

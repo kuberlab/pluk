@@ -12,7 +12,6 @@ import (
 )
 
 type Manager struct {
-	//git pacakimpl.GitInterface
 	mgr db.DataMgr
 }
 
@@ -40,7 +39,6 @@ func (m *Manager) GetDataset(workspace, name string) *Dataset {
 	for _, d := range datasets {
 		if d.Name == name {
 			res := d
-			//res.InitRepo(false)
 			return res
 		}
 	}

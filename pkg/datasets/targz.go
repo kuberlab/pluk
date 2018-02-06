@@ -11,14 +11,11 @@ import (
 )
 
 func WriteTarGz(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
-	// Wrap in gzip writer
-	//zipper := gzip.NewWriter(resp)
 
 	// Wrap in tar writer
 	twriter := tar.NewWriter(resp)
 	defer func() {
 		twriter.Close()
-		//zipper.Close()
 	}()
 
 	for _, f := range fs.FS {

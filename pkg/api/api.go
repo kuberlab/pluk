@@ -17,7 +17,6 @@ import (
 )
 
 type API struct {
-	//gitInterface pacakimpl.GitInterface
 	ds      *datasets.Manager
 	cache   *utils.RequestCache
 	fsCache *utils.RequestCache
@@ -29,9 +28,7 @@ func Start() {
 	logrus.Info("Starting pluk...")
 	utils.PrintEnvInfo()
 	plukio.MasterClient = plukclient.NewMultiClient()
-	//gitIface := pacakimpl.NewGitInterface(utils.GitDir(), utils.GitLocalDir())
 	api := &API{
-		//gitInterface: gitIface,
 		cache:   utils.NewRequestCache(),
 		fsCache: utils.NewRequestCache(),
 		client:  &http.Client{Timeout: time.Minute},

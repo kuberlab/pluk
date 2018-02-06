@@ -2,24 +2,18 @@ package io
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/kuberlab/pacak/pkg/pacakimpl"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
-	"golang.org/x/net/webdav"
-	"golang.org/x/sync/semaphore"
 )
 
 type PlukClient interface {
@@ -45,48 +39,6 @@ var MasterClient PlukClient
 type ChunkedFileFS struct {
 	lock *sync.RWMutex
 	FS   map[string]*ChunkedFile `json:"fs"`
-}
-
-func InitChunkedFSFromRepo(repo pacakimpl.PacakRepo, version string, gitFiles []os.FileInfo) (*ChunkedFileFS, error) {
-	fs := &ChunkedFileFS{FS: make(map[string]*ChunkedFile), lock: &sync.RWMutex{}}
-
-	var n int64 = utils.ReadConcurrency()
-	sem := semaphore.NewWeighted(n)
-	ctx := context.TODO()
-
-	//errChan := make(chan error, 1000)
-	addFile := func(gitFile os.FileInfo) {
-		defer sem.Release(1)
-		chunked, err := NewInternalChunked(repo, version, gitFile.Name())
-		if err != nil {
-			//errChan <- err
-			logrus.Errorf("Read %v: %v", gitFile.Name(), err)
-			return
-		}
-		chunked.Fstat = &ChunkedFileInfo{
-			FmodTime: gitFile.ModTime(),
-			Fmode:    gitFile.Mode(),
-			Fsize:    chunked.Size,
-			Fname:    path.Base(chunked.Name),
-			Dir:      gitFile.IsDir(),
-		}
-		if gitFile.IsDir() {
-			chunked.Fstat.Fsize = 4096
-		}
-		fs.lock.Lock()
-		fs.FS[gitFile.Name()] = chunked
-		fs.lock.Unlock()
-	}
-
-	for _, gitFile := range gitFiles {
-		if gitFile.Name() == "/.gitignore" {
-			continue
-		}
-		sem.Acquire(ctx, 1)
-		go addFile(gitFile)
-	}
-	sem.Acquire(ctx, n)
-	return fs, nil
 }
 
 func (fs *ChunkedFileFS) Prepare() {
@@ -159,7 +111,6 @@ func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error
 }
 
 type ChunkedFile struct {
-	//repo               pacakimpl.PacakRepo
 	Ref                string  `json:"ref"`
 	Name               string  `json:"name"`
 	Size               int64   `json:"size"`
@@ -175,50 +126,6 @@ type ChunkedFile struct {
 type Chunk struct {
 	Path string `json:"path"`
 	Size int64  `json:"size"`
-}
-
-func NewInternalChunked(repo pacakimpl.PacakRepo, ref, path string) (*ChunkedFile, error) {
-	chunked, err := NewChunkedFileFromRepo(repo, ref, path)
-	if err != nil {
-		return nil, err
-	}
-	return chunked.(*ChunkedFile), nil
-}
-
-func NewChunkedFileFromRepo(repo pacakimpl.PacakRepo, ref, path string) (webdav.File, error) {
-	file := &ChunkedFile{Name: path, Ref: ref}
-
-	if path == "/" {
-		return file, nil
-	}
-	data, err := repo.GetFileDataAtRev(ref, path)
-	if err != nil {
-		return nil, err
-	}
-
-	lines := strings.Split(string(data), "\n")
-	if len(lines) < 2 {
-		return file, nil
-		//return nil, fmt.Errorf("Probably corrupted file [Name=%v], contained less than 2 lines: %v", f.Name(), string(data))
-	}
-
-	size, err := strconv.ParseInt(lines[0], 10, 64)
-	if err != nil {
-		return file, nil
-		//return nil, err
-	}
-
-	file.Size = size
-	file.Chunks = make([]Chunk, 0)
-	for _, chunkPath := range lines[1:] {
-		info, err := os.Stat(chunkPath)
-		if err != nil {
-			return nil, err
-		}
-		file.Chunks = append(file.Chunks, Chunk{chunkPath, info.Size()})
-	}
-	//file.Dir = Path.Dir(f.Name())
-	return file, nil
 }
 
 func (f *ChunkedFile) Close() error {
@@ -249,9 +156,6 @@ func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, er
 			reader.Close()
 			SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
 			return ioutil.NopCloser(bytes.NewBuffer(data)), nil
-			//reader, err = os.Open(chunkPath)
-			//fmt.Println("READER/ERR", reader, err)
-			//return reader, err
 		} else {
 			return nil, err
 		}
@@ -345,26 +249,6 @@ func (f *ChunkedFile) Readdir(count int) ([]os.FileInfo, error) {
 
 func (f *ChunkedFile) Stat() (os.FileInfo, error) {
 	return f.Fstat, nil
-
-	//t := time.Now()
-	//baseStat, err := f.repo.StatFileAtRev(f.Ref, f.Name)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//info := &ChunkedFileInfo{
-	//	Fmode:    baseStat.Mode(),
-	//	FmodTime: baseStat.ModTime(),
-	//	Fname:    baseStat.Name(),
-	//	Dir:      baseStat.IsDir(),
-	//}
-	//if baseStat.IsDir() {
-	//	info.Fsize = 4096
-	//} else {
-	//	info.Fsize = f.Size
-	//}
-	//
-	////fmt.Println("STAT", f.Name, time.Since(t), *info)
-	//return info, nil
 }
 
 func (*ChunkedFile) Write(p []byte) (int, error) {
