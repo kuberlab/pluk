@@ -2,7 +2,6 @@ package datasets
 
 import (
 	"fmt"
-	"path"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
@@ -80,8 +79,6 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 }
 
 func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err error) {
-	repoPath := path.Join(utils.GitLocalDir(), d.Workspace, d.Name)
-
 	tx := db.DbMgr.Begin()
 	defer func() {
 		if err != nil {
@@ -107,14 +104,13 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 		//	fPath = "/" + fPath
 		//}
 		fileDB := &db.File{
-			Size:           int64(f.Size),
-			Path:           fPath,
-			RepositoryPath: repoPath,
-			Version:        version,
-			Workspace:      d.Workspace,
-			DatasetName:    d.Name,
+			Size:        int64(f.Size),
+			Path:        fPath,
+			Version:     version,
+			Workspace:   d.Workspace,
+			DatasetName: d.Name,
 		}
-		if existing, errD := tx.GetFile(fPath, repoPath, version); errD != nil {
+		if existing, errD := tx.GetFile(d.Workspace, d.Name, fPath, version); errD != nil {
 			// Create
 			err = tx.CreateFile(fileDB)
 			if err != nil {
@@ -132,8 +128,8 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 		}
 
 		for i, hash := range f.Hashes {
-			chunk := &db.Chunk{Hash: hash}
-			if eChunk, errD := tx.GetChunk(hash); errD != nil {
+			chunk := &db.Chunk{Hash: hash.Hash, Size: hash.Size}
+			if eChunk, errD := tx.GetChunk(hash.Hash); errD != nil {
 				if err = tx.CreateChunk(chunk); err != nil {
 					return err
 				}
@@ -206,7 +202,6 @@ func (d *Dataset) getFSStructureFromMaster(version string) (*plukio.ChunkedFileF
 }
 
 func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error {
-	d.InitRepo(true)
 	dest := types.FileStructure{}
 	for _, f := range src.FS {
 		if f.Fstat.Dir {
@@ -214,12 +209,12 @@ func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error
 		}
 		file := types.HashedFile{
 			Path:   strings.TrimPrefix(f.Name, "/"),
-			Size:   uint64(f.Size),
-			Hashes: make([]string, 0),
+			Size:   f.Size,
+			Hashes: make([]types.Hash, 0),
 		}
-		for _, chunkPath := range f.Chunks {
-			hash := utils.GetHashFromPath(chunkPath.Path)
-			file.Hashes = append(file.Hashes, hash)
+		for _, chunk := range f.Chunks {
+			hash := utils.GetHashFromPath(chunk.Path)
+			file.Hashes = append(file.Hashes, types.Hash{Hash: hash, Size: chunk.Size})
 		}
 		dest.Files = append(dest.Files, &file)
 	}
@@ -319,27 +314,27 @@ func (d *Dataset) DeleteVersion(version string) error {
 	return nil
 }
 
-func (d *Dataset) InitRepo(create bool) error {
-	//repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
-	//pacakRepo, err := d.git.GetRepository(repo)
-	//if err != nil {
-	//	if !create {
-	//		return err
-	//	}
-	//	if err = d.git.InitRepository(getCommitter(), repo, []pacakimpl.GitFile{}); err != nil {
-	//		return err
-	//	}
-	//}
-	//
-	//if pacakRepo == nil {
-	//	pacakRepo, err = d.git.GetRepository(repo)
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
-	//d.Repo = pacakRepo
-	return nil
-}
+//func (d *Dataset) InitRepo(create bool) error {
+//repo := fmt.Sprintf("%v/%v", d.Workspace, d.Name)
+//pacakRepo, err := d.git.GetRepository(repo)
+//if err != nil {
+//	if !create {
+//		return err
+//	}
+//	if err = d.git.InitRepository(getCommitter(), repo, []pacakimpl.GitFile{}); err != nil {
+//		return err
+//	}
+//}
+//
+//if pacakRepo == nil {
+//	pacakRepo, err = d.git.GetRepository(repo)
+//	if err != nil {
+//		return err
+//	}
+//}
+//d.Repo = pacakRepo
+//return nil
+//}
 
 func buildMessage(version, comment string) string {
 	return fmt.Sprintf("Version: %v\nComment: %v", version, comment)

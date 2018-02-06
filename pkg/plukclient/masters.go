@@ -151,7 +151,7 @@ func (c *MultiMasterClient) SaveFileStructure(structure types.FileStructure, wor
 	return err
 }
 
-func (c *MultiMasterClient) CheckChunk(hash string) (res *types.CheckChunkResponse, err error) {
+func (c *MultiMasterClient) CheckChunk(hash string) (res *types.ChunkCheck, err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
 		cl, err = c.initBaseClient(base)

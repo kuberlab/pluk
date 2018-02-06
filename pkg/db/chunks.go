@@ -13,6 +13,7 @@ type Chunk struct {
 	BaseModel
 	ID   uint   `sql:"AUTO_INCREMENT" gorm:"primary_key"`
 	Hash string `json:"hash" gorm:"index:idx_hash"`
+	Size int64  `json:"size"`
 }
 
 func (mgr *DatabaseMgr) CreateChunk(chunk *Chunk) error {

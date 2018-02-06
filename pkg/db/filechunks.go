@@ -49,24 +49,24 @@ func (mgr *DatabaseMgr) DeleteFileChunk(fileID, chunkID uint) error {
 }
 
 type rawFile struct {
-	FileID         uint
-	ChunkID        uint
-	Path           string
-	Size           int64
-	RepositoryPath string
-	Version        string
-	Index          uint
-	Hash           string
-	UpdatedAt      libtypes.Time
+	FileID     uint
+	ChunkID    uint
+	Path       string
+	FileSize   int64
+	ChunkSize  int64
+	Version    string
+	ChunkIndex uint
+	Hash       string
+	UpdatedAt  libtypes.Time
 }
 
 var columns = []string{
 	"file_id",
 	"chunk_id",
 	"path",
-	"size",
-	"repository_path",
-	`"chunk_index"`,
+	"f.size as file_size",
+	"chunks.size as chunk_size",
+	`chunk_index`,
 	"hash",
 	"f.updated_at",
 }
@@ -76,14 +76,15 @@ SELECT
   file_id,
   chunk_id,
   path,
-  "size",
+  f.size as file_size,
+  chunks.size as chunk_size
   repository_path,
   "chunk_index",
   hash,
   f.updated_at
 FROM file_chunks fc
   INNER JOIN files f
-    ON f.id = fc.file_id AND repository_path = '/git-local/kuberlab-demo/many' AND version = '1.0.0'
+    ON f.id = fc.file_id AND f.dataset_name = 'many' AND f.workspace = 'kuberlab-demo' AND version = '1.0.0'
   INNER JOIN chunks ON fc.chunk_id = chunks.id
 */
 func (mgr *DatabaseMgr) GetFS(workspace, dataset, version string) (*io.ChunkedFileFS, error) {
@@ -97,7 +98,7 @@ func (mgr *DatabaseMgr) GetFS(workspace, dataset, version string) (*io.ChunkedFi
 		Select(strings.Join(columns, ",")).
 		Joins(join1).
 		Joins("INNER JOIN chunks ON file_chunks.chunk_id = chunks.id").
-		Order(`path, "index"`).
+		Order(`path, chunk_index`).
 		Scan(&rawFiles).Error
 
 	if err != nil {
@@ -112,15 +113,15 @@ func (mgr *DatabaseMgr) GetFS(workspace, dataset, version string) (*io.ChunkedFi
 		}
 		fs.FS[raw.Path] = &io.ChunkedFile{
 			Name:   "/" + raw.Path,
-			Chunks: []io.Chunk{{Path: utils.GetHashedFilename(raw.Hash)}},
-			Size:   raw.Size,
+			Chunks: []io.Chunk{{Path: utils.GetHashedFilename(raw.Hash), Size: raw.ChunkSize}},
+			Size:   raw.FileSize,
 			Ref:    version,
 			Fstat: &io.ChunkedFileInfo{
 				Dir:      false,
 				Fmode:    0644,
 				FmodTime: raw.UpdatedAt.Time,
 				Fname:    path.Base("/" + raw.Path),
-				Fsize:    raw.Size,
+				Fsize:    raw.FileSize,
 			},
 		}
 	}

@@ -3,21 +3,20 @@ package db
 type FileMgr interface {
 	CreateFile(file *File) error
 	UpdateFile(file *File) (*File, error)
-	GetFile(path, repository, version string) (*File, error)
+	GetFile(workspace, dataset, path, version string) (*File, error)
 	ListFiles(filter File) ([]*File, error)
 	DeleteFile(id uint) error
 }
 
 type File struct {
 	BaseModel
-	ID             uint    `sql:"AUTO_INCREMENT" gorm:"primary_key"`
-	Path           string  `json:"path" gorm:"index:idx_repo_version_path"`
-	Size           int64   `json:"size"`
-	DatasetName    string  `json:"dataset_name" gorm:"index:idx_dataset_workspace"`
-	Workspace      string  `json:"workspace" gorm:"index:idx_dataset_workspace"`
-	RepositoryPath string  `json:"repository_path" gorm:"index:idx_repo_version_path"`
-	Version        string  `json:"version" gorm:"index:idx_repo_version_path"`
-	Chunks         []Chunk `gorm:"-"`
+	ID          uint    `sql:"AUTO_INCREMENT" gorm:"primary_key"`
+	Path        string  `json:"path" gorm:"index:idx_version_path"`
+	Size        int64   `json:"size"`
+	DatasetName string  `json:"dataset_name" gorm:"index:idx_dataset_workspace"`
+	Workspace   string  `json:"workspace" gorm:"index:idx_dataset_workspace"`
+	Version     string  `json:"version" gorm:"index:idx_version_path"`
+	Chunks      []Chunk `gorm:"-"`
 }
 
 func (mgr *DatabaseMgr) CreateFile(file *File) error {
@@ -29,9 +28,9 @@ func (mgr *DatabaseMgr) UpdateFile(file *File) (*File, error) {
 	return file, err
 }
 
-func (mgr *DatabaseMgr) GetFile(path, repository, version string) (*File, error) {
+func (mgr *DatabaseMgr) GetFile(workspace, dataset, path, version string) (*File, error) {
 	var file = File{}
-	err := mgr.db.First(&file, File{RepositoryPath: repository, Version: version, Path: path}).Error
+	err := mgr.db.First(&file, File{Workspace: workspace, DatasetName: dataset, Version: version, Path: path}).Error
 	return &file, err
 }
 

@@ -170,14 +170,14 @@ func (c *Client) SaveFileStructure(structure types.FileStructure, workspace, nam
 	return nil
 }
 
-func (c *Client) CheckChunk(hash string) (*types.CheckChunkResponse, error) {
+func (c *Client) CheckChunk(hash string) (*types.ChunkCheck, error) {
 	u := fmt.Sprintf("/chunks/%v", hash)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
-	res := new(types.CheckChunkResponse)
+	res := new(types.ChunkCheck)
 	_, err = c.Do(req, res)
 
 	if err != nil {

@@ -102,7 +102,7 @@ func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
 	exists := plukio.CheckChunk(hash)
 
-	resp.WriteEntity(types.CheckChunkResponse{Hash: hash, Exists: exists})
+	resp.WriteEntity(types.ChunkCheck{Hash: hash, Exists: exists})
 }
 
 func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
@@ -159,10 +159,6 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	dataset, err := api.ds.NewDataset(workspace, name)
 	if err != nil {
 		WriteError(resp, err)
-		return
-	}
-	if err = dataset.InitRepo(true); err != nil {
-		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
 	err = dataset.Save(structure, v.String(), comment, create, true)

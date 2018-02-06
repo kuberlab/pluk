@@ -28,6 +28,7 @@ type pushCmd struct {
 	version     string
 	chunkSize   int
 	concurrency int64
+	websocket   bool
 }
 
 func NewPushCmd() *cobra.Command {
@@ -76,6 +77,13 @@ func NewPushCmd() *cobra.Command {
 		false,
 		"Create dataset in cloud-dealer if not exists.",
 	)
+	f.BoolVarP(
+		&push.websocket,
+		"websocket",
+		"w",
+		false,
+		"Use websocket for connecting to server. Decreases the number of requests.",
+	)
 
 	return cmd
 }
@@ -97,10 +105,13 @@ func (cmd *pushCmd) run() error {
 		return nil
 	}
 
-	//if err = client.PrepareWebsocket(); err != nil {
-	//	logrus.Error(err)
-	//	return nil
-	//}
+	if cmd.websocket {
+		if err = client.PrepareWebsocket(); err != nil {
+			logrus.Error(err)
+			return nil
+		}
+	}
+	defer client.Close()
 
 	structure := types.FileStructure{Files: make([]*types.HashedFile, 0)}
 
@@ -122,8 +133,12 @@ func (cmd *pushCmd) run() error {
 		return nil
 	})
 
-	sem := semaphore.NewWeighted(cmd.concurrency)
-	//sem := semaphore.NewWeighted(1)
+	var sem *semaphore.Weighted
+	if cmd.websocket {
+		sem = semaphore.NewWeighted(1)
+	} else {
+		sem = semaphore.NewWeighted(cmd.concurrency)
+	}
 	lock := &sync.RWMutex{}
 	ctx := context.TODO()
 	bar := pb.New64(totalSize).SetUnits(pb.U_BYTES)
@@ -131,6 +146,7 @@ func (cmd *pushCmd) run() error {
 	bar.ShowSpeed = true
 	bar.Start()
 
+	var resp *types.ChunkCheck
 	checkAndUpload := func(chunkData []byte, hash string) error {
 		defer func() {
 			lock.Lock()
@@ -138,16 +154,28 @@ func (cmd *pushCmd) run() error {
 			lock.Unlock()
 			sem.Release(1)
 		}()
-		resp, err := client.CheckChunk(hash)
+
+		if cmd.websocket {
+			resp, err = client.CheckChunkWebsocket(hash)
+		} else {
+			resp, err = client.CheckChunk(hash)
+		}
 		if err != nil {
 			logrus.Errorf("Failed to check chunk: %v", err)
 			os.Exit(1)
 		}
 		if !resp.Exists {
 			// Upload chunk.
-			if err = client.SaveChunk(hash, chunkData); err != nil {
-				logrus.Errorf("Failed to upload chunk: %v", err)
-				os.Exit(1)
+			if cmd.websocket {
+				if err = client.SaveChunkWebsocket(hash, chunkData); err != nil {
+					logrus.Errorf("Failed to upload chunk: %v", err)
+					os.Exit(1)
+				}
+			} else {
+				if err = client.SaveChunk(hash, chunkData); err != nil {
+					logrus.Errorf("Failed to upload chunk: %v", err)
+					os.Exit(1)
+				}
 			}
 		}
 		return nil
@@ -188,8 +216,9 @@ func (cmd *pushCmd) run() error {
 			sem.Acquire(ctx, 1)
 			go checkAndUpload(chunkData, hash)
 
-			hashed.Size += uint64(len(chunkData))
-			hashed.Hashes = append(hashed.Hashes, hash)
+			length := int64(len(chunkData))
+			hashed.Size += length
+			hashed.Hashes = append(hashed.Hashes, types.Hash{Hash: hash, Size: length})
 
 		}
 		file.Close()
@@ -199,8 +228,11 @@ func (cmd *pushCmd) run() error {
 	})
 
 	// Wait for all.
-	sem.Acquire(ctx, cmd.concurrency)
-	//sem.Acquire(ctx, 1)
+	if cmd.websocket {
+		sem.Acquire(ctx, 1)
+	} else {
+		sem.Acquire(ctx, cmd.concurrency)
+	}
 
 	if err != nil {
 		bar.Finish()
