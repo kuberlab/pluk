@@ -39,11 +39,6 @@ func CreateAll(db *gorm.DB) error {
 	}
 
 	if err := db.Debug().Model(&File{}).AddIndex(
-		"idx_repo",
-		"repository_path").Error; err != nil {
-		logrus.Error(err)
-	}
-	if err := db.Debug().Model(&File{}).AddIndex(
 		"idx_path",
 		"path").Error; err != nil {
 		logrus.Error(err)
