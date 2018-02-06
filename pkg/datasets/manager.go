@@ -56,7 +56,7 @@ func (m *Manager) GetDataset(workspace, name string) *Dataset {
 	for _, d := range ds.Datasets {
 		if d.Name == name {
 			// Create locally.
-			dsDB := &db.Dataset{Name: d.Name, Workspace: d.Name}
+			dsDB := &db.Dataset{Name: d.Name, Workspace: d.Workspace}
 			err := m.mgr.CreateDataset(dsDB)
 			if err != nil {
 				logrus.Error(err)

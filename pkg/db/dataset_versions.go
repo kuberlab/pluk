@@ -12,8 +12,8 @@ type DatasetVersionVersionMgr interface {
 type DatasetVersion struct {
 	BaseModel
 	ID        uint   `sql:"AUTO_INCREMENT" gorm:"primary_key"`
-	Workspace string `json:"workspace" gorm:"index:idx_version_workspace"`
-	Name      string `json:"name" gorm:"index:idx_version_name"`
+	Workspace string `json:"workspace" gorm:"index:idx_workspace_name"`
+	Name      string `json:"name" gorm:"index:idx_workspace_name"`
 	Version   string `json:"version" gorm:"index:idx_version"`
 	Deleted   bool   `json:"deleted"`
 }

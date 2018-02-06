@@ -11,11 +11,11 @@ type FileMgr interface {
 type File struct {
 	BaseModel
 	ID          uint    `sql:"AUTO_INCREMENT" gorm:"primary_key"`
-	Path        string  `json:"path" gorm:"index:idx_version_path"`
+	Path        string  `json:"path" gorm:"index:idx_ws_name_version_path"`
 	Size        int64   `json:"size"`
-	DatasetName string  `json:"dataset_name" gorm:"index:idx_dataset_workspace"`
-	Workspace   string  `json:"workspace" gorm:"index:idx_dataset_workspace"`
-	Version     string  `json:"version" gorm:"index:idx_version_path"`
+	DatasetName string  `json:"dataset_name" gorm:"index:idx_ws_name_version_path"`
+	Workspace   string  `json:"workspace" gorm:"index:idx_ws_name_version_path"`
+	Version     string  `json:"version" gorm:"index:idx_ws_name_version_path"`
 	Chunks      []Chunk `gorm:"-"`
 }
 

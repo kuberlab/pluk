@@ -34,6 +34,7 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 		// TODO: decide whether it can go in async
 		plukio.MasterClient.SaveFileStructure(structure, d.Workspace, d.Name, version, create)
 	}
+	logrus.Infof("Done saving %v/%v:%v.", d.Workspace, d.Name, version)
 
 	return nil
 }
@@ -114,9 +115,9 @@ func (d *Dataset) Download(resp *restful.Response) error {
 }
 
 func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err error) {
-	dsv, _ := d.mgr.GetDatasetVersion(d.Workspace, d.Name, version)
+	_, err = d.mgr.GetDatasetVersion(d.Workspace, d.Name, version)
 
-	if dsv != nil {
+	if err == nil {
 		fs, err = d.GetFSFromDB(version)
 	} else {
 		if !utils.HasMasters() {
