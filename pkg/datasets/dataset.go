@@ -180,8 +180,6 @@ func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error
 
 func (d *Dataset) GetFSFromDB(version string) (*plukio.ChunkedFileFS, error) {
 	return d.mgr.GetFS(d.Workspace, d.Name, version)
-
-	return nil, nil
 }
 
 func (d *Dataset) CheckVersion(version string) (bool, error) {
