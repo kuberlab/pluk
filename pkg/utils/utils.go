@@ -22,8 +22,6 @@ const (
 	internalKeyVar     = "INTERNAL_KEY"
 	readConcurrencyVar = "READ_CONCURRENCY"
 	dataVar            = "DATA_DIR"
-	gitVar             = "GIT_BARE_DIR"
-	gitLocalVar        = "GIT_LOCAL_DIR"
 	mastersVar         = "MASTERS"
 	defaultGitDir      = "/git"
 	defaultGitLocalDir = "/git-local"
@@ -49,22 +47,6 @@ func DebugEnabled() bool {
 		return true
 	}
 	return false
-}
-
-func GitDir() string {
-	gitDir := os.Getenv(gitVar)
-	if gitDir == "" {
-		return defaultGitDir
-	}
-	return gitDir
-}
-
-func GitLocalDir() string {
-	gitLocalDir := os.Getenv(gitLocalVar)
-	if gitLocalDir == "" {
-		return defaultGitLocalDir
-	}
-	return gitLocalDir
 }
 
 func DataDir() string {
@@ -127,8 +109,6 @@ func GetHashFromPath(path string) string {
 
 func PrintEnvInfo() {
 	fmt.Printf("DEBUG = %v\n", DebugEnabled())
-	fmt.Printf("GIT_BARE_DIR = %q\n", GitDir())
-	fmt.Printf("GIT_LOCAL_DIR = %q\n", GitLocalDir())
 	fmt.Printf("DATA_DIR = %q\n", DataDir())
 	fmt.Printf("AUTH_VALIDATION = %q\n", AuthValidationURL())
 	fmt.Printf("MASTERS = %q\n", Masters())
