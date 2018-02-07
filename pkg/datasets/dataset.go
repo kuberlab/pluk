@@ -6,10 +6,12 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
+	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/db"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"net/http"
 )
 
 const (
@@ -49,13 +51,19 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 		}
 	}()
 
-	_, err = tx.GetDatasetVersion(d.Workspace, d.Name, version)
+	dsv, err := tx.GetDatasetVersion(d.Workspace, d.Name, version)
 	if err != nil {
 		err = nil
 		errD := tx.CreateDatasetVersion(&db.DatasetVersion{Name: d.Name, Workspace: d.Workspace, Version: version})
 		if errD != nil {
 			err = errD
 			return
+		}
+	} else if dsv.Deleted {
+		// Recover it.
+		dsv.Deleted = false
+		if err = tx.RecoverDatasetVersion(dsv); err != nil {
+			return err
 		}
 	}
 
@@ -219,7 +227,7 @@ func (d *Dataset) Versions() ([]string, error) {
 func (d *Dataset) DeleteVersion(version string) error {
 	dsv, err := d.mgr.GetDatasetVersion(d.Workspace, d.Name, version)
 	if err != nil {
-		return err
+		return errors.NewStatus(http.StatusNotFound, fmt.Sprintf("Version %v not found", version))
 	}
 	dsv.Deleted = true
 	if _, err = d.mgr.UpdateDatasetVersion(dsv); err != nil {

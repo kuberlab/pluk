@@ -35,7 +35,7 @@ func NewVersionDeleteCmd() *cobra.Command {
 			}
 
 			deleteV.name = nameVersion[0]
-			deleteV.name = nameVersion[1]
+			deleteV.version = nameVersion[1]
 			deleteV.workspace = workspace
 
 			return deleteV.run()

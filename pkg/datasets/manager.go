@@ -76,6 +76,12 @@ func (m *Manager) NewDataset(workspace, name string) (*Dataset, error) {
 		if err = m.mgr.CreateDataset(dsDB); err != nil {
 			return nil, err
 		}
+	} else if dsDB.Deleted {
+		// Recover it.
+		dsDB.Deleted = false
+		if err = m.mgr.RecoverDataset(dsDB); err != nil {
+			return nil, err
+		}
 	}
 	ds := &Dataset{Dataset: dsDB, mgr: m.mgr}
 	return ds, nil

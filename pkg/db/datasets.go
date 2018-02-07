@@ -1,8 +1,11 @@
 package db
 
+import "fmt"
+
 type DatasetMgr interface {
 	CreateDataset(dataset *Dataset) error
 	UpdateDataset(dataset *Dataset) (*Dataset, error)
+	RecoverDataset(dataset *Dataset) error
 	GetDataset(workspace, name string) (*Dataset, error)
 	GetDatasetByID(datasetID uint) (*Dataset, error)
 	ListDatasets(filter Dataset) ([]*Dataset, error)
@@ -26,6 +29,11 @@ func (mgr *DatabaseMgr) UpdateDataset(dataset *Dataset) (*Dataset, error) {
 	return dataset, err
 }
 
+func (mgr *DatabaseMgr) RecoverDataset(dataset *Dataset) error {
+	sql := fmt.Sprintf("UPDATE datasets SET deleted=0 where name='%v' AND workspace='%v'", dataset.Name, dataset.Workspace)
+	return mgr.db.Exec(sql).Error
+}
+
 func (mgr *DatabaseMgr) GetDataset(workspace, name string) (*Dataset, error) {
 	var dataset = Dataset{}
 	err := mgr.db.First(&dataset, Dataset{Workspace: workspace, Name: name}).Error
@@ -40,7 +48,11 @@ func (mgr *DatabaseMgr) GetDatasetByID(datasetID uint) (*Dataset, error) {
 
 func (mgr *DatabaseMgr) ListDatasets(filter Dataset) ([]*Dataset, error) {
 	var datasets = make([]*Dataset, 0)
-	err := mgr.db.Find(&datasets, filter).Error
+	db := mgr.db
+	if !filter.Deleted {
+		db = db.Where("deleted=0")
+	}
+	err := db.Find(&datasets, filter).Error
 	return datasets, err
 }
 

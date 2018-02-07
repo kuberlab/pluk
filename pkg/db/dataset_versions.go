@@ -1,5 +1,9 @@
 package db
 
+import (
+	"fmt"
+)
+
 type DatasetVersionVersionMgr interface {
 	CreateDatasetVersion(datasetVersionVersion *DatasetVersion) error
 	UpdateDatasetVersion(datasetVersion *DatasetVersion) (*DatasetVersion, error)
@@ -27,6 +31,11 @@ func (mgr *DatabaseMgr) UpdateDatasetVersion(datasetVersion *DatasetVersion) (*D
 	return datasetVersion, err
 }
 
+func (mgr *DatabaseMgr) RecoverDatasetVersion(dsv *DatasetVersion) error {
+	sql := fmt.Sprintf("UPDATE dataset_versions SET deleted=0 where name='%v' AND workspace='%v' AND version='%v'", dsv.Name, dsv.Workspace, dsv.Version)
+	return mgr.db.Exec(sql).Error
+}
+
 func (mgr *DatabaseMgr) GetDatasetVersion(workspace, name, version string) (*DatasetVersion, error) {
 	var datasetVersion = DatasetVersion{}
 	err := mgr.db.First(&datasetVersion, DatasetVersion{Workspace: workspace, Name: name, Version: version}).Error
@@ -41,7 +50,11 @@ func (mgr *DatabaseMgr) GetDatasetVersionByID(datasetVersionID uint) (*DatasetVe
 
 func (mgr *DatabaseMgr) ListDatasetVersions(filter DatasetVersion) ([]*DatasetVersion, error) {
 	var datasetVersions = make([]*DatasetVersion, 0)
-	err := mgr.db.Find(&datasetVersions, filter).Error
+	db := mgr.db
+	if !filter.Deleted {
+		db = db.Where("deleted=0")
+	}
+	err := db.Find(&datasetVersions, filter).Error
 	return datasetVersions, err
 }
 

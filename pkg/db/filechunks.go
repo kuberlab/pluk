@@ -16,6 +16,8 @@ type FileChunkMgr interface {
 	ListFileChunks(filter FileChunk) ([]*FileChunk, error)
 	DeleteFileChunk(fileID, chunkID uint) error
 	GetFS(workspace, dataset, version string) (*io.ChunkedFileFS, error)
+	DeleteRelatedFiles(workspace, dataset, version string) (int64, error)
+	ListRelatedChunks(workspace, dataset, version string) ([]*FileChunk, error)
 }
 
 type FileChunk struct {
@@ -46,6 +48,60 @@ func (mgr *DatabaseMgr) ListFileChunks(filter FileChunk) ([]*FileChunk, error) {
 
 func (mgr *DatabaseMgr) DeleteFileChunk(fileID, chunkID uint) error {
 	return mgr.db.Delete(FileChunk{}, FileChunk{FileID: fileID, ChunkID: chunkID}).Error
+}
+
+func (mgr *DatabaseMgr) ListRelatedChunks(workspace, dataset, version string) ([]*FileChunk, error) {
+	/*
+		SELECT chunk_id FROM file_chunks
+		INNER JOIN files ON
+		  files.workspace='kuberlab-demo'
+		  AND files.dataset_name='heavy'
+		  AND files.version='1.0.0'
+		  AND file_chunks.file_id=files.id;
+	*/
+	conditions := []string{
+		fmt.Sprintf("files.workspace='%v'", workspace),
+		fmt.Sprintf("files.dataset_name='%v'", dataset),
+		"file_chunks.file_id=files.id",
+	}
+	if version != "" {
+		conditions = append(conditions, fmt.Sprintf("files.version='%v'", version))
+	}
+	join := fmt.Sprintf("INNER JOIN files ON %v", strings.Join(conditions, " AND "))
+
+	fileChunks := make([]*FileChunk, 0)
+	err := mgr.db.
+		Table("file_chunks").
+		Select("distinct chunk_id").
+		Joins(join).
+		Scan(&fileChunks).Error
+
+	return fileChunks, err
+}
+
+func (mgr *DatabaseMgr) DeleteRelatedFiles(workspace, dataset, version string) (int64, error) {
+	conditions := []string{
+		fmt.Sprintf("files.workspace='%v'", workspace),
+		fmt.Sprintf("files.dataset_name='%v'", dataset),
+	}
+	if version != "" {
+		conditions = append(conditions, fmt.Sprintf("files.version='%v'", version))
+	}
+	condition := strings.Join(conditions, " AND ")
+	sqlDeleteRelation := fmt.Sprintf(
+		"DELETE FROM file_chunks where file_id in ("+
+			"SELECT id from files where %v)", condition,
+	)
+
+	err := mgr.db.Exec(sqlDeleteRelation).Error
+	if err != nil {
+		return 0, err
+	}
+
+	sqlDeleteFiles := fmt.Sprintf("DELETE FROM files where %v", condition)
+	db := mgr.db.Exec(sqlDeleteFiles)
+
+	return db.RowsAffected, db.Error
 }
 
 type rawFile struct {

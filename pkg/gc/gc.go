@@ -46,46 +46,37 @@ func goGC() {
 	// TODO: (like list dataset or versions) will hang until transaction is completed
 	// Done: Using WAL mode (Write ahead log) for SQLite.
 	tx := mgr.Begin()
-	var needCloseTx = true
 	endTx := func() {
-		if !needCloseTx {
-			return
-		}
 		if err != nil {
 			tx.Rollback()
 		} else {
 			tx.Commit()
 		}
-		needCloseTx = false
 	}
 	defer endTx()
 
-	deleted := 0
-	var files []*db.File
-
 	// First: check if repo exists.
 	for _, ds := range vDatasets {
-		// Delete all files within this repo
-		files, err = tx.ListFiles(db.File{Workspace: ds.Workspace, DatasetName: ds.Name})
-		if err != nil {
+		if err = deleteDatasetVersion(tx, ds, ""); err != nil {
 			logrus.Error(err)
 			return
 		}
-
-		for _, f := range files {
-			if checkAndDeleteFile(tx, f) {
-				deleted++
-			}
-			if deleted%100 == 0 {
-				logrus.Infof("Deleted %v objects", deleted)
-			}
-		}
-		deleteDataset(tx, ds)
 	}
 
 	// Second: Iterate over versions and see if the corresponding version deleted.
-	// TODO: ^^
 	endTx()
+	tx = mgr.Begin()
+	deletedVersions, err := mgr.ListDatasetVersions(db.DatasetVersion{Deleted: true})
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+	for _, dsv := range deletedVersions {
+		if err = deleteDatasetVersion(tx, &db.Dataset{Workspace: dsv.Workspace, Name: dsv.Name}, dsv.Version); err != nil {
+			logrus.Error(err)
+			return
+		}
+	}
 
 	// Third: See if there deleted dataset on master; delete those which don't exist on master
 	// but exist on slave.
@@ -93,7 +84,49 @@ func goGC() {
 		// Sync with master and delete obsolete datasets.
 		gcFromMasters(mgr)
 	}
-	logrus.Infof("Done garbage collecting. Deleted %v objects.", deleted)
+	logrus.Infof("Done garbage collecting.")
+}
+
+func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) error {
+	// Delete all files within this repo
+	fileChunks, err := mgr.ListRelatedChunks(dataset.Workspace, dataset.Name, version)
+	if err != nil {
+		return err
+	}
+
+	rows, err := mgr.DeleteRelatedFiles(dataset.Workspace, dataset.Name, version)
+	if err != nil {
+		return err
+	}
+	var deleted = 0
+	logrus.Infof("Deleted %v virtual files.", rows)
+	for _, fc := range fileChunks {
+		chunk, err := mgr.GetChunkByID(fc.ChunkID)
+		if err != nil {
+			return err
+		}
+		if checkAndDeleteChunk(mgr, chunk) {
+			deleted++
+		}
+		if deleted%500 == 0 && deleted != 0 {
+			logrus.Infof("Deleted %v chunks.", deleted)
+		}
+	}
+	logrus.Infof("Deleted %v chunks.", deleted)
+
+	if version != "" {
+		dsv, err := mgr.GetDatasetVersion(dataset.Workspace, dataset.Name, version)
+		if err != nil {
+			return err
+		}
+		if err = mgr.DeleteDatasetVersion(dsv.ID); err != nil {
+			return err
+		}
+	} else {
+		deleteDataset(mgr, dataset)
+	}
+
+	return nil
 }
 
 func deleteDataset(mgr db.DataMgr, d *db.Dataset) {
@@ -106,33 +139,13 @@ func deleteDataset(mgr db.DataMgr, d *db.Dataset) {
 	mgr.DeleteDataset(d.ID)
 }
 
-func checkAndDeleteFile(mgr db.DataMgr, f *db.File) bool {
-	mgr.DeleteFile(f.ID)
-
-	chunkIDs, err := mgr.ListFileChunks(db.FileChunk{FileID: f.ID})
-	if err != nil {
-		logrus.Error(err)
-		return false
-	}
-	for _, chunkID := range chunkIDs {
-		chunk, err := mgr.GetChunkByID(chunkID.ChunkID)
-		if err != nil {
-			logrus.Error(err)
-			return false
-		}
-		checkAndDeleteChunk(mgr, chunk, f)
-	}
-	return true
-}
-
-func checkAndDeleteChunk(mgr db.DataMgr, chunk *db.Chunk, f *db.File) {
-	mgr.DeleteFileChunk(f.ID, chunk.ID)
-
+func checkAndDeleteChunk(mgr db.DataMgr, chunk *db.Chunk) bool {
 	// See if there are more connections on this chunk
+	deleted := false
 	remain, err := mgr.ListFileChunks(db.FileChunk{ChunkID: chunk.ID})
 	if err != nil {
 		logrus.Error(err)
-		return
+		return false
 	}
 	// If there are no connections, completely delete this chunk.
 	if len(remain) == 0 {
@@ -151,7 +164,9 @@ func checkAndDeleteChunk(mgr db.DataMgr, chunk *db.Chunk, f *db.File) {
 		if len(remainFiles) == 0 {
 			os.RemoveAll(dirName)
 		}
+		deleted = true
 	}
+	return deleted
 }
 
 func gcFromMasters(mgr db.DataMgr) {
