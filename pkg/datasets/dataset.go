@@ -67,6 +67,15 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 		}
 	}
 
+	// For batch insert:
+	// 1. Delete all related files of workspace + dataset_name + version
+	// 2. Generate insert query for files
+	// 3. Batch insert files
+	// 4. Create chunks if needed (one by one only), collect their ids and index
+	// 5. Get all file_ids for workspace + dataset + version
+	// 6. Generate insert query for file_chunks connections
+	// 7. Batch insert file_chunks
+
 	for _, f := range structure.Files {
 		var fPath = f.Path
 		//if !strings.HasPrefix(fPath, "/") {
