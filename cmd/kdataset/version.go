@@ -11,12 +11,12 @@ type Version struct {
 }
 
 func (v Version) String() string {
-	return fmt.Sprintf("%v, Golang %v", v.version, v.goCompiler)
+	return fmt.Sprintf("%v", v.version)
 }
 
 func GetVersion() Version {
 	return Version{
-		version:    "1.0.9",
+		version:    "1.0.10",
 		goCompiler: runtime.Version(),
 	}
 }
