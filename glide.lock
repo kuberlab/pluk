@@ -1,5 +1,5 @@
-hash: b838d275adfda35c68841e9d1964e2c6c654d6abc5c2a77411b7de18275cface
-updated: 2018-02-06T12:21:55.037746021+03:00
+hash: 12758e5dd4aeac1df087b8ddeaafa6de68f5b2dfe9e354dcff161839e6bc1657
+updated: 2018-02-13T21:26:49.949785821+03:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -8,13 +8,13 @@ imports:
 - name: github.com/gogits/git-module
   version: 5cc36acd9bc119acc0376a4db452e8ce55451c9f
 - name: github.com/golang/glog
-  version: 44145f04b68cf362d9c4df2182967c2275eaefed
+  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
 - name: github.com/gorilla/context
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/mux
-  version: 392c28fe23e1c45ddba891b0320b3b5df220beea
+  version: c0091a029979286890368b4c7b301261e448e242
 - name: github.com/gorilla/websocket
-  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+  version: 4ac909741dfa57448bfadfdbca0cf7eeaa68f0e2
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jinzhu/gorm
@@ -24,30 +24,34 @@ imports:
 - name: github.com/jinzhu/inflection
   version: 1c35d901db3da928c72a72d8458480cc9ade058f
 - name: github.com/kuberlab/lib
-  version: b13ac0acfcfb1de90e7fd6cac1913a0f320322f2
+  version: a22787217a7bb8454b887c53c3064f7bba51bf45
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/errors
   - pkg/types
   - pkg/utils
 - name: github.com/Masterminds/semver
-  version: 59c29afe1a994eacb71c833025ca7acf874bb1da
+  version: 15d8430ab86497c5c0da827b748823945e1cf1e1
 - name: github.com/mattn/go-runewidth
   version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/mattn/go-sqlite3
-  version: 2d44decb4941c9cdf72c22297b7890faf7da9bcb
+  version: 3c6eef45ff2de301fee18d11cd8727f65754eeb5
 - name: github.com/patrickmn/go-cache
   version: a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0
 - name: github.com/pborman/uuid
-  version: e790cca94e6cc75c7064b1332e63811d4aae1a53
+  version: c65b2f87fee37d1c7854c9164a450713c28d50cd
 - name: github.com/Sirupsen/logrus
-  version: 3ec0642a7fb6488f65b06f9040adc67e3990296a
+  version: 8c0189d9f6bbf301e5d055d34268156b317016af
 - name: github.com/spf13/cobra
-  version: 7be4beda01ec05d0b93d80b3facd2b6f44080d94
+  version: be77323fc05148ef091e83b3866c0d47c8e74a8b
 - name: github.com/spf13/pflag
-  version: 5ccb023bc27df288a957c5e994cd44fd19619465
+  version: 6a877ebacf28c5fc79846f4fcd380a5d9872b997
+- name: golang.org/x/crypto
+  version: 9de5f2eaf759b4c4550b3db39fed2e9e5f86f45c
+  subpackages:
+  - ssh/terminal
 - name: golang.org/x/net
-  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
+  version: f5dfe339be1d06f81b22525fe34671ee7d2c8904
   subpackages:
   - context
   - webdav
@@ -60,8 +64,9 @@ imports:
   version: 1792d66dc88e503d3cb2400578221cdf1f7fe26f
   subpackages:
   - unix
+  - windows
 - name: gopkg.in/cheggaaa/pb.v1
-  version: 43d64de27312b32812ca7e994fa0bb03ccf08fdf
+  version: 5119518d88fbf604cab04dafd667dc7022e3b5ac
 - name: gopkg.in/cheggaaa/pb.v2
   version: c112833d014c77e8bde723fd0158e3156951639f
 - name: gopkg.in/robfig/cron.v2

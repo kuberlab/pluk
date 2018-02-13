@@ -88,6 +88,7 @@ func newRootCmd() *cobra.Command {
 		Use:               "kdataset",
 		Short:             "Management script for datasets.",
 		PersistentPreRunE: initConfig,
+		Version:           GetVersion().String(),
 	}
 
 	p := rootCmd.PersistentFlags()

@@ -2,9 +2,7 @@ package: github.com/kuberlab/pluk
 import:
 - package: github.com/Sirupsen/logrus
 - package: github.com/spf13/cobra
-  version: 7be4beda01ec05d0b93d80b3facd2b6f44080d94
 - package: github.com/spf13/pflag
-  version: 5ccb023bc27df288a957c5e994cd44fd19619465
 - package: github.com/gogits/git-module
 - package: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
