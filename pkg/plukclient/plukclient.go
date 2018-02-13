@@ -126,6 +126,40 @@ func (c *Client) authHeaders() http.Header {
 	return h
 }
 
+func (c *Client) CheckWorkspace(workspace string) (*types.Workspace, error) {
+	u := fmt.Sprintf("/workspaces/%v", workspace)
+
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	res := new(types.Workspace)
+	_, err = c.Do(req, res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
+func (c *Client) CheckDataset(workspace, dataset string) (*types.Dataset, error) {
+	u := fmt.Sprintf("/workspaces/%v/datasets/%v", workspace, dataset)
+
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	res := new(types.Dataset)
+	_, err = c.Do(req, res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
 func (c *Client) ListDatasets(workspace string) (*types.DataSetList, error) {
 	u := fmt.Sprintf("/datasets/%v", workspace)
 

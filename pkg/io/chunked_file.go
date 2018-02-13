@@ -17,21 +17,23 @@ import (
 )
 
 type PlukClient interface {
-	ListDatasets(workspace string) (*types.DataSetList, error)
-	ListVersions(workspace, datasetName string) (*types.VersionList, error)
 	CheckChunk(hash string) (*types.ChunkCheck, error)
 	CheckChunkWebsocket(hash string) (res *types.ChunkCheck, err error)
-	DownloadChunk(hash string) (io.ReadCloser, error)
-	SaveChunk(hash string, data []byte) error
-	SaveChunkWebsocket(hash string, data []byte) error
-	GetFSStructure(workspace, name, version string) (*ChunkedFileFS, error)
-	SaveFileStructure(structure types.FileStructure, workspace, name, version string, create bool) error
-	DownloadDataset(workspace, name, version string, w io.Writer) error
+	CheckDataset(workspace, dataset string) (*types.Dataset, error)
+	CheckWorkspace(workspace string) (*types.Workspace, error)
+	Close() error
 	DeleteDataset(workspace, name string) error
 	DeleteVersion(workspace, name, version string) error
-	WebdavAuth(user, pass, path string) (bool, error)
+	DownloadChunk(hash string) (io.ReadCloser, error)
+	DownloadDataset(workspace, name, version string, w io.Writer) error
+	GetFSStructure(workspace, name, version string) (*ChunkedFileFS, error)
+	ListDatasets(workspace string) (*types.DataSetList, error)
+	ListVersions(workspace, datasetName string) (*types.VersionList, error)
 	PrepareWebsocket() error
-	Close() error
+	SaveChunk(hash string, data []byte) error
+	SaveChunkWebsocket(hash string, data []byte) error
+	SaveFileStructure(structure types.FileStructure, workspace, name, version string, create bool) error
+	WebdavAuth(user, pass, path string) (bool, error)
 }
 
 var MasterClient PlukClient

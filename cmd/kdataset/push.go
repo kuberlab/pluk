@@ -25,6 +25,7 @@ type pushCmd struct {
 	workspace   string
 	name        string
 	create      bool
+	force       bool
 	version     string
 	chunkSize   int
 	concurrency int64
@@ -78,6 +79,13 @@ func NewPushCmd() *cobra.Command {
 		"Create dataset in cloud-dealer if not exists.",
 	)
 	f.BoolVarP(
+		&push.force,
+		"force",
+		"f",
+		false,
+		"Force dataset uploading regardless warnings.",
+	)
+	f.BoolVarP(
 		&push.websocket,
 		"websocket",
 		"w",
@@ -102,6 +110,24 @@ func (cmd *pushCmd) run() error {
 	)
 	if err != nil {
 		logrus.Error(err)
+		return nil
+	}
+
+	if _, err := client.CheckWorkspace(cmd.workspace); err != nil && !cmd.force {
+		if strings.Contains(err.Error(), "404") {
+			logrus.Errorf("Probably workspace '%v' doesn't exist. Check if workspace name is right.", cmd.workspace)
+		} else {
+			logrus.Error(err)
+		}
+		return nil
+	}
+
+	if _, err := client.CheckDataset(cmd.workspace, cmd.name); err != nil && !cmd.create && !cmd.force {
+		if strings.Contains(err.Error(), "404") {
+			logrus.Errorf("Dataset '%v' doesn't exist. Consider using --create option to automatically create dataset or use --force.", cmd.name)
+		} else {
+			logrus.Error(err)
+		}
 		return nil
 	}
 

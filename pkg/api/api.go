@@ -71,6 +71,10 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	ws.Path(prefix)
 	ws.ApiVersion(utils.ApiVersion)
 	ws.Produces(restful.MIME_JSON)
+
+	ws.Route(ws.GET("/workspaces/{workspace}").To(api.checkWorkspace))
+	ws.Route(ws.GET("/workspaces/{workspace}/datasets/{dataset}").To(api.checkDataset))
+
 	ws.Route(ws.GET("/datasets/{workspace}").To(api.datasets))
 	ws.Route(ws.DELETE("/datasets/{workspace}/{name}").To(api.deleteDataset))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions").To(api.versions))

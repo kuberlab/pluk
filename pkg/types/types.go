@@ -10,6 +10,13 @@ import (
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
+type Workspace struct {
+	Name        string
+	DisplayName string
+	Type        string
+	Can         []string
+}
+
 type DataSetList struct {
 	Datasets []*Dataset `json:"datasets"`
 }

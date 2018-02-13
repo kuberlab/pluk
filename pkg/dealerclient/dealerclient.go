@@ -3,7 +3,6 @@ package dealerclient
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,6 +13,8 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/kuberlab/lib/pkg/errors"
+	"github.com/kuberlab/pluk/pkg/types"
 )
 
 type Client struct {
@@ -139,6 +140,22 @@ func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
 	return resp, err
 }
 
+func (c *Client) GetWorkspace(workspace string) (*types.Workspace, error) {
+	u := fmt.Sprintf("/workspace/%v", workspace)
+
+	var ws = &types.Workspace{}
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	_, err = c.Do(req, ws)
+
+	if err != nil {
+		return nil, err
+	}
+	return ws, nil
+}
+
 func (c *Client) CreateDataset(workspace, name string) error {
 	u := fmt.Sprintf("/workspace/%v/datasets", workspace)
 
@@ -178,7 +195,7 @@ func checkResponse(resp *http.Response, err error) (*http.Response, error) {
 		} else {
 			messageBytes, _ := ioutil.ReadAll(resp.Body)
 			message := strconv.Itoa(resp.StatusCode) + ": " + string(messageBytes)
-			return resp, errors.New(message)
+			return resp, errors.NewStatus(resp.StatusCode, message)
 		}
 	}
 	return resp, nil

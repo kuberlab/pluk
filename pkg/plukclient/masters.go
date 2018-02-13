@@ -39,6 +39,14 @@ func (c *MultiMasterClient) Close() error {
 	return nil
 }
 
+func (c *MultiMasterClient) CheckWorkspace(workspace string) (*types.Workspace, error) {
+	return nil, nil
+}
+
+func (c *MultiMasterClient) CheckDataset(workspace, dataset string) (*types.Dataset, error) {
+	return nil, nil
+}
+
 func (c *MultiMasterClient) ListDatasets(workspace string) (res *types.DataSetList, err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {

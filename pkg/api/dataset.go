@@ -241,12 +241,16 @@ func (api *API) cacheFS(dataset *datasets.Dataset, versions []string) {
 	}
 }
 
+func (api *API) dealerClient(req *restful.Request) (*dealerclient.Client, error) {
+	return dealerclient.NewClient(utils.AuthValidationURL(), &dealerclient.AuthOpts{Headers: req.Request.Header})
+}
+
 func (api *API) createDatasetOnDealer(req *restful.Request, ws, name string) error {
 	if utils.AuthValidationURL() == "" {
 		return nil
 	}
 
-	dealer, err := dealerclient.NewClient(utils.AuthValidationURL(), &dealerclient.AuthOpts{Headers: req.Request.Header})
+	dealer, err := api.dealerClient(req)
 	if err != nil {
 		return err
 	}
