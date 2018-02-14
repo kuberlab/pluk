@@ -156,6 +156,21 @@ func (c *Client) GetWorkspace(workspace string) (*types.Workspace, error) {
 	return ws, nil
 }
 
+func (c *Client) DeleteDataset(workspace, name string) error {
+	u := fmt.Sprintf("/workspace/%v/datasets/%v", workspace, name)
+
+	req, err := c.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return err
+	}
+	_, err = c.Do(req, nil)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *Client) CreateDataset(workspace, name string) error {
 	u := fmt.Sprintf("/workspace/%v/datasets", workspace)
 

@@ -75,6 +75,18 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	if utils.AuthValidationURL() != "" {
+		dealer, err := api.dealerClient(req)
+		if err != nil {
+			WriteErrorString(resp, http.StatusBadRequest, fmt.Sprintf("Can not delete dataset '%v' from API: %v", name, err))
+			return
+		}
+		if err = dealer.DeleteDataset(workspace, name); err != nil {
+			WriteErrorString(resp, http.StatusBadRequest, fmt.Sprintf("Can not delete dataset '%v' from API: %v", name, err))
+			return
+		}
+	}
+
 	resp.WriteHeader(http.StatusNoContent)
 }
 
