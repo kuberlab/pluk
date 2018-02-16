@@ -27,7 +27,7 @@ func (m *Manager) ListDatasets(workspace string) []*Dataset {
 	}
 	sets := make([]*Dataset, 0)
 	for _, d := range datasets {
-		sets = append(sets, &Dataset{Dataset: &db.Dataset{Name: d.Name, Workspace: workspace}, mgr: m.mgr})
+		sets = append(sets, &Dataset{Dataset: &db.Dataset{Name: d.Name, Workspace: d.Workspace}, mgr: m.mgr})
 	}
 
 	return sets
