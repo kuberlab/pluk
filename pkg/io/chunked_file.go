@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -44,9 +45,27 @@ type ChunkedFileFS struct {
 }
 
 func (fs *ChunkedFileFS) Prepare() {
-	fs.AddRoot()
+	fs.AddSubdirs()
 	for _, f := range fs.FS {
 		f.fs = fs
+	}
+}
+
+func (fs *ChunkedFileFS) AddSubdirs() {
+	cloned := fs.Clone()
+	for name := range cloned.FS {
+		dirname := filepath.Dir(name)
+		fs.FS[dirname] = &ChunkedFile{
+			Fstat: &ChunkedFileInfo{
+				Fsize:    4096,
+				Dir:      true,
+				Fname:    filepath.Base(dirname),
+				Fmode:    0775,
+				FmodTime: time.Now().Add(-time.Hour),
+			},
+			Size: 4096,
+			Name: dirname,
+		}
 	}
 }
 
@@ -69,20 +88,6 @@ func (fs *ChunkedFileFS) Clone() *ChunkedFileFS {
 		}
 	}
 	return cloned
-}
-
-func (fs *ChunkedFileFS) AddRoot() {
-	fs.FS["/"] = &ChunkedFile{
-		Fstat: &ChunkedFileInfo{
-			Fsize:    4096,
-			Dir:      true,
-			Fname:    "/",
-			Fmode:    0775,
-			FmodTime: time.Now().Add(-time.Hour),
-		},
-		Size: 4096,
-		Name: "/",
-	}
 }
 
 func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error) {

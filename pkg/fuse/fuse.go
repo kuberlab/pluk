@@ -1,8 +1,6 @@
 package fuse
 
 import (
-	"encoding/json"
-	"fmt"
 	"sync"
 
 	"github.com/hanwen/go-fuse/fuse"
@@ -45,9 +43,6 @@ func NewPlukFS(workspace, dataset, version, server, secret string) (pathfs.FileS
 	}
 	innerFS.Prepare()
 	fs.innerFS = innerFS
-
-	d, _ := json.MarshalIndent(innerFS, "", "  ")
-	fmt.Println(string(d))
 
 	return fs, nil
 }
