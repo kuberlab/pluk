@@ -77,13 +77,13 @@ func (fs *PlukFS) Open(name string, flags uint32, context *fuse.Context) (file n
 
 	name = "/" + name
 	fs.lock.RLock()
-	_, ok := fs.innerFS.FS[name]
+	f, ok := fs.innerFS.FS[name]
 	fs.lock.RUnlock()
 	if !ok {
 		return nil, fuse.ENOENT
 	}
 
-	return nil, fuse.EACCES
+	return NewPlukFile(f), fuse.OK
 }
 
 func (fs *PlukFS) OpenDir(name string, context *fuse.Context) (stream []fuse.DirEntry, status fuse.Status) {
