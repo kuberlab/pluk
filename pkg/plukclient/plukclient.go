@@ -35,6 +35,8 @@ type AuthOpts struct {
 	Token       string
 	Cookie      string
 	InternalKey string
+	Workspace   string
+	Secret      string
 }
 
 func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
@@ -122,6 +124,12 @@ func (c *Client) authHeaders() http.Header {
 	}
 	if c.auth.InternalKey != "" {
 		h.Set("Internal", c.auth.InternalKey)
+	}
+	if c.auth.Workspace != "" {
+		h.Set("X-Workspace-Name", c.auth.Workspace)
+	}
+	if c.auth.InternalKey != "" {
+		h.Set("X-Workspace-Secret", c.auth.Secret)
 	}
 	return h
 }

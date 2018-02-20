@@ -28,3 +28,4 @@ import:
 - package: github.com/Masterminds/semver
 - package: golang.org/x/sync/semaphore
 - package: github.com/gorilla/websocket
+- package: github.com/hanwen/go-fuse

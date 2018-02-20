@@ -77,7 +77,7 @@ func (fs *ChunkedFileFS) AddRoot() {
 			Fsize:    4096,
 			Dir:      true,
 			Fname:    "/",
-			Fmode:    os.ModePerm,
+			Fmode:    0775,
 			FmodTime: time.Now().Add(-time.Hour),
 		},
 		Size: 4096,
@@ -150,14 +150,18 @@ func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, er
 			if err != nil {
 				return nil, err
 			}
-			data, err := ioutil.ReadAll(reader)
-			if err != nil {
-				return nil, err
+			if utils.SaveChunks() {
+				data, err := ioutil.ReadAll(reader)
+				if err != nil {
+					return nil, err
+				}
+				//logrus.Debugf("download complete! %v", time.Since(t))
+				reader.Close()
+				SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
+				return ioutil.NopCloser(bytes.NewBuffer(data)), nil
+			} else {
+				return reader, nil
 			}
-			//logrus.Debugf("download complete! %v", time.Since(t))
-			reader.Close()
-			SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
-			return ioutil.NopCloser(bytes.NewBuffer(data)), nil
 		} else {
 			return nil, err
 		}

@@ -19,10 +19,11 @@ const (
 	InternalPrefix     = "/internal"
 	debug              = "DEBUG"
 	authValidationVar  = "AUTH_VALIDATION"
+	DoNotSaveChunks    = "DO_NOT_SAVE_CHUNKS"
 	internalKeyVar     = "INTERNAL_KEY"
 	readConcurrencyVar = "READ_CONCURRENCY"
 	dataVar            = "DATA_DIR"
-	mastersVar         = "MASTERS"
+	MastersVar         = "MASTERS"
 	defaultGitDir      = "/git"
 	defaultGitLocalDir = "/git-local"
 	defaultDataDir     = "/data"
@@ -75,11 +76,19 @@ func ReadConcurrency() int64 {
 }
 
 func Masters() []string {
-	mastersRaw := os.Getenv(mastersVar)
+	mastersRaw := os.Getenv(MastersVar)
 	if mastersRaw == "" {
 		return make([]string, 0)
 	}
 	return strings.Split(mastersRaw, ",")
+}
+
+func SaveChunks() bool {
+	dontSave := os.Getenv(DoNotSaveChunks)
+	if strings.ToLower(dontSave) == "true" {
+		return false
+	}
+	return true
 }
 
 func HasMasters() bool {
@@ -113,6 +122,7 @@ func PrintEnvInfo() {
 	fmt.Printf("AUTH_VALIDATION = %q\n", AuthValidationURL())
 	fmt.Printf("MASTERS = %q\n", Masters())
 	fmt.Printf("READ_CONCURRENCY = %v\n", ReadConcurrency())
+	fmt.Printf("SAVE_CHUNKS = %v\n", SaveChunks())
 }
 
 func GetFirstN(s []string, n int) []string {
