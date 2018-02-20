@@ -46,9 +46,10 @@ type ChunkedFileFS struct {
 
 func (fs *ChunkedFileFS) Prepare() {
 	fs.AddSubdirs()
-	for _, f := range fs.FS {
-		f.fs = fs
-	}
+	// For reflective calls
+	//for _, f := range fs.FS {
+	//	f.fs = fs
+	//}
 }
 
 func (fs *ChunkedFileFS) AddSubdirs() {
@@ -65,6 +66,26 @@ func (fs *ChunkedFileFS) AddSubdirs() {
 			},
 			Size: 4096,
 			Name: dirname,
+		}
+
+		// Add more
+		splitted := strings.Split(dirname, "/")
+		for len(splitted) > 1 {
+			dirname := filepath.Join(splitted[:len(splitted)-1]...)
+			if _, ok := fs.FS[dirname]; !ok {
+				fs.FS[dirname] = &ChunkedFile{
+					Fstat: &ChunkedFileInfo{
+						Fsize:    4096,
+						Dir:      true,
+						Fname:    filepath.Base(dirname),
+						Fmode:    0775,
+						FmodTime: time.Now().Add(-time.Hour),
+					},
+					Size: 4096,
+					Name: "/" + dirname,
+				}
+			}
+			splitted = strings.Split(dirname, "/")
 		}
 	}
 }

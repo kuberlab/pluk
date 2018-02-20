@@ -145,8 +145,8 @@ func (cmd *plukeFSCmd) run() {
 		return
 	}
 
-	fs := pathfs.NewPathNodeFs(pathfs.NewReadonlyFileSystem(plukfs), &pathfs.PathNodeFsOptions{Debug: debug})
-	server, _, err := nodefs.MountRoot(cmd.mountPoint, fs.Root(), &nodefs.Options{Debug: debug})
+	fs := pathfs.NewPathNodeFs(pathfs.NewReadonlyFileSystem(plukfs), &pathfs.PathNodeFsOptions{})
+	server, _, err := nodefs.MountRoot(cmd.mountPoint, fs.Root(), &nodefs.Options{})
 	if err != nil {
 		logrus.Error(err)
 		return

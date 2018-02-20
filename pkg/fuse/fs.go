@@ -88,13 +88,17 @@ func (fs *PlukFS) Open(name string, flags uint32, context *fuse.Context) (file n
 
 func (fs *PlukFS) OpenDir(name string, context *fuse.Context) (stream []fuse.DirEntry, status fuse.Status) {
 	name = "/" + name
-	fs.lock.RLock()
-	f, ok := fs.innerFS.FS[name]
-	fs.lock.RUnlock()
-	if !ok {
-		return nil, fuse.ENOENT
-	}
-	infos, err := f.Readdir(0)
+
+	//fs.lock.RLock()
+	//f, ok := fs.innerFS.FS[name]
+	//fs.lock.RUnlock()
+	//if !ok {
+	//	return nil, fuse.ENOENT
+	//}
+	//t := time.Now()
+	infos, err := fs.innerFS.Readdir(name, 0)
+	//fmt.Println("OPENDIR", time.Since(t))
+	//infos, err := f.Readdir(0)
 	if err != nil {
 		return nil, fuse.ENODATA
 	}
