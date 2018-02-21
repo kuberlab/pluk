@@ -176,7 +176,7 @@ func (mgr *DatabaseMgr) GetFS(workspace, dataset, version string) (*io.ChunkedFi
 			if i == len(splitted)-1 {
 				filePath := partPath
 				if f, ok := curDir.Files[filePath]; ok {
-					f.Chunks = append(f.Chunks, io.Chunk{Path: utils.GetHashedFilename(raw.Hash)})
+					f.Chunks = append(f.Chunks, io.Chunk{Path: utils.GetHashedFilename(raw.Hash), Size: raw.ChunkSize})
 					continue
 				} else {
 					curDir.Files[filePath] = &io.ChunkedFile{
