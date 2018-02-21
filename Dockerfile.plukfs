@@ -9,7 +9,6 @@ RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && go build ./cmd/plukefs/
 
 FROM ubuntu:16.04
 
-COPY --from=0 /go/src/github.com/kuberlab/pluk/plukefs /usr/bin/plukefs
 RUN apt-get update
 RUN apt-get install -y libfuse-dev fuse
-
+COPY --from=0 /go/src/github.com/kuberlab/pluk/plukefs /usr/bin/plukefs

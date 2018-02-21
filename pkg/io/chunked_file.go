@@ -112,6 +112,9 @@ func (fs *ChunkedFileFS) Walk(root string, walkFunc func(path string, f *Chunked
 	if err := walkFunc(root, fs.dirObj(root), nil); err != nil {
 		return err
 	}
+	if rootDir == nil {
+		return nil
+	}
 	for _, d := range rootDir.Dirs {
 		if err := d.Walk(d.Root, walkFunc); err != nil {
 			return err
@@ -195,7 +198,7 @@ type ChunkedFile struct {
 	Size               int64   `json:"size"`
 	Chunks             []Chunk `json:"chunks"`
 	currentChunk       int
-	currentChunkReader io.ReadCloser
+	currentChunkReader ReaderInterface
 	offset             int64 // absolute offset
 	chunkOffset        int64
 
@@ -216,7 +219,7 @@ func (f *ChunkedFile) Close() error {
 	return nil
 }
 
-func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, err error) {
+func (f *ChunkedFile) getChunkReader(chunkPath string) (reader ReaderInterface, err error) {
 	reader, err = os.Open(chunkPath)
 	if err != nil {
 		if os.IsNotExist(err) && utils.HasMasters() {
@@ -224,7 +227,7 @@ func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, er
 			hash := utils.GetHashFromPath(chunkPath)
 			//logrus.Debugf("download")
 			//t := time.Now()
-			reader, err = MasterClient.DownloadChunk(hash)
+			readerRaw, err := MasterClient.DownloadChunk(hash)
 
 			if err != nil {
 				return nil, err
@@ -237,8 +240,12 @@ func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, er
 				//logrus.Debugf("download complete! %v", time.Since(t))
 				reader.Close()
 				SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
-				return ioutil.NopCloser(bytes.NewBuffer(data)), nil
+				return NewChunkReaderFromData(data), nil
 			} else {
+				reader, err = NewChunkReaderFromCloser(readerRaw)
+				if err != nil {
+					return nil, err
+				}
 				return reader, nil
 			}
 		} else {
@@ -252,7 +259,7 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	var read int
-	var reader io.ReadCloser
+	var reader ReaderInterface
 	if f.currentChunkReader == nil {
 		if len(f.Chunks) == 0 {
 			return 0, io.EOF
@@ -267,7 +274,7 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 
 	var r int
 	// Shift read position to current offset
-	f.currentChunkReader.Read(make([]byte, f.chunkOffset))
+	f.currentChunkReader.Seek(f.chunkOffset, io.SeekStart)
 	f.chunkOffset = 0
 	for {
 		r, err = f.currentChunkReader.Read(p[read:])
@@ -312,11 +319,6 @@ func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
 		return 0, fmt.Errorf("seek before the start of the file")
 	}
 
-	if f.currentChunkReader != nil {
-		f.currentChunkReader.Close()
-		f.currentChunkReader = nil
-	}
-
 	var absoluteOffset int64
 	switch whence {
 	case io.SeekStart:
@@ -327,6 +329,7 @@ func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
 		absoluteOffset = f.Size - offset
 	}
 
+	prevCurrentChunk := f.currentChunk
 	ofs := absoluteOffset
 	for i, ch := range f.Chunks {
 		if ofs-ch.Size < 0 {
@@ -337,6 +340,11 @@ func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
 		ofs -= ch.Size
 	}
 	f.offset = absoluteOffset
+
+	if f.currentChunkReader != nil && prevCurrentChunk != f.currentChunk {
+		f.currentChunkReader.Close()
+		f.currentChunkReader = nil
+	}
 
 	return absoluteOffset, nil
 }
