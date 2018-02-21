@@ -201,6 +201,7 @@ type ChunkedFile struct {
 
 	Fstat *ChunkedFileInfo `json:"stat"`
 	fs    *ChunkedFileFS
+	lock  sync.RWMutex
 }
 
 type Chunk struct {
@@ -248,6 +249,8 @@ func (f *ChunkedFile) getChunkReader(chunkPath string) (reader io.ReadCloser, er
 }
 
 func (f *ChunkedFile) Read(p []byte) (n int, err error) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
 	var read int
 	var reader io.ReadCloser
 	if f.currentChunkReader == nil {
@@ -274,6 +277,11 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 			f.currentChunkReader.Close()
 			f.currentChunk++
 			reader, err = f.getChunkReader(f.Chunks[f.currentChunk].Path)
+			if err != nil {
+				logrus.Error(err)
+				f.currentChunkReader = nil
+				return read, io.EOF
+			}
 			f.currentChunkReader = reader
 			err = nil
 		} else {
@@ -294,6 +302,8 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 }
 
 func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
 	if (whence == io.SeekStart && offset > f.Size) || (whence == io.SeekEnd && offset > 0) {
 		return 0, fmt.Errorf("offset %v more than Size of the file", offset)
 	}
