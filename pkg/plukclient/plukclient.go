@@ -48,7 +48,7 @@ func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
 	if len(base.Path) < 2 {
 		base.Path = "/pluk/v1"
 	}
-	baseClient := &http.Client{Timeout: time.Minute * 10}
+	baseClient := &http.Client{Timeout: time.Hour * 8}
 	return &Client{
 		BaseURL:   base,
 		Client:    baseClient,
@@ -128,7 +128,7 @@ func (c *Client) authHeaders() http.Header {
 	if c.auth.Workspace != "" {
 		h.Set("X-Workspace-Name", c.auth.Workspace)
 	}
-	if c.auth.InternalKey != "" {
+	if c.auth.Secret != "" {
 		h.Set("X-Workspace-Secret", c.auth.Secret)
 	}
 	return h

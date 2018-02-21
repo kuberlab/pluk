@@ -10,17 +10,22 @@ import (
 )
 
 type MultiMasterClient struct {
-	Masters     []string
-	InternalKey string
+	Masters  []string
+	AuthOpts AuthOpts
 }
 
 func NewMultiClient() plukio.PlukClient {
 	masters := utils.Masters()
-	return &MultiMasterClient{Masters: masters, InternalKey: utils.InternalKey()}
+	return &MultiMasterClient{Masters: masters, AuthOpts: AuthOpts{InternalKey: utils.InternalKey()}}
+}
+
+func NewMasterClientWithSecret(workspace, secret string) plukio.PlukClient {
+	masters := utils.Masters()
+	return &MultiMasterClient{Masters: masters, AuthOpts: AuthOpts{Workspace: workspace, Secret: secret}}
 }
 
 func (c *MultiMasterClient) initBaseClient(baseURL string) (plukio.PlukClient, error) {
-	return NewClient(baseURL, &AuthOpts{InternalKey: c.InternalKey})
+	return NewClient(baseURL, &c.AuthOpts)
 }
 
 func (c *MultiMasterClient) PrepareWebsocket() error {

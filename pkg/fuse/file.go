@@ -1,17 +1,19 @@
 package fuse
 
 import (
+	"io"
+
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/hanwen/go-fuse/fuse/nodefs"
-	"github.com/kuberlab/pluk/pkg/io"
+	plukio "github.com/kuberlab/pluk/pkg/io"
 )
 
 type PlukFile struct {
 	nodefs.File
-	chunked *io.ChunkedFile
+	chunked *plukio.ChunkedFile
 }
 
-func NewPlukFile(chunked *io.ChunkedFile) *PlukFile {
+func NewPlukFile(chunked *plukio.ChunkedFile) *PlukFile {
 	return &PlukFile{
 		File:    nodefs.NewDefaultFile(),
 		chunked: chunked,
@@ -19,7 +21,7 @@ func NewPlukFile(chunked *io.ChunkedFile) *PlukFile {
 }
 
 func (f *PlukFile) Read(dest []byte, off int64) (fuse.ReadResult, fuse.Status) {
-	return nil, fuse.ENOSYS
+	return newResultData(f.chunked, dest, off), fuse.OK
 }
 
 func (f *PlukFile) Flush() fuse.Status {
@@ -41,3 +43,27 @@ func (f *PlukFile) GetAttr(a *fuse.Attr) fuse.Status {
 	a.Mtime = uint64(f.chunked.Fstat.ModTime().Unix())
 	return fuse.OK
 }
+
+type ResultData struct {
+	data []byte
+	size int
+}
+
+func newResultData(f *plukio.ChunkedFile, buf []byte, off int64) *ResultData {
+	f.Seek(off, io.SeekStart)
+	n, err := f.Read(buf)
+	if err != nil {
+		return &ResultData{buf, 0}
+	}
+	return &ResultData{buf, n}
+}
+
+func (r *ResultData) Bytes(buf []byte) ([]byte, fuse.Status) {
+	return r.data, fuse.OK
+}
+
+func (r *ResultData) Size() int {
+	return r.size
+}
+
+func (r *ResultData) Done() {}

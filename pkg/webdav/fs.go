@@ -31,8 +31,8 @@ func (fs *FS) OpenFile(ctx context.Context, name string, flag int, perm os.FileM
 	if name != "/" {
 		name = strings.TrimSuffix(name, "/")
 	}
-	f, ok := fs.Dataset.FS.FS[name]
-	if !ok {
+	f := fs.Dataset.FS.GetFile(name)
+	if f == nil {
 		return nil, fmt.Errorf("%v: No such file or directory", name)
 	}
 	return f, nil
@@ -50,8 +50,8 @@ func (fs *FS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 	if name != "/" {
 		name = strings.TrimSuffix(name, "/")
 	}
-	f, ok := fs.Dataset.FS.FS[name]
-	if !ok {
+	f := fs.Dataset.FS.GetFile(name)
+	if f == nil {
 		return nil, fmt.Errorf("%v: No such file or directory", name)
 	}
 	return f.Fstat, nil

@@ -8,6 +8,8 @@ import (
 	"github.com/hanwen/go-fuse/fuse/nodefs"
 	"github.com/hanwen/go-fuse/fuse/pathfs"
 	"github.com/kuberlab/pluk/pkg/fuse"
+	"github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -18,6 +20,7 @@ const (
 
 var (
 	debug    bool
+	debugFS  bool
 	logLevel string
 )
 
@@ -94,6 +97,7 @@ func newPlukeFSCmd() *cobra.Command {
 	// Declare common arguments.
 	p.StringVar(&logLevel, "log-level", defaultLogLevel, "Logging level. One of (debug, info, warning, error)")
 	p.BoolVarP(&debug, "debug", "", false, "Enable debug level (shortcut for --log-level=debug).")
+	p.BoolVarP(&debugFS, "debug-fs", "", false, "Enable debug level (shortcut for --log-level=debug).")
 	p.StringSliceVarP(&opts, "option", "o", opts, "Options for mount. Pass them as -o name=value")
 
 	// Add all commands
@@ -131,6 +135,7 @@ func (cmd *plukeFSCmd) run() {
 	os.Setenv(utils.DoNotSaveChunks, "true")
 	os.Setenv(utils.MastersVar, cmd.server)
 
+	io.MasterClient = plukclient.NewMasterClientWithSecret(cmd.workspace, cmd.secret)
 	utils.PrintEnvInfo()
 
 	plukfs, err := fuse.NewPlukFS(
@@ -145,8 +150,8 @@ func (cmd *plukeFSCmd) run() {
 		return
 	}
 
-	fs := pathfs.NewPathNodeFs(pathfs.NewReadonlyFileSystem(plukfs), &pathfs.PathNodeFsOptions{})
-	server, _, err := nodefs.MountRoot(cmd.mountPoint, fs.Root(), &nodefs.Options{})
+	fs := pathfs.NewPathNodeFs(pathfs.NewReadonlyFileSystem(plukfs), &pathfs.PathNodeFsOptions{Debug: debugFS})
+	server, _, err := nodefs.MountRoot(cmd.mountPoint, fs.Root(), &nodefs.Options{Debug: debugFS})
 	if err != nil {
 		logrus.Error(err)
 		return

@@ -168,9 +168,9 @@ func (d *Dataset) getFSStructureFromMaster(version string) (*plukio.ChunkedFileF
 
 func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error {
 	dest := types.FileStructure{}
-	for _, f := range src.FS {
-		if f.Fstat.Dir {
-			continue
+	err := src.Walk("/", func(path string, f *plukio.ChunkedFile, err error) error {
+		if f.Fstat.IsDir() {
+			return nil
 		}
 		file := types.HashedFile{
 			Path:   strings.TrimPrefix(f.Name, "/"),
@@ -182,6 +182,10 @@ func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error
 			file.Hashes = append(file.Hashes, types.Hash{Hash: hash, Size: chunk.Size})
 		}
 		dest.Files = append(dest.Files, &file)
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return d.Save(dest, version, "", false, false)

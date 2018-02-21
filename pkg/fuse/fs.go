@@ -1,6 +1,7 @@
 package fuse
 
 import (
+	"math"
 	"sync"
 
 	"github.com/hanwen/go-fuse/fuse"
@@ -47,12 +48,15 @@ func NewPlukFS(workspace, dataset, version, server, secret string) (pathfs.FileS
 	return fs, nil
 }
 
+func (fs *PlukFS) String() string {
+	return "plukefs"
+}
+
 func (fs *PlukFS) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fuse.Status) {
-	name = "/" + name
 	fs.lock.RLock()
-	f, ok := fs.innerFS.FS[name]
+	f := fs.innerFS.GetFile(name)
 	fs.lock.RUnlock()
-	if !ok {
+	if f == nil {
 		return nil, fuse.ENOENT
 	}
 	var mode uint32
@@ -62,11 +66,13 @@ func (fs *PlukFS) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fuse.
 		mode = fuse.S_IFREG | uint32(f.Fstat.Mode())
 	}
 	return &fuse.Attr{
-		Size:  uint64(f.Size),
-		Mode:  mode,
-		Atime: uint64(f.Fstat.ModTime().Unix()),
-		Ctime: uint64(f.Fstat.ModTime().Unix()),
-		Mtime: uint64(f.Fstat.ModTime().Unix()),
+		Size:    uint64(f.Size),
+		Mode:    mode,
+		Atime:   uint64(f.Fstat.ModTime().Unix()),
+		Ctime:   uint64(f.Fstat.ModTime().Unix()),
+		Mtime:   uint64(f.Fstat.ModTime().Unix()),
+		Blocks:  uint64(math.Ceil(float64(f.Size) / 512.0)),
+		Blksize: 1,
 	}, fuse.OK
 }
 
@@ -77,9 +83,9 @@ func (fs *PlukFS) Open(name string, flags uint32, context *fuse.Context) (file n
 
 	name = "/" + name
 	fs.lock.RLock()
-	f, ok := fs.innerFS.FS[name]
+	f := fs.innerFS.GetFile(name)
 	fs.lock.RUnlock()
-	if !ok {
+	if f == nil {
 		return nil, fuse.ENOENT
 	}
 
@@ -89,16 +95,10 @@ func (fs *PlukFS) Open(name string, flags uint32, context *fuse.Context) (file n
 func (fs *PlukFS) OpenDir(name string, context *fuse.Context) (stream []fuse.DirEntry, status fuse.Status) {
 	name = "/" + name
 
-	//fs.lock.RLock()
-	//f, ok := fs.innerFS.FS[name]
-	//fs.lock.RUnlock()
-	//if !ok {
-	//	return nil, fuse.ENOENT
-	//}
 	//t := time.Now()
 	infos, err := fs.innerFS.Readdir(name, 0)
-	//fmt.Println("OPENDIR", time.Since(t))
-	//infos, err := f.Readdir(0)
+	//fmt.Print("OPENDIR ", time.Since(t))
+	//fmt.Println()
 	if err != nil {
 		return nil, fuse.ENODATA
 	}
@@ -111,4 +111,46 @@ func (fs *PlukFS) OpenDir(name string, context *fuse.Context) (stream []fuse.Dir
 		res = append(res, e)
 	}
 	return res, fuse.OK
+}
+
+func (fs *PlukFS) StatFs(name string) *fuse.StatfsOut {
+
+	//  struct statvfs {
+	//    unsigned long  f_bsize;    /* Filesystem block size */
+	//    unsigned long  f_frsize;   /* Fragment size */
+	//    fsblkcnt_t     f_blocks;   /* Size of fs in f_frsize units */
+	//    fsblkcnt_t     f_bfree;    /* Number of free blocks */
+	//    fsblkcnt_t     f_bavail;   /* Number of free blocks for
+	//                                        unprivileged users */
+	//    fsfilcnt_t     f_files;    /* Number of inodes */
+	//    fsfilcnt_t     f_ffree;    /* Number of free inodes */
+	//    fsfilcnt_t     f_favail;   /* Number of free inodes for
+	//                                        unprivileged users */
+	//    unsigned long  f_fsid;     /* Filesystem ID */
+	//    unsigned long  f_flag;     /* Mount flags */
+	//    unsigned long  f_namemax;  /* Maximum filename length */
+	//  }
+	var chunks uint64
+	var files uint64
+	var size uint64
+	fs.innerFS.Walk("/"+name, func(path string, f *io.ChunkedFile, err error) error {
+		if f.Fstat.IsDir() {
+			return nil
+		}
+		files++
+		chunks += uint64(len(f.Chunks))
+		size += uint64(f.Size)
+		return nil
+	})
+
+	return &fuse.StatfsOut{
+		Files:   files,
+		Bavail:  0,
+		Bfree:   0,
+		Blocks:  size,
+		Bsize:   1,
+		Ffree:   0,
+		Frsize:  1,
+		NameLen: 256,
+	}
 }

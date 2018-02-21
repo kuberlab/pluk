@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"strings"
 
 	libtypes "github.com/kuberlab/lib/pkg/types"
@@ -160,29 +160,47 @@ func (mgr *DatabaseMgr) GetFS(workspace, dataset, version string) (*io.ChunkedFi
 	if err != nil {
 		return nil, err
 	}
-
-	fs := &io.ChunkedFileFS{FS: make(map[string]*io.ChunkedFile)}
-	for _, raw := range rawFiles {
-		if f, ok := fs.FS[raw.Path]; ok {
-			f.Chunks = append(f.Chunks, io.Chunk{Path: utils.GetHashedFilename(raw.Hash)})
-			continue
-		}
-		fs.FS[raw.Path] = &io.ChunkedFile{
-			Name:   "/" + raw.Path,
-			Chunks: []io.Chunk{{Path: utils.GetHashedFilename(raw.Hash), Size: raw.ChunkSize}},
-			Size:   raw.FileSize,
-			Ref:    version,
-			Fstat: &io.ChunkedFileInfo{
-				Dir:      false,
-				Fmode:    0644,
-				FmodTime: raw.UpdatedAt.Time,
-				Fname:    path.Base("/" + raw.Path),
-				Fsize:    raw.FileSize,
-			},
+	newFS := func(root string) *io.ChunkedFileFS {
+		return &io.ChunkedFileFS{
+			Files: make(map[string]*io.ChunkedFile),
+			Root:  "/",
+			Dirs:  make(map[string]*io.ChunkedFileFS),
 		}
 	}
-	//for _, file := range fileMap {
-	//	fs.Files = append(fs.Files, file)
-	//}
+
+	fs := newFS("/")
+	for _, raw := range rawFiles {
+		splitted := strings.Split(raw.Path, "/")
+		curDir := fs
+		for i, partPath := range splitted {
+			if i == len(splitted)-1 {
+				filePath := partPath
+				if f, ok := curDir.Files[filePath]; ok {
+					f.Chunks = append(f.Chunks, io.Chunk{Path: utils.GetHashedFilename(raw.Hash)})
+					continue
+				} else {
+					curDir.Files[filePath] = &io.ChunkedFile{
+						Name:   filePath,
+						Chunks: []io.Chunk{{Path: utils.GetHashedFilename(raw.Hash), Size: raw.ChunkSize}},
+						Size:   raw.FileSize,
+						Ref:    version,
+						Fstat: &io.ChunkedFileInfo{
+							Dir:      false,
+							Fmode:    0644,
+							FmodTime: raw.UpdatedAt.Time,
+							Fname:    partPath,
+							Fsize:    raw.FileSize,
+						},
+					}
+				}
+			} else {
+				dirname := "/" + strings.Join(splitted[:i+1], "/")
+				if dirname != "/" {
+					curDir.AddDir(dirname)
+					curDir = curDir.Dirs[filepath.Base(dirname)]
+				}
+			}
+		}
+	}
 	return fs, nil
 }

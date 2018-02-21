@@ -18,48 +18,34 @@ func WriteTarGz(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 		twriter.Close()
 	}()
 
-	for _, f := range fs.FS {
-		fi := f.Fstat
-		name := f.Name
-		name = strings.TrimPrefix(name, "/")
+	err := fs.Walk("/", func(path string, f *plukio.ChunkedFile, err error) error {
+		if f.Fstat.IsDir() {
+			return nil
+		}
+		name := strings.TrimPrefix(path, "/")
 		if strings.HasPrefix(name, ".") {
-			continue
+			return nil
 		}
-		if fi.IsDir() {
-			continue
-		}
-
 		logrus.Debugf("Processing file %v", name)
 
 		size := f.Size
+
 		h := &tar.Header{
 			Name:    name,
 			Mode:    0666,
 			Size:    size,
-			ModTime: fi.ModTime(),
+			ModTime: f.Fstat.ModTime(),
 		}
 		if err := twriter.WriteHeader(h); err != nil {
 			return err
 		}
-
-		_, err := io.Copy(twriter, f)
+		_, err = io.Copy(twriter, f)
 		if err != nil {
 			return err
 		}
 		resp.Flush()
-		//for {
-		//	buf := make([]byte, 65536*2)
-		//	n, err := f.Read(buf)
-		//	if err == io.EOF {
-		//		break
-		//	}
-		//	if _, err := twriter.Write(buf[:n]); err != nil {
-		//		return err
-		//	}
-		//	resp.Flush()
-		//}
 		f.Close()
-	}
-
-	return nil
+		return nil
+	})
+	return err
 }

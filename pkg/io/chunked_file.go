@@ -40,63 +40,118 @@ type PlukClient interface {
 var MasterClient PlukClient
 
 type ChunkedFileFS struct {
-	lock *sync.RWMutex
-	FS   map[string]*ChunkedFile `json:"fs"`
+	lock  sync.RWMutex
+	Root  string                    `json:"root"`
+	Dirs  map[string]*ChunkedFileFS `json:"dirs"`  // Only dirs for current root
+	Files map[string]*ChunkedFile   `json:"files"` // Only files for current root
+}
+
+func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
+	absname = strings.TrimPrefix(absname, "/")
+	dirname := filepath.Dir(absname)
+	filename := filepath.Base(absname)
+
+	if absname == "" {
+		return fs.dirObj("/" + absname)
+	}
+	curDir := fs.GetDir(dirname)
+	if curDir == nil {
+		return nil
+	}
+	if f, ok := curDir.Files[filename]; ok {
+		return f
+	} else {
+		if _, ok := curDir.Dirs[filename]; ok {
+			// Return file-dir object
+			return fs.dirObj(absname)
+		} else {
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func (fs *ChunkedFileFS) dirObj(absname string) *ChunkedFile {
+	return &ChunkedFile{
+		Fstat: &ChunkedFileInfo{
+			Fsize:    4096,
+			Dir:      true,
+			Fname:    filepath.Base(absname),
+			Fmode:    0775,
+			FmodTime: time.Now().Add(-time.Hour),
+		},
+		Size: 4096,
+		Name: absname,
+	}
+}
+
+func (fs *ChunkedFileFS) GetDir(dirname string) *ChunkedFileFS {
+	if dirname == fs.Root || dirname == "." {
+		return fs
+	}
+
+	dirname = strings.TrimPrefix(dirname, "/")
+	splitted := strings.Split(dirname, "/")
+	curDir := fs
+	if dirname == "" {
+		return curDir
+	}
+	for _, dir := range splitted {
+		newDir, ok := curDir.Dirs[dir]
+		if !ok {
+			return nil
+		}
+		curDir = newDir
+	}
+	return curDir
+}
+
+func (fs *ChunkedFileFS) Walk(root string, walkFunc func(path string, f *ChunkedFile, err error) error) error {
+	rootDir := fs.GetDir(root)
+	if err := walkFunc(root, fs.dirObj(root), nil); err != nil {
+		return err
+	}
+	for _, d := range rootDir.Dirs {
+		if err := d.Walk(d.Root, walkFunc); err != nil {
+			return err
+		}
+	}
+	for _, f := range fs.Files {
+		if err := walkFunc(filepath.Join(rootDir.Root, f.Name), f, nil); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (fs *ChunkedFileFS) Prepare() {
-	fs.AddSubdirs()
 	// For reflective calls
 	//for _, f := range fs.FS {
 	//	f.fs = fs
 	//}
 }
 
-func (fs *ChunkedFileFS) AddSubdirs() {
-	cloned := fs.Clone()
-	for name := range cloned.FS {
-		dirname := filepath.Dir(name)
-		fs.FS[dirname] = &ChunkedFile{
-			Fstat: &ChunkedFileInfo{
-				Fsize:    4096,
-				Dir:      true,
-				Fname:    filepath.Base(dirname),
-				Fmode:    0775,
-				FmodTime: time.Now().Add(-time.Hour),
-			},
-			Size: 4096,
-			Name: dirname,
-		}
-
-		// Add more
-		splitted := strings.Split(dirname, "/")
-		for len(splitted) > 1 {
-			dirname := filepath.Join(splitted[:len(splitted)-1]...)
-			if _, ok := fs.FS[dirname]; !ok {
-				fs.FS[dirname] = &ChunkedFile{
-					Fstat: &ChunkedFileInfo{
-						Fsize:    4096,
-						Dir:      true,
-						Fname:    filepath.Base(dirname),
-						Fmode:    0775,
-						FmodTime: time.Now().Add(-time.Hour),
-					},
-					Size: 4096,
-					Name: "/" + dirname,
-				}
-			}
-			splitted = strings.Split(dirname, "/")
+func (fs *ChunkedFileFS) AddDir(path string) {
+	base := filepath.Base(path)
+	_, ok := fs.Dirs[base]
+	if !ok {
+		fs.Dirs[base] = &ChunkedFileFS{
+			Root:  path,
+			Dirs:  make(map[string]*ChunkedFileFS),
+			Files: make(map[string]*ChunkedFile),
 		}
 	}
 }
 
 func (fs *ChunkedFileFS) Clone() *ChunkedFileFS {
 	cloned := &ChunkedFileFS{
-		lock: &sync.RWMutex{},
-		FS:   make(map[string]*ChunkedFile),
+		Files: make(map[string]*ChunkedFile),
+		Dirs:  make(map[string]*ChunkedFileFS),
+		Root:  fs.Root,
 	}
-	for _, f := range fs.FS {
-		cloned.FS[f.Name] = &ChunkedFile{
+	for k, f := range fs.Files {
+		cloned.Files[k] = &ChunkedFile{
 			Name:               f.Name,
 			currentChunkReader: nil,
 			currentChunk:       0,
@@ -108,28 +163,24 @@ func (fs *ChunkedFileFS) Clone() *ChunkedFileFS {
 			Size:               f.Size,
 		}
 	}
+	for k, d := range fs.Dirs {
+		cloned.Dirs[k] = d.Clone()
+	}
 	return cloned
 }
 
 func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error) {
-	// filter infos by prefix.
-	if !strings.HasSuffix(prefix, "/") {
-		prefix += "/"
-	}
-	//logrus.Debugf("Search by prefix %v", prefix)
-	res := make([]os.FileInfo, 0)
-	for _, f := range fs.FS {
-		if strings.HasPrefix(f.Name, prefix) && f.Name != prefix {
-			path := strings.TrimPrefix(f.Name, prefix)
-			// If there is a slash in 1+ position: exclude subdirs
-			//logrus.Debugf("path = %v, index = %v", path, strings.Index(strings.TrimPrefix(path, "/"), "/"))
-			if strings.Index(strings.TrimPrefix(path, "/"), "/") > 0 {
-				continue
-			}
-			//logrus.Debugf("Include %v [name=%v]", f.Name, f.Fstat.Name())
+	prefix = strings.TrimPrefix(prefix, "/")
 
-			res = append(res, f.Fstat)
-		}
+	dir := fs.GetDir(prefix)
+	res := make([]os.FileInfo, 0)
+
+	// Add all files and dirs within current directory
+	for _, d := range dir.Dirs {
+		res = append(res, dir.dirObj(d.Root).Fstat)
+	}
+	for _, f := range dir.Files {
+		res = append(res, f.Fstat)
 	}
 
 	if count == 0 {
