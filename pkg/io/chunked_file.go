@@ -197,6 +197,7 @@ type ChunkedFile struct {
 	currentChunk       int
 	currentChunkReader io.ReadCloser
 	offset             int64 // absolute offset
+	chunkOffset        int64
 
 	Fstat *ChunkedFileInfo `json:"stat"`
 	fs    *ChunkedFileFS
@@ -262,6 +263,9 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 	}
 
 	var r int
+	// Shift read position to current offset
+	f.currentChunkReader.Read(make([]byte, f.chunkOffset))
+	f.chunkOffset = 0
 	for {
 		r, err = f.currentChunkReader.Read(p[read:])
 		read += r
@@ -317,6 +321,7 @@ func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
 	for i, ch := range f.Chunks {
 		if ofs-ch.Size < 0 {
 			f.currentChunk = i
+			f.chunkOffset = ofs
 			break
 		}
 		ofs -= ch.Size
