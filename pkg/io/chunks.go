@@ -11,7 +11,10 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"golang.org/x/sync/semaphore"
 )
+
+var queue = semaphore.NewWeighted(5)
 
 type ChunkedReader struct {
 	ChunkSize int
@@ -66,7 +69,7 @@ func GetChunk(hash string) (reader ReaderInterface, err error) {
 				}
 				//logrus.Debugf("download complete! %v", time.Since(t))
 				readerRaw.Close()
-				SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
+				go SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
 				return NewChunkReaderFromData(data), nil
 			} else {
 				reader, err = NewChunkReaderFromCloser(readerRaw)
@@ -85,42 +88,57 @@ func GetChunk(hash string) (reader ReaderInterface, err error) {
 func SaveChunk(hash string, data io.ReadCloser, sendToMaster bool) error {
 	//logrus.Debugf("Save")
 	//t := time.Now()
-	filePath := utils.GetHashedFilename(hash)
-
-	splitted := strings.Split(filePath, "/")
-	baseDir := splitted[:len(splitted)-1]
-
-	if err := os.MkdirAll(strings.Join(baseDir, "/"), os.ModePerm); err != nil {
-		return err
+	syn := false
+	if !queue.TryAcquire(1) {
+		syn = true
+	} else {
+		defer queue.Release(1)
 	}
 
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	logrus.Debugf("Created %v", filePath)
+	save := func() error {
+		filePath := utils.GetHashedFilename(hash)
 
-	defer file.Close()
+		splitted := strings.Split(filePath, "/")
+		baseDir := splitted[:len(splitted)-1]
 
-	buf := bytes.NewBuffer([]byte{})
-	var written int64
-	var writer io.Writer = file
-	if utils.HasMasters() && sendToMaster {
-		// If we have masters, then also write to buf in order to use it for further push.
-		writer = io.MultiWriter(writer, buf)
-	}
-	written, err = io.Copy(writer, data)
-	if err != nil {
-		return err
-	}
-	data.Close()
+		if err := os.MkdirAll(strings.Join(baseDir, "/"), os.ModePerm); err != nil {
+			return err
+		}
 
-	logrus.Debugf("Written %v bytes.", written)
+		file, err := os.Create(filePath)
+		if err != nil {
+			return err
+		}
+		logrus.Debugf("Created %v", filePath)
 
-	if utils.HasMasters() && sendToMaster {
-		// TODO: decide whether it can go in async
-		MasterClient.SaveChunk(hash, buf.Bytes())
+		defer file.Close()
+
+		buf := bytes.NewBuffer([]byte{})
+		var written int64
+		var writer io.Writer = file
+		if utils.HasMasters() && sendToMaster {
+			// If we have masters, then also write to buf in order to use it for further push.
+			writer = io.MultiWriter(writer, buf)
+		}
+		written, err = io.Copy(writer, data)
+		if err != nil {
+			return err
+		}
+		data.Close()
+
+		logrus.Debugf("Written %v bytes.", written)
+
+		if utils.HasMasters() && sendToMaster {
+			// TODO: decide whether it can go in async
+			MasterClient.SaveChunk(hash, buf.Bytes())
+		}
+		//logrus.Debugf("Save complete! %v", time.Since(t))
+		return nil
 	}
-	//logrus.Debugf("Save complete! %v", time.Since(t))
+	if syn {
+		return save()
+	} else {
+		go save()
+	}
 	return nil
 }
