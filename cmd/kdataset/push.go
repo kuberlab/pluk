@@ -19,6 +19,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/semaphore"
+	"net/http"
 )
 
 type pushCmd struct {
@@ -97,6 +98,7 @@ func NewPushCmd() *cobra.Command {
 }
 
 func (cmd *pushCmd) run() error {
+	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 100
 	logrus.Debugf("Concurrency is set to %v.", cmd.concurrency)
 	cwd, err := os.Getwd()
 	if err != nil {

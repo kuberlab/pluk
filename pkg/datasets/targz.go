@@ -2,6 +2,7 @@ package datasets
 
 import (
 	"archive/tar"
+	"fmt"
 	"io"
 	"strings"
 
@@ -17,6 +18,7 @@ func WriteTar(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 		twriter.Close()
 	}()
 
+	prevName := ""
 	err := fs.Walk("/", func(path string, f *plukio.ChunkedFile, err error) error {
 		if f.Fstat.IsDir() {
 			return nil
@@ -36,12 +38,13 @@ func WriteTar(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 			ModTime: f.Fstat.ModTime(),
 		}
 		if err := twriter.WriteHeader(h); err != nil {
-			return err
+			return fmt.Errorf("Failed write file %v: %v", prevName, err)
 		}
 		_, err = io.Copy(twriter, f)
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed write file %v: %v", name, err)
 		}
+		prevName = name
 		resp.Flush()
 		f.Close()
 		return nil

@@ -1,5 +1,7 @@
 .idea/
 vendor/
+delete_wrong_chunks
+update_chunks
 
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
