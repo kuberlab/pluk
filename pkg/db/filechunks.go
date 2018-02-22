@@ -133,14 +133,13 @@ SELECT
   chunk_id,
   path,
   f.size as file_size,
-  chunks.size as chunk_size
-  repository_path,
+  chunks.size as chunk_size,
   "chunk_index",
   hash,
   f.updated_at
 FROM file_chunks fc
   INNER JOIN files f
-    ON f.id = fc.file_id AND f.dataset_name = 'many' AND f.workspace = 'kuberlab-demo' AND version = '1.0.0'
+    ON f.id = fc.file_id AND f.dataset_name = 'zappos' AND f.workspace = 'kuberlab-demo' AND version = '1.0.0'
   INNER JOIN chunks ON fc.chunk_id = chunks.id
 */
 func (mgr *DatabaseMgr) GetFS(workspace, dataset, version string) (*io.ChunkedFileFS, error) {

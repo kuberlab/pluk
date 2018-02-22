@@ -113,6 +113,12 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 				}
 			} else {
 				chunk.ID = eChunk.ID
+				if eChunk.Size != chunk.Size {
+					_, err = tx.UpdateChunk(chunk)
+					if err != nil {
+						return err
+					}
+				}
 			}
 			// Create connection
 			fileChunk := &db.FileChunk{ChunkID: chunk.ID, FileID: fileDB.ID, ChunkIndex: uint(i)}
