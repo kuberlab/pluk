@@ -128,7 +128,7 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 }
 
 func (d *Dataset) Download(resp *restful.Response) error {
-	return WriteTarGz(d.FS, resp)
+	return WriteTar(d.FS, resp)
 }
 
 func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err error) {
@@ -173,7 +173,7 @@ func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error
 			return nil
 		}
 		file := types.HashedFile{
-			Path:   strings.TrimPrefix(f.Name, "/"),
+			Path:   strings.TrimPrefix(path, "/"),
 			Size:   f.Size,
 			Hashes: make([]types.Hash, 0),
 		}

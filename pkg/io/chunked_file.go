@@ -242,14 +242,20 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 	var r int
 	// Shift read position to current offset
 	f.currentChunkReader.Seek(f.chunkOffset, io.SeekStart)
-	f.chunkOffset = 0
+	//f.chunkOffset = 0
+	chunk := f.currentChunk
 	for {
 		r, err = f.currentChunkReader.Read(p[read:])
+		if f.currentChunk == chunk {
+			f.chunkOffset += int64(r)
+		}
 		read += r
 		if err == io.EOF && f.currentChunk < (len(f.Chunks)-1) && read < len(p) {
 			// Read more; current chunk is over.
 			f.currentChunkReader.Close()
 			f.currentChunk++
+			chunk = f.currentChunk
+			f.chunkOffset = 0
 			reader, err = f.getChunkReader(f.Chunks[f.currentChunk].Path)
 			if err != nil {
 				logrus.Error(err)

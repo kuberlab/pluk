@@ -10,8 +10,7 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 )
 
-func WriteTarGz(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
-
+func WriteTar(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 	// Wrap in tar writer
 	twriter := tar.NewWriter(resp)
 	defer func() {
@@ -26,13 +25,13 @@ func WriteTarGz(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 		if strings.HasPrefix(name, ".") {
 			return nil
 		}
-		logrus.Debugf("Processing file %v", name)
+		logrus.Debugf("Processing file %v, size=%v", name, f.Size)
 
 		size := f.Size
 
 		h := &tar.Header{
 			Name:    name,
-			Mode:    0666,
+			Mode:    0644,
 			Size:    size,
 			ModTime: f.Fstat.ModTime(),
 		}
