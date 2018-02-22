@@ -1,11 +1,9 @@
 package io
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -220,39 +218,8 @@ func (f *ChunkedFile) Close() error {
 }
 
 func (f *ChunkedFile) getChunkReader(chunkPath string) (reader ReaderInterface, err error) {
-	reader, err = os.Open(chunkPath)
-	if err != nil {
-		if os.IsNotExist(err) && utils.HasMasters() {
-			// Read from master
-			hash := utils.GetHashFromPath(chunkPath)
-			//logrus.Debugf("download")
-			//t := time.Now()
-			readerRaw, err := MasterClient.DownloadChunk(hash)
-
-			if err != nil {
-				return nil, err
-			}
-			if utils.SaveChunks() {
-				data, err := ioutil.ReadAll(reader)
-				if err != nil {
-					return nil, err
-				}
-				//logrus.Debugf("download complete! %v", time.Since(t))
-				reader.Close()
-				SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
-				return NewChunkReaderFromData(data), nil
-			} else {
-				reader, err = NewChunkReaderFromCloser(readerRaw)
-				if err != nil {
-					return nil, err
-				}
-				return reader, nil
-			}
-		} else {
-			return nil, err
-		}
-	}
-	return reader, err
+	hash := utils.GetHashFromPath(chunkPath)
+	return GetChunk(hash)
 }
 
 func (f *ChunkedFile) Read(p []byte) (n int, err error) {

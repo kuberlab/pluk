@@ -244,6 +244,7 @@ func (c *Client) DownloadChunk(hash string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
+	logrus.Debugf("[go-plukclient] %v %v", req.Method, req.URL)
 	resp, err := c.Client.Do(req)
 
 	if err != nil {

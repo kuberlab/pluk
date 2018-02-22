@@ -122,6 +122,7 @@ func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
 	file, err := plukio.GetChunk(hash)
 	if err != nil {
 		WriteStatusError(resp, http.StatusNotFound, err)
+		return
 	}
 
 	io.Copy(resp, file)

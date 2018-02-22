@@ -5,6 +5,7 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -45,9 +46,40 @@ func CheckChunk(hash string) bool {
 	return err == nil
 }
 
-func GetChunk(hash string) (io.ReadCloser, error) {
-	filePath := utils.GetHashedFilename(hash)
-	return os.Open(filePath)
+func GetChunk(hash string) (reader ReaderInterface, err error) {
+	chunkPath := utils.GetHashedFilename(hash)
+	reader, err = os.Open(chunkPath)
+	if err != nil {
+		if os.IsNotExist(err) && utils.HasMasters() {
+			// Read from master
+			//logrus.Debugf("download")
+			//t := time.Now()
+			readerRaw, err := MasterClient.DownloadChunk(hash)
+
+			if err != nil {
+				return nil, err
+			}
+			if utils.SaveChunks() {
+				data, err := ioutil.ReadAll(readerRaw)
+				if err != nil {
+					return nil, err
+				}
+				//logrus.Debugf("download complete! %v", time.Since(t))
+				readerRaw.Close()
+				SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
+				return NewChunkReaderFromData(data), nil
+			} else {
+				reader, err = NewChunkReaderFromCloser(readerRaw)
+				if err != nil {
+					return nil, err
+				}
+				return reader, nil
+			}
+		} else {
+			return nil, err
+		}
+	}
+	return reader, err
 }
 
 func SaveChunk(hash string, data io.ReadCloser, sendToMaster bool) error {

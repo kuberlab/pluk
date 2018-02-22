@@ -33,8 +33,14 @@ func (r *ChunkReader) Read(p []byte) (n int, err error) {
 	if end > int64(len(r.data)) {
 		end = int64(len(r.data))
 	}
+	if end-r.offset <= 0 {
+		return 0, io.EOF
+	}
 	copy(p, r.data[r.offset:end])
-	return int(end - r.offset), nil
+
+	copied := end - r.offset
+	r.offset = end
+	return int(copied), nil
 }
 
 func (r *ChunkReader) Close() error {
