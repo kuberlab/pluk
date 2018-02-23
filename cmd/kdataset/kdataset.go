@@ -96,7 +96,7 @@ func newRootCmd() *cobra.Command {
 	p.StringVar(&logLevel, "log-level", defaultLogLevel, "Logging level. One of (debug, info, warning, error)")
 	p.BoolVarP(&debug, "debug", "", false, "Enable debug level (shortcut for --log-level=debug).")
 	p.StringVarP(&configPath, "config", "", defaultConfigPath, "Path to config file")
-	p.StringVar(&baseURL, "url", "", "Base url to pluk.")
+	p.StringVar(&baseURL, "url", "", "Base url to dataset storage.")
 
 	// Add all commands
 	rootCmd.AddCommand(
