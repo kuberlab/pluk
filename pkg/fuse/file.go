@@ -53,7 +53,7 @@ func newResultData(f *plukio.ChunkedFile, buf []byte, off int64) *ResultData {
 	f.Seek(off, io.SeekStart)
 	n, err := f.Read(buf)
 	if err != nil {
-		return &ResultData{buf, 0}
+		return &ResultData{buf, n}
 	}
 	return &ResultData{buf, n}
 }
