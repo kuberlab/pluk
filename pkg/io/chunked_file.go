@@ -250,6 +250,11 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 			f.chunkOffset += int64(r)
 		}
 		read += r
+		if err == nil && read < len(p) {
+			// Means that buffer is not yet full, but is not EOF as well.
+			// Try read more, EOF should appear next.
+			continue
+		}
 		if err == io.EOF && f.currentChunk < (len(f.Chunks)-1) && read < len(p) {
 			// Read more; current chunk is over.
 			f.currentChunkReader.Close()
