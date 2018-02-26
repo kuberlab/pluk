@@ -49,7 +49,7 @@ type ResultData struct {
 	size int
 }
 
-func newResultData(f *plukio.ChunkedFile, buf []byte, off int64) *ResultData {
+func newResultData(f *plukio.ChunkedFile, buf []byte, off int64) fuse.ReadResult {
 	//f.Seek(off, io.SeekStart)
 	//n, err := f.Read(buf)
 	// Squash seek & read into 1 operation since we can get
