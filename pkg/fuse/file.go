@@ -1,8 +1,7 @@
 package fuse
 
 import (
-	"io"
-
+	"github.com/Sirupsen/logrus"
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/hanwen/go-fuse/fuse/nodefs"
 	plukio "github.com/kuberlab/pluk/pkg/io"
@@ -21,6 +20,7 @@ func NewPlukFile(chunked *plukio.ChunkedFile) *PlukFile {
 }
 
 func (f *PlukFile) Read(dest []byte, off int64) (fuse.ReadResult, fuse.Status) {
+	logrus.Debugf("READ %v, SIZE %v, OFFSET %v", f.chunked.Name, len(dest), off)
 	return newResultData(f.chunked, dest, off), fuse.OK
 }
 
@@ -50,8 +50,21 @@ type ResultData struct {
 }
 
 func newResultData(f *plukio.ChunkedFile, buf []byte, off int64) *ResultData {
-	f.Seek(off, io.SeekStart)
-	n, err := f.Read(buf)
+	//f.Seek(off, io.SeekStart)
+	//n, err := f.Read(buf)
+	// Squash seek & read into 1 operation since we can get
+	// parallel request for reading 1 file:
+	// Crashing sequence for parallel read 500 & 300:
+	// SEEK 500
+	// SEEK 0
+	// READ 300
+	// READ 500
+	// Operations above must be in correct order:
+	// SEEK 500
+	// READ 300
+	// SEEK 0
+	// READ 500
+	n, err := f.SeekAndRead(buf, off)
 	if err != nil {
 		return &ResultData{buf, n}
 	}

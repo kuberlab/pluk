@@ -223,8 +223,8 @@ func (f *ChunkedFile) getChunkReader(chunkPath string) (reader ReaderInterface, 
 }
 
 func (f *ChunkedFile) Read(p []byte) (n int, err error) {
-	f.lock.Lock()
-	defer f.lock.Unlock()
+	//f.lock.Lock()
+	//defer f.lock.Unlock()
 	var read int
 	var reader ReaderInterface
 	if f.currentChunkReader == nil {
@@ -288,9 +288,19 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 	return read, err
 }
 
-func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
+func (f *ChunkedFile) SeekAndRead(p []byte, offset int64) (int, error) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
+	_, err := f.Seek(offset, io.SeekStart)
+	if err != nil {
+		return 0, err
+	}
+	return f.Read(p)
+}
+
+func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
+	//f.lock.Lock()
+	//defer f.lock.Unlock()
 	if (whence == io.SeekStart && offset > f.Size) || (whence == io.SeekEnd && offset > 0) {
 		return 0, fmt.Errorf("offset %v more than Size of the file", offset)
 	}
