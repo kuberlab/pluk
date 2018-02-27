@@ -9,6 +9,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/cmd/kdataset/config"
+	"github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/spf13/cobra"
 )
 
@@ -75,6 +77,17 @@ func initConfig(cmd *cobra.Command, args []string) error {
 	overridePlukURL()
 
 	return nil
+}
+
+func initClient() (io.PlukClient, error) {
+	return plukclient.NewClient(
+		config.Config.PlukURL,
+		&plukclient.AuthOpts{
+			Token:     config.Config.Token,
+			Workspace: config.Config.Workspace,
+			Secret:    config.Config.WorkspaceSecret,
+		},
+	)
 }
 
 func initLogging() {

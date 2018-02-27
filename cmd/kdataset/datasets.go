@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/kuberlab/pluk/cmd/kdataset/config"
-	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/spf13/cobra"
 )
 
@@ -36,10 +34,7 @@ func NewDatasetsCmd() *cobra.Command {
 }
 
 func (cmd *datasetsCmd) run() (err error) {
-	client, err := plukclient.NewClient(
-		config.Config.PlukURL,
-		&plukclient.AuthOpts{Token: config.Config.Token},
-	)
+	client, err := initClient()
 	if err != nil {
 		return err
 	}

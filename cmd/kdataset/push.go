@@ -14,9 +14,7 @@ import (
 	"gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/kuberlab/pluk/cmd/kdataset/config"
 	chunk_io "github.com/kuberlab/pluk/pkg/io"
-	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/semaphore"
@@ -106,14 +104,7 @@ func (cmd *pushCmd) run() error {
 		return nil
 	}
 
-	client, err := plukclient.NewClient(
-		config.Config.PlukURL,
-		&plukclient.AuthOpts{
-			Token: config.Config.Token,
-			Workspace: config.Config.Workspace,
-			Secret: config.Config.WorkspaceSecret,
-		},
-	)
+	client, err := initClient()
 	if err != nil {
 		logrus.Error(err)
 		return nil

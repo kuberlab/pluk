@@ -11,8 +11,6 @@ import (
 	"io"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/kuberlab/pluk/cmd/kdataset/config"
-	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/spf13/cobra"
 )
 
@@ -64,10 +62,7 @@ func NewPullCmd() *cobra.Command {
 }
 
 func (cmd *pullCmd) run() (err error) {
-	client, err := plukclient.NewClient(
-		config.Config.PlukURL,
-		&plukclient.AuthOpts{Token: config.Config.Token},
-	)
+	client, err := initClient()
 	if err != nil {
 		logrus.Error(err)
 		return nil
