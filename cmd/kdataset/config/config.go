@@ -11,9 +11,11 @@ import (
 var Config *DealerConfig
 
 type DealerConfig struct {
-	BaseURL string `yaml:"base_url"`
-	PlukURL string `yaml:"pluk_url"`
-	Token   string `yaml:"token"`
+	BaseURL         string `yaml:"base_url"`
+	PlukURL         string `yaml:"pluk_url"`
+	Token           string `yaml:"token"`
+	Workspace       string `yaml:"workspace"`
+	WorkspaceSecret string `yaml:"workspace_secret"`
 }
 
 // InitConfig loads Config from the given path.

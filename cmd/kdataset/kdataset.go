@@ -63,6 +63,15 @@ func initConfig(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	// Override workspace & secret if needed.
+	ws := os.Getenv("WORKSPACE_NAME")
+	secret := os.Getenv("WORKSPACE_SECRET")
+	if ws != "" && secret != "" {
+		config.Config.Workspace = ws
+		config.Config.WorkspaceSecret = secret
+	}
+
 	overridePlukURL()
 
 	return nil

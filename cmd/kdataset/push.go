@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -19,7 +20,6 @@ import (
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/semaphore"
-	"net/http"
 )
 
 type pushCmd struct {
@@ -108,7 +108,11 @@ func (cmd *pushCmd) run() error {
 
 	client, err := plukclient.NewClient(
 		config.Config.PlukURL,
-		&plukclient.AuthOpts{Token: config.Config.Token},
+		&plukclient.AuthOpts{
+			Token: config.Config.Token,
+			Workspace: config.Config.Workspace,
+			Secret: config.Config.WorkspaceSecret,
+		},
 	)
 	if err != nil {
 		logrus.Error(err)
