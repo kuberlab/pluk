@@ -64,15 +64,13 @@ func NewPullCmd() *cobra.Command {
 func (cmd *pullCmd) run() (err error) {
 	client, err := initClient()
 	if err != nil {
-		logrus.Error(err)
-		return nil
+		logrus.Fatal(err)
 	}
 
 	logrus.Debug("Run pull...")
 	f, err := os.Create(cmd.output)
 	if err != nil {
-		logrus.Error(err)
-		return nil
+		logrus.Fatal(err)
 	}
 	defer f.Close()
 
@@ -86,8 +84,7 @@ func (cmd *pullCmd) run() (err error) {
 	err = client.DownloadDataset(cmd.workspace, cmd.name, cmd.version, w)
 	if err != nil {
 		bar.Finish()
-		logrus.Error(err)
-		return nil
+		logrus.Fatal(err)
 	}
 	bar.Finish()
 

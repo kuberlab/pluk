@@ -2,8 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
-
 	"strings"
 
 	"github.com/Sirupsen/logrus"
@@ -53,8 +51,7 @@ func (cmd *versionDeleteCmd) run() (err error) {
 
 	err = client.DeleteVersion(cmd.workspace, cmd.name, cmd.version)
 	if err != nil {
-		fmt.Println(err.Error())
-		return nil
+		logrus.Fatal(err)
 	}
 
 	logrus.Infof("Version %v of dataset %v successfully deleted.", cmd.version, cmd.name)

@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -46,8 +45,7 @@ func (cmd *datasetDeleteCmd) run() (err error) {
 
 	err = client.DeleteDataset(cmd.workspace, cmd.name)
 	if err != nil {
-		fmt.Println(err.Error())
-		return nil
+		logrus.Fatal(err)
 	}
 
 	logrus.Infof("Dataset %v successfully deleted.", cmd.name)

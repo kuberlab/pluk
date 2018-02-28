@@ -41,16 +41,14 @@ func NewVersionsCmd() *cobra.Command {
 func (cmd *versionsCmd) run() error {
 	client, err := initClient()
 	if err != nil {
-		logrus.Error(err)
-		return nil
+		logrus.Fatal(err)
 	}
 
 	logrus.Debug("Run version-list...")
 
 	versions, err := client.ListVersions(cmd.workspace, cmd.name)
 	if err != nil {
-		fmt.Println(err.Error())
-		return nil
+		logrus.Fatal(err)
 	}
 
 	fmt.Println("VERSIONS:")

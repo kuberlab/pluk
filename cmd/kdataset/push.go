@@ -100,38 +100,35 @@ func (cmd *pushCmd) run() error {
 	logrus.Debugf("Concurrency is set to %v.", cmd.concurrency)
 	cwd, err := os.Getwd()
 	if err != nil {
-		logrus.Error(err)
-		return nil
+		logrus.Fatal(err)
 	}
 
 	client, err := initClient()
 	if err != nil {
-		logrus.Error(err)
-		return nil
+		logrus.Fatal(err)
 	}
 
 	if _, err := client.CheckWorkspace(cmd.workspace); err != nil && !cmd.force {
 		if strings.Contains(err.Error(), "404") {
-			logrus.Errorf("Probably workspace '%v' doesn't exist. Check if workspace name is right.", cmd.workspace)
+			logrus.Fatalf("Probably workspace '%v' doesn't exist. Check if workspace name is right.", cmd.workspace)
 		} else {
-			logrus.Error(err)
+			logrus.Fatal(err)
 		}
 		return nil
 	}
 
 	if _, err := client.CheckDataset(cmd.workspace, cmd.name); err != nil && !cmd.create && !cmd.force {
 		if strings.Contains(err.Error(), "404") {
-			logrus.Errorf("Dataset '%v' doesn't exist. Consider using --create option to automatically create dataset or use --force.", cmd.name)
+			logrus.Fatalf("Dataset '%v' doesn't exist. Consider using --create option to automatically create dataset or use --force.", cmd.name)
 		} else {
-			logrus.Error(err)
+			logrus.Fatal(err)
 		}
 		return nil
 	}
 
 	if cmd.websocket {
 		if err = client.PrepareWebsocket(); err != nil {
-			logrus.Error(err)
-			return nil
+			logrus.Fatal(err)
 		}
 	}
 	defer client.Close()
@@ -184,8 +181,7 @@ func (cmd *pushCmd) run() error {
 			resp, err = client.CheckChunk(hash)
 		}
 		if err != nil {
-			logrus.Errorf("Failed to check chunk: %v", err)
-			os.Exit(1)
+			logrus.Fatalf("Failed to check chunk: %v", err)
 		}
 		if !resp.Exists {
 			// Upload chunk.
@@ -196,8 +192,7 @@ func (cmd *pushCmd) run() error {
 				}
 			} else {
 				if err = client.SaveChunk(hash, chunkData); err != nil {
-					logrus.Errorf("Failed to upload chunk: %v", err)
-					os.Exit(1)
+					logrus.Fatalf("Failed to upload chunk: %v", err)
 				}
 			}
 		}
@@ -259,16 +254,14 @@ func (cmd *pushCmd) run() error {
 
 	if err != nil {
 		bar.Finish()
-		logrus.Error(err)
-		return nil
+		logrus.Fatal(err)
 	}
 
 	// finally, commit file structure.
 	logrus.Debugf("File structure: %v", structure)
 	if err = client.SaveFileStructure(structure, cmd.workspace, cmd.name, cmd.version, cmd.create); err != nil {
 		bar.Finish()
-		logrus.Error(err)
-		return nil
+		logrus.Fatal(err)
 	}
 	if !bar.IsFinished() {
 		bar.Finish()

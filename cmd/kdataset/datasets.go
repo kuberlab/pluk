@@ -43,8 +43,7 @@ func (cmd *datasetsCmd) run() (err error) {
 
 	datasets, err := client.ListDatasets(cmd.workspace)
 	if err != nil {
-		fmt.Println(err.Error())
-		return nil
+		logrus.Fatal(err)
 	}
 
 	if len(datasets.Datasets) == 0 {
