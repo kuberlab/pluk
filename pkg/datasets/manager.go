@@ -7,7 +7,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/db"
-	"github.com/kuberlab/pluk/pkg/plukclient"
+	"github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
@@ -33,12 +33,13 @@ func (m *Manager) ListDatasets(workspace string) []*Dataset {
 	return sets
 }
 
-func (m *Manager) GetDataset(workspace, name string) *Dataset {
+func (m *Manager) GetDataset(workspace, name string, master io.PlukClient) *Dataset {
 	datasets := m.ListDatasets(workspace)
 
 	for _, d := range datasets {
 		if d.Name == name {
 			res := d
+			res.MasterClient = master
 			return res
 		}
 	}
@@ -48,7 +49,7 @@ func (m *Manager) GetDataset(workspace, name string) *Dataset {
 		return nil
 	}
 
-	ds, err := plukclient.NewMultiClient().ListDatasets(workspace)
+	ds, err := master.ListDatasets(workspace)
 	if err != nil {
 		logrus.Errorf("From master: %v", err)
 		return nil
@@ -62,14 +63,14 @@ func (m *Manager) GetDataset(workspace, name string) *Dataset {
 				logrus.Error(err)
 				return nil
 			}
-			return &Dataset{Dataset: dsDB, mgr: m.mgr}
+			return &Dataset{Dataset: dsDB, mgr: m.mgr, MasterClient: master}
 		}
 	}
 
 	return nil
 }
 
-func (m *Manager) NewDataset(workspace, name string) (*Dataset, error) {
+func (m *Manager) NewDataset(workspace, name string, master io.PlukClient) (*Dataset, error) {
 	dsDB, err := m.mgr.GetDataset(workspace, name)
 	if err != nil {
 		dsDB = &db.Dataset{Workspace: workspace, Name: name}
@@ -83,11 +84,11 @@ func (m *Manager) NewDataset(workspace, name string) (*Dataset, error) {
 			return nil, err
 		}
 	}
-	ds := &Dataset{Dataset: dsDB, mgr: m.mgr}
+	ds := &Dataset{Dataset: dsDB, mgr: m.mgr, MasterClient: master}
 	return ds, nil
 }
 
-func (m *Manager) DeleteDataset(workspace, name string) error {
+func (m *Manager) DeleteDataset(workspace, name string, master io.PlukClient) error {
 	ds, err := m.mgr.GetDataset(workspace, name)
 	if err != nil {
 		return errors.NewStatus(http.StatusNotFound, fmt.Sprintf("Dataset %v not found: %v", name, err))
@@ -106,6 +107,10 @@ func (m *Manager) DeleteDataset(workspace, name string) error {
 	ds.Deleted = true
 	if _, err = m.mgr.UpdateDataset(ds); err != nil {
 		return err
+	}
+
+	if utils.HasMasters() && master != nil {
+		master.DeleteDataset(workspace, name)
 	}
 
 	return nil

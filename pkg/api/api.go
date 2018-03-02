@@ -27,7 +27,7 @@ type API struct {
 func Start() {
 	logrus.Info("Starting pluk...")
 	utils.PrintEnvInfo()
-	plukio.MasterClient = plukclient.NewMultiClient()
+	plukio.MasterClient = plukclient.NewInternalMasterClient()
 	api := &API{
 		cache:   utils.NewRequestCache(),
 		fsCache: utils.NewRequestCache(),

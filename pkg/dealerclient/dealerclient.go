@@ -65,9 +65,31 @@ func NewClient(baseURL string, auth *AuthOpts) (*Client, error) {
 	}, nil
 }
 
+func (c *Client) getUrl(urlStr string) string {
+	workspace := c.auth.Headers.Get("X-Workspace-Name")
+	secret := c.auth.Headers.Get("X-Workspace-Secret")
+
+	if workspace == "" && secret == "" {
+		return urlStr
+	}
+
+	splitted := strings.Split(urlStr, "/")
+	if len(splitted) < 3 {
+		return urlStr
+	}
+	workspaceInURL := splitted[2]
+	if workspace != workspaceInURL {
+		return urlStr
+	}
+	return strings.Replace(
+		urlStr,
+		fmt.Sprintf("workspace/%v", workspace), fmt.Sprintf("secret/%v", secret), -1,
+	)
+}
+
 func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Request, error) {
 	u := c.BaseURL.String()
-	u = strings.TrimSuffix(u, "/") + urlStr
+	u = strings.TrimSuffix(u, "/") + c.getUrl(urlStr)
 
 	var buf io.ReadWriter
 	if body != nil {
@@ -157,7 +179,7 @@ func (c *Client) GetWorkspace(workspace string) (*types.Workspace, error) {
 }
 
 func (c *Client) DeleteDataset(workspace, name string) error {
-	u := fmt.Sprintf("/workspace/%v/datasets/%v", workspace, name)
+	u := fmt.Sprintf("/workspace/%v/dataset/%v", workspace, name)
 
 	req, err := c.NewRequest("DELETE", u, nil)
 	if err != nil {
@@ -172,7 +194,7 @@ func (c *Client) DeleteDataset(workspace, name string) error {
 }
 
 func (c *Client) CreateDataset(workspace, name string) error {
-	u := fmt.Sprintf("/workspace/%v/datasets", workspace)
+	u := fmt.Sprintf("/workspace/%v/dataset", workspace)
 
 	ds := &Dataset{Name: name, WorkspaceName: workspace, Published: true, DisplayName: strings.Title(name)}
 	req, err := c.NewRequest("POST", u, ds)
@@ -188,7 +210,7 @@ func (c *Client) CreateDataset(workspace, name string) error {
 }
 
 func (c *Client) ListDatasets(workspace string) ([]Dataset, error) {
-	u := fmt.Sprintf("/workspace/%v/datasets", workspace)
+	u := fmt.Sprintf("/workspace/%v/dataset", workspace)
 
 	var ds = make([]Dataset, 0)
 	req, err := c.NewRequest("GET", u, nil)

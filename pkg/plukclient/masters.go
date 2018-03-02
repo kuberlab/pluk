@@ -2,6 +2,8 @@ package plukclient
 
 import (
 	"io"
+	"net/http"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	plukio "github.com/kuberlab/pluk/pkg/io"
@@ -14,7 +16,7 @@ type MultiMasterClient struct {
 	AuthOpts AuthOpts
 }
 
-func NewMultiClient() plukio.PlukClient {
+func NewInternalMasterClient() plukio.PlukClient {
 	masters := utils.Masters()
 	return &MultiMasterClient{Masters: masters, AuthOpts: AuthOpts{InternalKey: utils.InternalKey()}}
 }
@@ -22,6 +24,17 @@ func NewMultiClient() plukio.PlukClient {
 func NewMasterClientWithSecret(workspace, secret string) plukio.PlukClient {
 	masters := utils.Masters()
 	return &MultiMasterClient{Masters: masters, AuthOpts: AuthOpts{Workspace: workspace, Secret: secret}}
+}
+
+func NewMasterClientFromHeaders(headers http.Header) plukio.PlukClient {
+	masters := utils.Masters()
+	auth := AuthOpts{
+		Cookie:    headers.Get("Cookie"),
+		Workspace: headers.Get("X-Workspace-Name"),
+		Secret:    headers.Get("X-Workspace-Secret"),
+		Token:     strings.TrimPrefix(headers.Get("Authorization"), "Bearer "),
+	}
+	return &MultiMasterClient{Masters: masters, AuthOpts: auth}
 }
 
 func (c *MultiMasterClient) initBaseClient(baseURL string) (plukio.PlukClient, error) {

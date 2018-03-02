@@ -18,6 +18,7 @@ const (
 	ApiPrefix          = "/pluk/" + ApiVersion
 	InternalPrefix     = "/internal"
 	debug              = "DEBUG"
+	logLevel           = "LOG_LEVEL"
 	authValidationVar  = "AUTH_VALIDATION"
 	DoNotSaveChunks    = "DO_NOT_SAVE_CHUNKS"
 	internalKeyVar     = "INTERNAL_KEY"
@@ -48,6 +49,10 @@ func DebugEnabled() bool {
 		return true
 	}
 	return false
+}
+
+func LogLevel() string {
+	return os.Getenv(logLevel)
 }
 
 func DataDir() string {

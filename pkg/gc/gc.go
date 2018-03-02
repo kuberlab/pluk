@@ -11,6 +11,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/datasets"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
@@ -229,7 +230,7 @@ func gcFromMasters(mgr db.DataMgr) {
 
 	for _, candidate := range candidates {
 		logrus.Infof("Delete dataset %v/%v from slave", candidate.Workspace, candidate.Name)
-		if err = dsManager.DeleteDataset(candidate.Workspace, candidate.Name); err != nil {
+		if err = dsManager.DeleteDataset(candidate.Workspace, candidate.Name, plukclient.NewInternalMasterClient()); err != nil {
 			logrus.Error(err)
 			return
 		}

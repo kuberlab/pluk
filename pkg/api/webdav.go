@@ -8,6 +8,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	plukio "github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
 	pluk_webdav "github.com/kuberlab/pluk/pkg/webdav"
 	"golang.org/x/net/webdav"
@@ -90,7 +91,7 @@ func (api *API) webdav() http.HandlerFunc {
 			return
 		}
 
-		dataset := api.ds.GetDataset(workspace, name)
+		dataset := api.ds.GetDataset(workspace, name, plukclient.NewInternalMasterClient())
 		if dataset == nil {
 			resp.WriteHeader(http.StatusNotFound)
 			resp.Write([]byte(fmt.Sprintf("Dataset %v not found", name)))

@@ -17,12 +17,24 @@ import (
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
+func (api *API) masterClient(req *restful.Request) plukio.PlukClient {
+	masterRaw := req.Attribute("masterclient")
+	if masterRaw == nil {
+		return nil
+	}
+	if master, ok := masterRaw.(plukio.PlukClient); ok {
+		return master
+	}
+	return nil
+}
+
 func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 	version := req.PathParameter("version")
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
+	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name)
+	dataset := api.ds.GetDataset(workspace, name, master)
 	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
@@ -48,8 +60,9 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 	version := req.PathParameter("version")
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
+	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name)
+	dataset := api.ds.GetDataset(workspace, name, master)
 	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
@@ -68,8 +81,9 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
+	master := api.masterClient(req)
 
-	err := api.ds.DeleteDataset(workspace, name)
+	err := api.ds.DeleteDataset(workspace, name, master)
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -94,8 +108,9 @@ func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	version := req.PathParameter("version")
 	workspace := req.PathParameter("workspace")
+	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name)
+	dataset := api.ds.GetDataset(workspace, name, master)
 	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
@@ -147,6 +162,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	version := req.PathParameter("version")
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
+	master := api.masterClient(req)
 
 	structure := types.FileStructure{}
 	err := req.ReadEntity(&structure)
@@ -169,7 +185,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	dataset, err := api.ds.NewDataset(workspace, name)
+	dataset, err := api.ds.NewDataset(workspace, name, master)
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -193,8 +209,9 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 func (api *API) versions(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
+	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name)
+	dataset := api.ds.GetDataset(workspace, name, master)
 	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return

@@ -21,8 +21,9 @@ const (
 
 type Dataset struct {
 	*db.Dataset
-	mgr db.DataMgr
-	FS  *plukio.ChunkedFileFS `json:"-"`
+	mgr          db.DataMgr
+	FS           *plukio.ChunkedFileFS `json:"-"`
+	MasterClient plukio.PlukClient     `json:"-"`
 }
 
 func (d *Dataset) Save(structure types.FileStructure, version string, comment string, create bool, masterSave bool) error {
@@ -34,7 +35,7 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 
 	if utils.HasMasters() && masterSave {
 		// TODO: decide whether it can go in async
-		plukio.MasterClient.SaveFileStructure(structure, d.Workspace, d.Name, version, create)
+		d.MasterClient.SaveFileStructure(structure, d.Workspace, d.Name, version, create)
 	}
 	logrus.Infof("Done saving %v/%v:%v.", d.Workspace, d.Name, version)
 
@@ -159,7 +160,7 @@ func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err 
 }
 
 func (d *Dataset) getFSStructureFromMaster(version string) (*plukio.ChunkedFileFS, error) {
-	fs, err := plukio.MasterClient.GetFSStructure(d.Workspace, d.Name, version)
+	fs, err := d.MasterClient.GetFSStructure(d.Workspace, d.Name, version)
 
 	if err != nil {
 		return nil, err
@@ -224,7 +225,7 @@ func (d *Dataset) Versions() ([]string, error) {
 		versionMap[dsv.Version] = true
 	}
 	if utils.HasMasters() {
-		vList, err := plukio.MasterClient.ListVersions(d.Workspace, d.Name)
+		vList, err := d.MasterClient.ListVersions(d.Workspace, d.Name)
 		if err != nil {
 			return nil, err
 		}

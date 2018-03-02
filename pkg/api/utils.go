@@ -14,6 +14,7 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/lib/pkg/types"
+	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
@@ -194,7 +195,7 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 	}
 
 	authURL := utils.AuthValidationURL()
-	if authURL == "" {
+	if authURL == "" && !utils.HasMasters() {
 		filter.ProcessFilter(req, resp)
 		return
 	}
@@ -205,11 +206,21 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 	ws := req.HeaderParameter("X-Workspace-Name")
 	key := authHeader + cookie + ws + secret
 
+	masterClient := plukclient.NewMasterClientFromHeaders(req.Request.Header)
+	req.SetAttribute("masterclient", masterClient)
+
 	if api.cache.Get(key) {
 		filter.ProcessFilter(req, resp)
 		return
 	} else {
-		if ws != "" && secret != "" {
+		if utils.HasMasters() {
+			// Talk to master.
+			logrus.Debugf("Auth request to master %v", utils.Masters()[0])
+			_, err := masterClient.ListDatasets("kuberlab")
+			if err != nil {
+				WriteErrorString(resp, http.StatusUnauthorized, err.Error())
+			}
+		} else if ws != "" && secret != "" {
 			u, err := url.Parse(authURL)
 			if err != nil {
 				WriteError(resp, err)
