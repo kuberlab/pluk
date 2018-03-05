@@ -226,7 +226,7 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 				WriteError(resp, err)
 				return
 			}
-			validationURL := fmt.Sprintf("%v://%v/api/v0.2/workspace/%v/secret/%v", u.Scheme, u.Host, ws, secret)
+			validationURL := fmt.Sprintf("%v://%v/api/v0.2/secret/%v", u.Scheme, u.Host, secret)
 			request, _ := http.NewRequest("GET", validationURL, nil)
 			logrus.Debugf("GET %v://%v/[redacted]", request.URL.Scheme, request.URL.Host)
 			r, err := api.client.Do(request)
