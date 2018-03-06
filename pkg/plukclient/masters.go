@@ -161,14 +161,14 @@ func (c *MultiMasterClient) SaveChunk(hash string, data []byte) (err error) {
 	return err
 }
 
-func (c *MultiMasterClient) SaveFileStructure(structure types.FileStructure, workspace, name, version string, create bool) (err error) {
+func (c *MultiMasterClient) SaveFileStructure(structure types.FileStructure, workspace, name, version string, create bool, publish bool) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
 		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return err
 		}
-		err = cl.SaveFileStructure(structure, workspace, name, version, create)
+		err = cl.SaveFileStructure(structure, workspace, name, version, create, publish)
 		if err != nil {
 			logrus.Errorf("Failed save FS to %v", base)
 		}

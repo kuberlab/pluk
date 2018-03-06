@@ -193,10 +193,15 @@ func (c *Client) DeleteDataset(workspace, name string) error {
 	return nil
 }
 
-func (c *Client) CreateDataset(workspace, name string) error {
+func (c *Client) CreateDataset(workspace, name string, public bool) error {
 	u := fmt.Sprintf("/workspace/%v/dataset", workspace)
 
-	ds := &Dataset{Name: name, WorkspaceName: workspace, Published: true, DisplayName: strings.Title(name)}
+	ds := &Dataset{
+		Name:          name,
+		WorkspaceName: workspace,
+		Published:     public,
+		DisplayName:   strings.Title(name),
+	}
 	req, err := c.NewRequest("POST", u, ds)
 	if err != nil {
 		return err

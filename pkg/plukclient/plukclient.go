@@ -202,10 +202,18 @@ func (c *Client) ListVersions(workspace, datasetName string) (*types.VersionList
 	return res, err
 }
 
-func (c *Client) SaveFileStructure(structure types.FileStructure, workspace, name, version string, create bool) error {
+func (c *Client) SaveFileStructure(structure types.FileStructure, workspace, name, version string, create bool, publish bool) error {
 	u := fmt.Sprintf("/datasets/%v/%v/%v", workspace, name, version)
+	q := url.Values{}
+
 	if create {
-		u += "?create=true"
+		q.Set("create", "true")
+	}
+	if publish {
+		q.Set("publish", "true")
+	}
+	if len(q) > 0 {
+		u += "?" + q.Encode()
 	}
 
 	req, err := c.NewRequest("POST", u, structure)

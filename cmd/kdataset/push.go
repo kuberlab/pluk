@@ -21,14 +21,15 @@ import (
 )
 
 type pushCmd struct {
-	workspace   string
-	name        string
-	create      bool
-	force       bool
-	version     string
 	chunkSize   int
 	concurrency int64
+	create      bool
+	force       bool
+	name        string
+	publish     bool
+	version     string
 	websocket   bool
+	workspace   string
 }
 
 func NewPushCmd() *cobra.Command {
@@ -76,6 +77,13 @@ func NewPushCmd() *cobra.Command {
 		"",
 		false,
 		"Create dataset in cloud-dealer if not exists.",
+	)
+	f.BoolVarP(
+		&push.create,
+		"publish",
+		"",
+		false,
+		"Newly created dataset will be public. Only used in conjunction with --create.",
 	)
 	f.BoolVarP(
 		&push.force,
@@ -259,7 +267,14 @@ func (cmd *pushCmd) run() error {
 
 	// finally, commit file structure.
 	logrus.Debugf("File structure: %v", structure)
-	if err = client.SaveFileStructure(structure, cmd.workspace, cmd.name, cmd.version, cmd.create); err != nil {
+	if err = client.SaveFileStructure(
+		structure,
+		cmd.workspace,
+		cmd.name,
+		cmd.version,
+		cmd.create,
+		cmd.publish,
+	); err != nil {
 		bar.Finish()
 		logrus.Fatal(err)
 	}

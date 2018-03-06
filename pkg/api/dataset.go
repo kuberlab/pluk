@@ -159,6 +159,8 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	comment := req.HeaderParameter("Comment")
 	createRaw := req.QueryParameter("create")
 	create, _ := strconv.ParseBool(createRaw)
+	publishRaw := req.QueryParameter("publish")
+	publish, _ := strconv.ParseBool(publishRaw)
 	version := req.PathParameter("version")
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
@@ -190,14 +192,14 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		WriteError(resp, err)
 		return
 	}
-	err = dataset.Save(structure, v.String(), comment, create, true)
+	err = dataset.Save(structure, v.String(), comment, create, publish, true)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
 
 	if create {
-		if err = api.createDatasetOnDealer(req, workspace, name); err != nil {
+		if err = api.createDatasetOnDealer(req, workspace, name, publish); err != nil {
 			WriteStatusError(resp, http.StatusInternalServerError, err)
 			return
 		}
@@ -287,7 +289,7 @@ func (api *API) dealerClient(req *restful.Request) (*dealerclient.Client, error)
 	return dealerclient.NewClient(utils.AuthValidationURL(), &dealerclient.AuthOpts{Headers: req.Request.Header})
 }
 
-func (api *API) createDatasetOnDealer(req *restful.Request, ws, name string) error {
+func (api *API) createDatasetOnDealer(req *restful.Request, ws, name string, public bool) error {
 	if utils.AuthValidationURL() == "" {
 		return nil
 	}
@@ -308,5 +310,5 @@ func (api *API) createDatasetOnDealer(req *restful.Request, ws, name string) err
 		}
 	}
 
-	return dealer.CreateDataset(ws, name)
+	return dealer.CreateDataset(ws, name, public)
 }
