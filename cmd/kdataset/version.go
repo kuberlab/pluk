@@ -16,7 +16,7 @@ func (v Version) String() string {
 
 func GetVersion() Version {
 	return Version{
-		version:    "1.1.2",
+		version:    "1.1.3",
 		goCompiler: runtime.Version(),
 	}
 }
