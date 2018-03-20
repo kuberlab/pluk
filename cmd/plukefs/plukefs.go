@@ -156,6 +156,7 @@ func (cmd *plukeFSCmd) run() {
 		logrus.Error(err)
 		return
 	}
+	logrus.Info("FS is ready!")
 	server.Serve()
 }
 
