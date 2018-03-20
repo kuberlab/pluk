@@ -219,6 +219,7 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 			_, err := masterClient.ListDatasets("kuberlab")
 			if err != nil {
 				WriteErrorString(resp, http.StatusUnauthorized, err.Error())
+				return
 			}
 		} else if ws != "" && secret != "" {
 			u, err := url.Parse(authURL)
