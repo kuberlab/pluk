@@ -15,6 +15,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
+	liberrs "github.com/kuberlab/lib/pkg/errors"
 	libtypes "github.com/kuberlab/lib/pkg/types"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
@@ -439,8 +440,19 @@ func checkResponse(resp *http.Response, err error) (*http.Response, error) {
 			return &http.Response{StatusCode: http.StatusInternalServerError}, err
 		} else {
 			messageBytes, _ := ioutil.ReadAll(resp.Body)
-			message := strconv.Itoa(resp.StatusCode) + ": " + string(messageBytes)
-			return resp, errors.New(message)
+			e := &liberrs.Error{}
+			err = json.Unmarshal(messageBytes, e)
+			if err != nil {
+				message := strconv.Itoa(resp.StatusCode) + ": " + string(messageBytes)
+				return resp, errors.New(message)
+			} else {
+				// Include reason in message if any
+				if e.Reason != "" {
+					e.Message += "; " + string(e.Reason)
+					e.Reason = ""
+				}
+				return resp, e
+			}
 		}
 	}
 	return resp, nil

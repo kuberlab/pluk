@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Masterminds/semver"
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/errors"
@@ -173,18 +172,8 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	v, err := semver.NewVersion(version)
-	if err != nil {
-		WriteStatusError(resp, http.StatusBadRequest, fmt.Errorf("%v: %v", version, err.Error()))
-		return
-	}
-	if v.String() != version {
-		WriteStatusError(
-			resp,
-			http.StatusBadRequest,
-			fmt.Errorf("Version must be a valid semantic version. Given %v, try to save as version %v", version, v.String()),
-		)
-		return
+	if err = utils.CheckVersion(version); err != nil {
+		WriteStatusError(resp, http.StatusBadRequest, err)
 	}
 
 	dataset, err := api.ds.NewDataset(workspace, name, master)
@@ -192,7 +181,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		WriteError(resp, err)
 		return
 	}
-	err = dataset.Save(structure, v.String(), comment, create, publish, true)
+	err = dataset.Save(structure, version, comment, create, publish, true)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return

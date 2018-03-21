@@ -57,5 +57,10 @@ func (api *API) checkDataset(req *restful.Request, resp *restful.Response) {
 			return
 		}
 	}
+	err = dealer.CheckDataset(workspace, dataset)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
 	WriteErrorString(resp, http.StatusNotFound, fmt.Sprintf("Dataset %v not found", dataset))
 }

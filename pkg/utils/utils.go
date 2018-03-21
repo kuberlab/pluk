@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/gorilla/websocket"
 	"github.com/kuberlab/lib/pkg/types"
 )
@@ -164,4 +165,16 @@ func LoadAsJson(m map[string]interface{}, v interface{}) error {
 		return err
 	}
 	return json.Unmarshal(data, v)
+}
+
+func CheckVersion(version string) error {
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		reg := "version examples: 1.0.1, 1.5.0-dev, 1.8.1-alpha.1"
+		return fmt.Errorf("%v: %v; %v", version, err.Error(), reg)
+	}
+	if v.String() != version {
+		return fmt.Errorf("Version must be a valid semantic version. Given %v, try to save as version %v", version, v.String())
+	}
+	return nil
 }

@@ -214,6 +214,27 @@ func (c *Client) CreateDataset(workspace, name string, public bool) error {
 	return nil
 }
 
+func (c *Client) CheckDataset(workspace, name string) error {
+	u := fmt.Sprintf("/workspace/%v/dataset-check", workspace)
+
+	ds := &Dataset{
+		Name:          name,
+		WorkspaceName: workspace,
+		Published:     false,
+		DisplayName:   name,
+	}
+	req, err := c.NewRequest("POST", u, ds)
+	if err != nil {
+		return err
+	}
+	_, err = c.Do(req, nil)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *Client) ListDatasets(workspace string) ([]Dataset, error) {
 	u := fmt.Sprintf("/workspace/%v/dataset", workspace)
 
@@ -230,14 +251,28 @@ func (c *Client) ListDatasets(workspace string) ([]Dataset, error) {
 	return ds, nil
 }
 
+type DealerError struct {
+	Status     string
+	Error      string
+	Reason     string
+	StatusCode int
+}
+
 func checkResponse(resp *http.Response, err error) (*http.Response, error) {
 	if err != nil || resp.StatusCode >= 400 {
 		if err != nil {
 			return &http.Response{StatusCode: http.StatusInternalServerError}, err
 		} else {
 			messageBytes, _ := ioutil.ReadAll(resp.Body)
-			message := strconv.Itoa(resp.StatusCode) + ": " + string(messageBytes)
-			return resp, errors.NewStatus(resp.StatusCode, message)
+			// Try use dealerError
+			e := &DealerError{}
+			err = json.Unmarshal(messageBytes, e)
+			if err != nil {
+				message := strconv.Itoa(resp.StatusCode) + ": " + string(messageBytes)
+				return resp, errors.NewStatus(resp.StatusCode, message)
+			} else {
+				return resp, errors.NewStatusReason(e.StatusCode, e.Error, e.Reason)
+			}
 		}
 	}
 	return resp, nil

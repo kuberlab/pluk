@@ -16,6 +16,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	chunk_io "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
+	"github.com/kuberlab/pluk/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/semaphore"
 )
@@ -113,6 +114,10 @@ func (cmd *pushCmd) run() error {
 
 	client, err := initClient()
 	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	if err = utils.CheckVersion(cmd.version); err != nil {
 		logrus.Fatal(err)
 	}
 

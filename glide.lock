@@ -26,7 +26,7 @@ imports:
 - name: github.com/jinzhu/inflection
   version: 1c35d901db3da928c72a72d8458480cc9ade058f
 - name: github.com/kuberlab/lib
-  version: 15136e260400e88b616ab4e8dd9017eb08b87666
+  version: 091bfc87a808d71b9594ba23a2a90276f06162f2
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/errors
