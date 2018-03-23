@@ -80,7 +80,7 @@ func NewPushCmd() *cobra.Command {
 		"Create dataset in cloud-dealer if not exists.",
 	)
 	f.BoolVarP(
-		&push.create,
+		&push.publish,
 		"publish",
 		"",
 		false,
