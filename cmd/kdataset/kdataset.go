@@ -23,6 +23,7 @@ const (
 var (
 	configPath string
 	baseURL    string
+	insecure   bool
 	logLevel   string
 	debug      bool
 )
@@ -74,6 +75,14 @@ func initConfig(cmd *cobra.Command, args []string) error {
 		config.Config.WorkspaceSecret = secret
 	}
 
+	insecureEnv := os.Getenv("KUBERLAB_INSECURE")
+	if strings.ToLower(insecureEnv) == "true" {
+		config.Config.Insecure = true
+	}
+	if insecure {
+		config.Config.Insecure = true
+	}
+
 	overridePlukURL()
 
 	return nil
@@ -83,9 +92,10 @@ func initClient() (io.PlukClient, error) {
 	return plukclient.NewClient(
 		config.Config.PlukURL,
 		&plukclient.AuthOpts{
-			Token:     config.Config.Token,
-			Workspace: config.Config.Workspace,
-			Secret:    config.Config.WorkspaceSecret,
+			Token:              config.Config.Token,
+			Workspace:          config.Config.Workspace,
+			Secret:             config.Config.WorkspaceSecret,
+			InsecureSkipVerify: config.Config.Insecure,
 		},
 	)
 }
@@ -119,6 +129,7 @@ func newRootCmd() *cobra.Command {
 	p.BoolVarP(&debug, "debug", "", false, "Enable debug level (shortcut for --log-level=debug).")
 	p.StringVarP(&configPath, "config", "", defaultConfigPath, "Path to config file")
 	p.StringVar(&baseURL, "url", "", "Base url to dataset storage.")
+	p.BoolVarP(&insecure, "insecure", "", false, "Enable insecure SSL/TLS connection (skip verify).")
 
 	// Add all commands
 	rootCmd.AddCommand(

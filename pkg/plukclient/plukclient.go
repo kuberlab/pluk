@@ -2,6 +2,7 @@ package plukclient
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,11 +34,12 @@ type Client struct {
 }
 
 type AuthOpts struct {
-	Token       string
-	Cookie      string
-	InternalKey string
-	Workspace   string
-	Secret      string
+	Token              string
+	Cookie             string
+	InternalKey        string
+	Workspace          string
+	Secret             string
+	InsecureSkipVerify bool
 }
 
 func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
@@ -49,7 +51,12 @@ func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
 	if len(base.Path) < 2 {
 		base.Path = "/pluk/v1"
 	}
-	baseClient := &http.Client{Timeout: time.Hour * 8}
+	var transport = *(http.DefaultTransport.(*http.Transport))
+	if base.Scheme == "https" {
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: auth.InsecureSkipVerify}
+	}
+	baseClient := &http.Client{Timeout: time.Hour * 8, Transport: &transport}
+
 	return &Client{
 		BaseURL:   base,
 		Client:    baseClient,

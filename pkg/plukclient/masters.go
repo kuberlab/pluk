@@ -18,7 +18,13 @@ type MultiMasterClient struct {
 
 func NewInternalMasterClient() plukio.PlukClient {
 	masters := utils.Masters()
-	return &MultiMasterClient{Masters: masters, AuthOpts: AuthOpts{InternalKey: utils.InternalKey()}}
+	return &MultiMasterClient{
+		Masters: masters,
+		AuthOpts: AuthOpts{
+			InternalKey:        utils.InternalKey(),
+			InsecureSkipVerify: true,
+		},
+	}
 }
 
 func NewMasterClientWithSecret(workspace, secret string) plukio.PlukClient {
@@ -29,10 +35,11 @@ func NewMasterClientWithSecret(workspace, secret string) plukio.PlukClient {
 func NewMasterClientFromHeaders(headers http.Header) plukio.PlukClient {
 	masters := utils.Masters()
 	auth := AuthOpts{
-		Cookie:    headers.Get("Cookie"),
-		Workspace: headers.Get("X-Workspace-Name"),
-		Secret:    headers.Get("X-Workspace-Secret"),
-		Token:     strings.TrimPrefix(headers.Get("Authorization"), "Bearer "),
+		Cookie:             headers.Get("Cookie"),
+		Workspace:          headers.Get("X-Workspace-Name"),
+		Secret:             headers.Get("X-Workspace-Secret"),
+		Token:              strings.TrimPrefix(headers.Get("Authorization"), "Bearer "),
+		InsecureSkipVerify: true,
 	}
 	return &MultiMasterClient{Masters: masters, AuthOpts: auth}
 }

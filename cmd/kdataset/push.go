@@ -131,7 +131,7 @@ func (cmd *pushCmd) run() error {
 	}
 
 	if _, err := client.CheckDataset(cmd.workspace, cmd.name); err != nil && !cmd.create && !cmd.force {
-		if strings.Contains(err.Error(), "404") {
+		if strings.Contains(err.Error(), "not found") {
 			logrus.Fatalf("Dataset '%v' doesn't exist. Consider using --create option to automatically create dataset or use --force.", cmd.name)
 		} else {
 			logrus.Fatal(err)

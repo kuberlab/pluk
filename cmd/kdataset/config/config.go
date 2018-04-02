@@ -16,6 +16,7 @@ type DealerConfig struct {
 	Token           string `yaml:"token"`
 	Workspace       string `yaml:"workspace"`
 	WorkspaceSecret string `yaml:"workspace_secret"`
+	Insecure        bool   `yaml:"insecure"`
 }
 
 // InitConfig loads Config from the given path.

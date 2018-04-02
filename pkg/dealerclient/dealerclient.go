@@ -200,7 +200,7 @@ func (c *Client) CreateDataset(workspace, name string, public bool) error {
 		Name:          name,
 		WorkspaceName: workspace,
 		Published:     public,
-		DisplayName:   strings.Title(name),
+		DisplayName:   name,
 	}
 	req, err := c.NewRequest("POST", u, ds)
 	if err != nil {
