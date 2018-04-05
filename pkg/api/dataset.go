@@ -174,6 +174,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 
 	if err = utils.CheckVersion(version); err != nil {
 		WriteStatusError(resp, http.StatusBadRequest, err)
+		return
 	}
 
 	dataset, err := api.ds.NewDataset(workspace, name, master)
