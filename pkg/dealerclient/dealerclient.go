@@ -14,7 +14,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/lib/pkg/errors"
-	"github.com/kuberlab/pluk/pkg/types"
 )
 
 type Client struct {
@@ -38,6 +37,13 @@ type Dataset struct {
 	Name          string
 	Published     bool
 	WorkspaceName string
+}
+
+type Workspace struct {
+	Name        string
+	DisplayName string
+	Type        string
+	Can         []string
 }
 
 func NewClient(baseURL string, auth *AuthOpts) (*Client, error) {
@@ -168,10 +174,10 @@ func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
 	return resp, err
 }
 
-func (c *Client) GetWorkspace(workspace string) (*types.Workspace, error) {
+func (c *Client) GetWorkspace(workspace string) (*Workspace, error) {
 	u := fmt.Sprintf("/workspace/%v", workspace)
 
-	var ws = &types.Workspace{}
+	var ws = &Workspace{}
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, err

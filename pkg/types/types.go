@@ -7,15 +7,11 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
+	"github.com/kuberlab/pluk/pkg/dealerclient"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
-type Workspace struct {
-	Name        string
-	DisplayName string
-	Type        string
-	Can         []string
-}
+type Workspace dealerclient.Workspace
 
 type DataSetList struct {
 	Datasets []*Dataset `json:"datasets"`
