@@ -7,7 +7,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
-	"github.com/kuberlab/pluk/pkg/dealerclient"
+	"github.com/kuberlab/lib/pkg/dealerclient"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
