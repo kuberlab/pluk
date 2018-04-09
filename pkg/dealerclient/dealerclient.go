@@ -26,9 +26,11 @@ type Client struct {
 }
 
 type AuthOpts struct {
-	Token   string
-	Cookie  string
-	Headers http.Header
+	Token           string
+	Cookie          string
+	Headers         http.Header
+	Workspace       string
+	WorkspaceSecret string
 }
 
 type Dataset struct {
@@ -113,6 +115,10 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 		}
 		if c.auth.Token != "" {
 			req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", c.auth.Token))
+		}
+		if c.auth.Workspace != "" && c.auth.WorkspaceSecret != "" {
+			req.Header.Set("X-Workspace-Name", c.auth.Workspace)
+			req.Header.Set("X-Workspace-Secret", c.auth.WorkspaceSecret)
 		}
 	}
 
