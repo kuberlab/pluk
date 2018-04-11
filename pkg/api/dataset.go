@@ -215,7 +215,11 @@ func (api *API) versions(req *restful.Request, resp *restful.Response) {
 	}
 
 	// Cache last 3 versions.
-	go api.cacheFS(dataset, utils.GetFirstN(versions, 3))
+	onlyVersions := make([]string, 0)
+	for _, v := range versions {
+		onlyVersions = append(onlyVersions, v.Version)
+	}
+	go api.cacheFS(dataset, utils.GetFirstN(onlyVersions, 3))
 	resp.WriteEntity(types.VersionList{Versions: versions})
 }
 

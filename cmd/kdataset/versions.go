@@ -6,6 +6,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"os"
+	"text/tabwriter"
 )
 
 type versionsCmd struct {
@@ -51,10 +53,32 @@ func (cmd *versionsCmd) run() error {
 		logrus.Fatal(err)
 	}
 
-	fmt.Println("VERSIONS:")
+	w := tabwriter.NewWriter(os.Stdout, 5, 4, 3, ' ', 0)
+	fmt.Fprintln(w, "VERSIONS\tSIZE")
 	for _, v := range versions.Versions {
-		fmt.Println(v)
+		fmt.Fprintln(w, v.Version+"\t"+sizeString(v.SizeBytes))
 	}
+	w.Flush()
 
 	return nil
+}
+
+func sizeString(size int64) string {
+	suffix := "b"
+	sz := float64(size)
+	if size > 1024 {
+		sz = sz / 1024.0
+		suffix = "K"
+	} else {
+		return fmt.Sprintf("%.0f%v", sz, suffix)
+	}
+	if size > 1024*1024 {
+		sz = sz / 1024.0
+		suffix = "M"
+	}
+	if size > 1024*1024*1024 {
+		sz = sz / 1024.0
+		suffix = "G"
+	}
+	return fmt.Sprintf("%.3f%v", sz, suffix)
 }

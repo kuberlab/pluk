@@ -208,21 +208,21 @@ func (d *Dataset) CheckVersion(version string) (bool, error) {
 		return false, err
 	}
 	for _, v := range versions {
-		if v == version {
+		if v.Version == version {
 			return true, nil
 		}
 	}
 	return false, nil
 }
 
-func (d *Dataset) Versions() ([]string, error) {
+func (d *Dataset) Versions() ([]types.Version, error) {
 	dsvs, err := d.mgr.ListDatasetVersions(db.DatasetVersion{Workspace: d.Workspace, Name: d.Name})
 	if err != nil {
 		return nil, err
 	}
-	versionMap := make(map[string]bool)
+	versionMap := make(map[string]types.Version)
 	for _, dsv := range dsvs {
-		versionMap[dsv.Version] = true
+		versionMap[dsv.Version] = types.Version{Version: dsv.Version, SizeBytes: dsv.Size}
 	}
 	if utils.HasMasters() {
 		vList, err := d.MasterClient.ListVersions(d.Workspace, d.Name)
@@ -231,11 +231,11 @@ func (d *Dataset) Versions() ([]string, error) {
 		}
 
 		for _, v := range vList.Versions {
-			versionMap[v] = true
+			versionMap[v.Version] = v
 		}
 	}
-	result := make([]string, 0)
-	for v := range versionMap {
+	result := make([]types.Version, 0)
+	for _, v := range versionMap {
 		result = append(result, v)
 	}
 

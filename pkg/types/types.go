@@ -23,7 +23,12 @@ type Dataset struct {
 }
 
 type VersionList struct {
-	Versions []string `json:"versions"`
+	Versions []Version `json:"versions"`
+}
+
+type Version struct {
+	Version   string `json:"version"`
+	SizeBytes int64  `json:"size_bytes"`
 }
 
 type FileStructure struct {
