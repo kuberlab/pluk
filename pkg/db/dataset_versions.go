@@ -20,6 +20,7 @@ type DatasetVersion struct {
 	Name      string `json:"name" gorm:"index:idx_workspace_name"`
 	Version   string `json:"version" gorm:"index:idx_version"`
 	Deleted   bool   `json:"deleted"`
+	Size      int64  `json:"size"`
 }
 
 func (mgr *DatabaseMgr) CreateDatasetVersion(datasetVersion *DatasetVersion) error {
