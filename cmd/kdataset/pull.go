@@ -74,7 +74,19 @@ func (cmd *pullCmd) run() (err error) {
 	}
 	defer f.Close()
 
-	bar := pb.New64(0).SetUnits(pb.U_BYTES)
+	versions, err := client.ListVersions(cmd.workspace, cmd.name)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	var size int64
+	for _, v := range versions.Versions {
+		if v.Version == cmd.version {
+			size = v.SizeBytes
+		}
+	}
+
+	bar := pb.New64(size).SetUnits(pb.U_BYTES)
 	w := io.MultiWriter(f, bar)
 
 	bar.SetMaxWidth(100)
