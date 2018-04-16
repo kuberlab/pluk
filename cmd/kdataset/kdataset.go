@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"os/exec"
+	"os/user"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
@@ -31,9 +31,10 @@ var (
 func initConfig(cmd *cobra.Command, args []string) error {
 	initLogging()
 	// Expand the path
-	path, err := exec.Command("sh", "-c", fmt.Sprintf("echo %v", configPath)).Output()
-	if err != nil {
-		return err
+	path := configPath
+	if configPath == defaultConfigPath {
+		u, _ := user.Current()
+		path = strings.Replace(defaultConfigPath, "~", u.HomeDir, -1)
 	}
 
 	overridePlukURL := func() {
@@ -53,8 +54,7 @@ func initConfig(cmd *cobra.Command, args []string) error {
 		}
 
 	}
-	upath := strings.TrimSuffix(string(path), "\n")
-	_, err = os.Stat(upath)
+	_, err := os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
 		logrus.Errorln(err)
 		config.Config = &config.DealerConfig{}
@@ -62,7 +62,7 @@ func initConfig(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = config.InitConfig(upath)
+	err = config.InitConfig(path)
 	if err != nil {
 		return err
 	}
@@ -84,6 +84,9 @@ func initConfig(cmd *cobra.Command, args []string) error {
 	}
 
 	overridePlukURL()
+
+	// check new version
+	// curl https://api.github.com/repos/kuberlab/pluk/tags
 
 	return nil
 }
