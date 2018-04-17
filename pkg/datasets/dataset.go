@@ -52,10 +52,20 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 		}
 	}()
 
+	var totalSize int64 = 0
+	for _, f := range structure.Files {
+		totalSize += f.Size
+	}
+
 	dsv, err := tx.GetDatasetVersion(d.Workspace, d.Name, version)
 	if err != nil {
 		err = nil
-		errD := tx.CreateDatasetVersion(&db.DatasetVersion{Name: d.Name, Workspace: d.Workspace, Version: version})
+		errD := tx.CreateDatasetVersion(&db.DatasetVersion{
+			Name:      d.Name,
+			Workspace: d.Workspace,
+			Version:   version,
+			Size:      totalSize,
+		})
 		if errD != nil {
 			err = errD
 			return
@@ -63,7 +73,14 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 	} else if dsv.Deleted {
 		// Recover it.
 		dsv.Deleted = false
+		dsv.Size = totalSize
 		if err = tx.RecoverDatasetVersion(dsv); err != nil {
+			return err
+		}
+	} else {
+		// Simple update
+		dsv.Size = totalSize
+		if _, err = tx.UpdateDatasetVersion(dsv); err != nil {
 			return err
 		}
 	}
