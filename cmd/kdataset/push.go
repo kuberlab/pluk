@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -105,7 +104,6 @@ func NewPushCmd() *cobra.Command {
 }
 
 func (cmd *pushCmd) run() error {
-	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 100
 	logrus.Debugf("Concurrency is set to %v.", cmd.concurrency)
 	cwd, err := os.Getwd()
 	if err != nil {

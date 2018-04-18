@@ -140,7 +140,10 @@ func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
 	}
 
 	io.Copy(resp, file)
-	file.Close()
+	err = file.Close()
+	if err != nil {
+		logrus.Error(err)
+	}
 }
 
 func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {

@@ -12,24 +12,29 @@ import (
 )
 
 type MultiMasterClient struct {
-	Masters  []string
-	AuthOpts AuthOpts
+	Masters     []string
+	baseClients []plukio.PlukClient
+	AuthOpts    AuthOpts
 }
 
 func NewInternalMasterClient() plukio.PlukClient {
 	masters := utils.Masters()
-	return &MultiMasterClient{
+	mClient := &MultiMasterClient{
 		Masters: masters,
 		AuthOpts: AuthOpts{
 			InternalKey:        utils.InternalKey(),
 			InsecureSkipVerify: true,
 		},
 	}
+	mClient.initAllClients()
+	return mClient
 }
 
 func NewMasterClientWithSecret(workspace, secret string) plukio.PlukClient {
 	masters := utils.Masters()
-	return &MultiMasterClient{Masters: masters, AuthOpts: AuthOpts{Workspace: workspace, Secret: secret}}
+	mClient := &MultiMasterClient{Masters: masters, AuthOpts: AuthOpts{Workspace: workspace, Secret: secret}}
+	mClient.initAllClients()
+	return mClient
 }
 
 func NewMasterClientFromHeaders(headers http.Header) plukio.PlukClient {
@@ -41,7 +46,19 @@ func NewMasterClientFromHeaders(headers http.Header) plukio.PlukClient {
 		Token:              strings.TrimPrefix(headers.Get("Authorization"), "Bearer "),
 		InsecureSkipVerify: true,
 	}
-	return &MultiMasterClient{Masters: masters, AuthOpts: auth}
+	mClient := &MultiMasterClient{Masters: masters, AuthOpts: auth}
+	mClient.initAllClients()
+	return mClient
+}
+
+func (c *MultiMasterClient) initAllClients() {
+	c.baseClients = make([]plukio.PlukClient, 0)
+	for _, m := range c.Masters {
+		cl, err := c.initBaseClient(m)
+		if err == nil {
+			c.baseClients = append(c.baseClients, cl)
+		}
+	}
 }
 
 func (c *MultiMasterClient) initBaseClient(baseURL string) (plukio.PlukClient, error) {
@@ -105,12 +122,7 @@ func (c *MultiMasterClient) ListVersions(workspace, datasetName string) (res *ty
 }
 
 func (c *MultiMasterClient) DownloadChunk(hash string) (reader io.ReadCloser, err error) {
-	var cl plukio.PlukClient
-	for _, base := range c.Masters {
-		cl, err = c.initBaseClient(base)
-		if err != nil {
-			return nil, err
-		}
+	for _, cl := range c.baseClients {
 		reader, err = cl.DownloadChunk(hash)
 		if err != nil {
 			continue

@@ -3,11 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+	"text/tabwriter"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"os"
-	"text/tabwriter"
 )
 
 type versionsCmd struct {

@@ -51,6 +51,7 @@ func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
 	if len(base.Path) < 2 {
 		base.Path = "/pluk/v1"
 	}
+	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 100
 	var transport = *(http.DefaultTransport.(*http.Transport))
 	if base.Scheme == "https" {
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: auth.InsecureSkipVerify}

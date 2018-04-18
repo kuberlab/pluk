@@ -53,6 +53,9 @@ func GetChunk(hash string) (reader ReaderInterface, err error) {
 	chunkPath := utils.GetHashedFilename(hash)
 	reader, err = os.Open(chunkPath)
 	if err != nil {
+		if reader != nil {
+			reader.Close()
+		}
 		if os.IsNotExist(err) && utils.HasMasters() {
 			// Read from master
 			//logrus.Debugf("download")
@@ -72,11 +75,17 @@ func GetChunk(hash string) (reader ReaderInterface, err error) {
 				SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
 				return NewChunkReaderFromData(data), nil
 			} else {
-				reader, err = NewChunkReaderFromCloser(readerRaw)
+				data, err := ioutil.ReadAll(readerRaw)
 				if err != nil {
 					return nil, err
 				}
-				return reader, nil
+				//logrus.Debugf("download complete! %v", time.Since(t))
+				readerRaw.Close()
+				return NewChunkReaderFromData(data), nil
+				//if err != nil {
+				//	return nil, err
+				//}
+				//return reader, nil
 			}
 		} else {
 			return nil, err

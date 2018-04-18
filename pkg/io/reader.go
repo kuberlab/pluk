@@ -3,6 +3,8 @@ package io
 import (
 	"io"
 	"io/ioutil"
+
+	"github.com/Sirupsen/logrus"
 )
 
 type ReaderInterface interface {
@@ -20,7 +22,9 @@ func NewChunkReaderFromCloser(closer io.ReadCloser) (ReaderInterface, error) {
 	if err != nil {
 		return nil, err
 	}
-	closer.Close()
+	if err = closer.Close(); err != nil {
+		logrus.Errorf("Can't close: %v", err)
+	}
 	return &ChunkReader{data: data}, nil
 }
 
