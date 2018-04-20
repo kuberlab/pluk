@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/emicklei/go-restful"
+	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
@@ -13,8 +14,20 @@ func (api *API) checkWorkspace(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 
 	u := utils.AuthValidationURL()
-	if u == "" {
+	if u == "" && !utils.HasMasters() {
 		resp.WriteEntity(&types.Workspace{Name: workspace})
+		return
+	}
+
+	if u == "" && utils.HasMasters() {
+		// Request master.
+		masters := plukclient.NewMasterClientFromHeaders(req.Request.Header)
+		ws, err := masters.CheckWorkspace(workspace)
+		if err != nil {
+			WriteError(resp, err)
+			return
+		}
+		resp.WriteEntity(ws)
 		return
 	}
 
@@ -36,8 +49,20 @@ func (api *API) checkDataset(req *restful.Request, resp *restful.Response) {
 	dataset := req.PathParameter("dataset")
 
 	u := utils.AuthValidationURL()
-	if u == "" {
+	if u == "" && !utils.HasMasters() {
 		resp.WriteEntity(&types.Dataset{Name: dataset, Workspace: workspace})
+		return
+	}
+
+	if u == "" && utils.HasMasters() {
+		// Request master.
+		masters := plukclient.NewMasterClientFromHeaders(req.Request.Header)
+		ds, err := masters.CheckDataset(workspace, dataset)
+		if err != nil {
+			WriteError(resp, err)
+			return
+		}
+		resp.WriteEntity(ds)
 		return
 	}
 

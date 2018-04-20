@@ -120,7 +120,7 @@ func (cmd *pushCmd) run() error {
 	}
 
 	if _, err := client.CheckWorkspace(cmd.workspace); err != nil && !cmd.force {
-		if strings.Contains(err.Error(), "404") {
+		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
 			logrus.Fatalf("Probably workspace '%v' doesn't exist. Check if workspace name is right.", cmd.workspace)
 		} else {
 			logrus.Fatal(err)
