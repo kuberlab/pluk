@@ -357,6 +357,23 @@ func (c *Client) DownloadDataset(workspace, name, version string, w io.Writer) e
 	return nil
 }
 
+func (c *Client) DatasetTarsize(workspace, name, version string) (int64, error) {
+	u := fmt.Sprintf("/datasets/%v/%v/versions/%v/tarsize", workspace, name, version)
+
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	b := bytes.NewBufferString("")
+	_, err = c.Do(req, b)
+	if err != nil {
+		return 0, err
+	}
+	out := strings.TrimSuffix(b.String(), "\n")
+	return strconv.ParseInt(out, 10, 64)
+}
+
 func (c *Client) DeleteDataset(workspace, name string) error {
 	u := fmt.Sprintf("/datasets/%v/%v", workspace, name)
 

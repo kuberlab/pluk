@@ -25,6 +25,7 @@ type PlukClient interface {
 	DeleteVersion(workspace, name, version string) error
 	DownloadChunk(hash string) (io.ReadCloser, error)
 	DownloadDataset(workspace, name, version string, w io.Writer) error
+	DatasetTarsize(workspace, name, version string) (int64, error)
 	GetFSStructure(workspace, name, version string) (*ChunkedFileFS, error)
 	ListDatasets(workspace string) (*types.DataSetList, error)
 	ListVersions(workspace, datasetName string) (*types.VersionList, error)

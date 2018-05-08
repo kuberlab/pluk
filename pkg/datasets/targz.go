@@ -20,11 +20,22 @@ func WriteTar(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 
 	prevName := ""
 	err := fs.Walk("/", func(path string, f *plukio.ChunkedFile, err error) error {
-		if f.Fstat.IsDir() {
+		name := strings.TrimPrefix(path, "/")
+		if strings.HasPrefix(name, ".") || path == "/" {
 			return nil
 		}
-		name := strings.TrimPrefix(path, "/")
-		if strings.HasPrefix(name, ".") {
+		if f.Fstat.IsDir() {
+			//h := &tar.Header{
+			//	Name:     name,
+			//	Mode:     0644,
+			//	Typeflag: tar.TypeDir,
+			//	ModTime:  f.Fstat.ModTime(),
+			//}
+			//if err := twriter.WriteHeader(h); err != nil {
+			//	return fmt.Errorf("Failed write file %v: %v", prevName, err)
+			//}
+			//hd++
+			//sz += 512
 			return nil
 		}
 		logrus.Debugf("Processing file %v, size=%v", name, f.Size)

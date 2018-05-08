@@ -44,15 +44,50 @@ func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	dataset.FS = fs
-	err = dataset.Download(resp)
+
+	sz, err := dataset.TarSize()
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
 
 	resp.Header().Add("Content-Type", "application/tar")
+	resp.Header().Add("Content-Length", fmt.Sprintf("%v", sz))
+
+	err = dataset.Download(resp)
+	if err != nil {
+		WriteStatusError(resp, http.StatusInternalServerError, err)
+		return
+	}
 
 	//resp.Header().Add("Content-Disposition", fmt.Sprintf("attachment;filename=%s-%s.%s.tgz;", workspace, name, version))
+}
+
+func (api *API) datasetTarSize(req *restful.Request, resp *restful.Response) {
+	version := req.PathParameter("version")
+	name := req.PathParameter("name")
+	workspace := req.PathParameter("workspace")
+	master := api.masterClient(req)
+
+	dataset := api.ds.GetDataset(workspace, name, master)
+	if dataset == nil {
+		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		return
+	}
+	fs, err := api.getFS(dataset, version)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
+	dataset.FS = fs
+
+	sz, err := dataset.TarSize()
+	if err != nil {
+		WriteStatusError(resp, http.StatusInternalServerError, err)
+		return
+	}
+
+	resp.Write([]byte(fmt.Sprintf("%v\n", sz)))
 }
 
 func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {

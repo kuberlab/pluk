@@ -74,17 +74,11 @@ func (cmd *pullCmd) run() (err error) {
 	}
 	defer f.Close()
 
-	versions, err := client.ListVersions(cmd.workspace, cmd.name)
+	size, err := client.DatasetTarsize(cmd.workspace, cmd.name, cmd.version)
 	if err != nil {
 		logrus.Fatal(err)
 	}
-
-	var size int64
-	for _, v := range versions.Versions {
-		if v.Version == cmd.version {
-			size = v.SizeBytes
-		}
-	}
+	logrus.Debugf("Tar archive size = %v", size)
 
 	bar := pb.New64(size).SetUnits(pb.U_BYTES)
 	w := io.MultiWriter(f, bar)

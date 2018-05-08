@@ -178,6 +178,22 @@ func (c *MultiMasterClient) DownloadDataset(workspace, name, version string, w i
 	return err
 }
 
+func (c *MultiMasterClient) DatasetTarsize(workspace, name, version string) (res int64, err error) {
+	var cl plukio.PlukClient
+	for _, base := range c.Masters {
+		cl, err = c.initBaseClient(base)
+		if err != nil {
+			return 0, err
+		}
+		res, err = cl.DatasetTarsize(workspace, name, version)
+		if err != nil {
+			continue
+		}
+		return 0, err
+	}
+	return res, err
+}
+
 func (c *MultiMasterClient) SaveChunk(hash string, data []byte) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {

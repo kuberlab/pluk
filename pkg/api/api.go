@@ -82,6 +82,7 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	ws.Route(ws.DELETE("/datasets/{workspace}/{name}").To(api.deleteDataset))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions").To(api.versions))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}").To(api.getDataset))
+	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/tarsize").To(api.datasetTarSize))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/fs").To(api.getDatasetFS))
 	ws.Route(ws.DELETE("/datasets/{workspace}/{name}/versions/{version}").To(api.deleteVersion))
 

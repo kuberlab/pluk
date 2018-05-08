@@ -155,6 +155,34 @@ func (d *Dataset) Download(resp *restful.Response) error {
 	return WriteTar(d.FS, resp)
 }
 
+func (d *Dataset) TarSize() (int64, error) {
+	var size int64 = 0
+	err := d.FS.Walk("/", func(path string, f *plukio.ChunkedFile, err error) error {
+		name := strings.TrimPrefix(path, "/")
+		if strings.HasPrefix(name, ".") || path == "/" {
+			return nil
+		}
+
+		if f.Fstat.IsDir() {
+			// Directory size
+			// size += 4096
+			return nil
+		}
+		// Header size
+		size += 512
+
+		// File size padded to 512
+		size += f.Size
+		if f.Size%512 != 0 {
+			size += 512 - f.Size%512
+		}
+		return nil
+	})
+	// 2 end blocks
+	size += 512 * 2
+	return size, err
+}
+
 func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err error) {
 	_, err = d.mgr.GetDatasetVersion(d.Workspace, d.Name, version)
 
