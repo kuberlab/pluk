@@ -50,6 +50,7 @@ type Hash struct {
 
 type ChunkCheck struct {
 	Hash   string `json:"hash"`
+	Size   int64  `json:"size"`
 	Exists bool   `json:"exists"`
 }
 

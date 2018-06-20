@@ -43,10 +43,13 @@ func (c *ChunkedReader) NextChunk() ([]byte, string, error) {
 	return nil, "", io.EOF
 }
 
-func CheckChunk(hash string) bool {
+func CheckChunk(hash string) (int64, bool) {
 	filePath := utils.GetHashedFilename(hash)
-	_, err := os.Stat(filePath)
-	return err == nil
+	stat, err := os.Stat(filePath)
+	if err != nil {
+		return 0, false
+	}
+	return stat.Size(), err == nil
 }
 
 func GetChunk(hash string) (reader ReaderInterface, err error) {

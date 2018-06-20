@@ -194,7 +194,7 @@ func (cmd *pushCmd) run() error {
 		if err != nil {
 			logrus.Fatalf("Failed to check chunk: %v", err)
 		}
-		if !resp.Exists {
+		if !resp.Exists || resp.Size != int64(len(chunkData)) {
 			// Upload chunk.
 			if cmd.websocket {
 				if err = client.SaveChunkWebsocket(hash, chunkData); err != nil {

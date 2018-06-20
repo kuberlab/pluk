@@ -161,9 +161,9 @@ func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
 
 func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
-	exists := plukio.CheckChunk(hash)
+	size, exists := plukio.CheckChunk(hash)
 
-	resp.WriteEntity(types.ChunkCheck{Hash: hash, Exists: exists})
+	resp.WriteEntity(types.ChunkCheck{Hash: hash, Exists: exists, Size: size})
 }
 
 func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
