@@ -1,7 +1,7 @@
 # Pluk
-Pluk is a simple git large file system implementation done in 2 parts: git data and the data itself.
+Pluk is a simple dataset management system which stores data in chunks and a virtual filesystem in DB.
 
-Data in git contains only links to the data chunks while data is separated by chunks and named after its SHA512 hash.
+Data in a virtual filesystem contains only links to the data chunks while a real data is separated by chunks and named after its SHA512 hash.
 
 ## Installation and running
 
@@ -26,10 +26,10 @@ docker run -it --rm kuberlab/pluk:latest
 * clone the repository:
 * run `glide install -v`
 * run `go install -v ./...`
-* binaries are saved in `$GOPATH/bin` and named **pluk** and **kdataset**
+* binaries are saved in `$GOPATH/bin` and named **pluk**, **plukefs** and **kdataset**
 
-**Note**: Paths marked as env variables `GIT_BARE_DIR`,`GIT_LOCAL_DIR` and `DATA_DIR`
- (by default `/git`, `/git-local` and `/data` accordingly, see below) must be available for write.
+**Note**: Paths marked as env variables `DATA_DIR` and `DB_PATH`
+ (by default `/data` and `/pluk/pluke.db` accordingly, see below) must be available for write.
 
 ## Configuration variables
 
@@ -45,8 +45,7 @@ treated as *slaves* and usually slaves re-request auth for mounting **webdav** a
 * `INTERNAL_KEY`: used for internal slave-to-master requests to skip authentication on master. The key on the master must be equal to the key on each slave in this case.
 
 * `DATA_DIR`: directory which contains real file chunks. Defaults to `/data`.
-* `GIT_BARE_DIR`: directory which contains git bare repositories for versioning datasets. Defaults to `/git`.
-* `GIT_LOCAL_DIR`: directory which contains git local repositories. Defaults to `/git-local`.
+* `DB_PATH`: path to sqlite3 DB. Defaults to `/pluk/pluke.db`.
 
 ## CLI reference
 
