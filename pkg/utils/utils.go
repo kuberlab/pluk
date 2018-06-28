@@ -25,10 +25,10 @@ const (
 	internalKeyVar     = "INTERNAL_KEY"
 	readConcurrencyVar = "READ_CONCURRENCY"
 	dataVar            = "DATA_DIR"
+	dbPathVar          = "DB_PATH"
 	MastersVar         = "MASTERS"
-	defaultGitDir      = "/git"
-	defaultGitLocalDir = "/git-local"
 	defaultDataDir     = "/data"
+	defaultDBPath      = "/pluk/pluke.db"
 	ChunkDirLength     = 8
 )
 
@@ -62,6 +62,14 @@ func DataDir() string {
 		return defaultDataDir
 	}
 	return dataDir
+}
+
+func DBPath() string {
+	dbPath := os.Getenv(dbPathVar)
+	if dbPath == "" {
+		return defaultDBPath
+	}
+	return dbPath
 }
 
 func AuthValidationURL() string {

@@ -33,7 +33,11 @@ func InitFake(postCreate postCreateFunc) *gorm.DB {
 }
 
 func InitMain(postCreate postCreateFunc) *gorm.DB {
-	db, err := gorm.Open("sqlite3", fmt.Sprintf("/pluk/pluke.db"))
+	dbPath := utils.DBPath()
+
+	logrus.Infof("Opening sqlite DB at %v...", dbPath)
+
+	db, err := gorm.Open("sqlite3", dbPath)
 	if err != nil {
 		logrus.Panic("Can't create sqlite database: ", err)
 	}
