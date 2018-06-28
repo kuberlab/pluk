@@ -1,7 +1,10 @@
 # Pluk
+
 Pluk is a simple dataset management system which stores data in chunks and a virtual filesystem in DB.
 
 Data in a virtual filesystem contains only links to the data chunks while a real data is separated by chunks and named after its SHA512 hash.
+
+It supports mounting a dataset filesystem (read-only) using FUSE.
 
 ## Installation and running
 
@@ -46,6 +49,32 @@ treated as *slaves* and usually slaves re-request auth for mounting **webdav** a
 
 * `DATA_DIR`: directory which contains real file chunks. Defaults to `/data`.
 * `DB_PATH`: path to sqlite3 DB. Defaults to `/pluk/pluke.db`.
+
+## Mounting dataset using plukefs
+
+Pluk supports mounting a dataset using fuse. There is a fuse implementation
+for this in **plukefs**. To mount a plukefs (dataset), need to use either plukefs
+directly or docker image **kuberlab/plukefs:latest**:
+
+**plukefs binary**:
+```bash
+plukefs --debug -o workspace=<workspace> -o dataset=<dataset-name> \
+-o version=<version> -o server=http://<IP>:8082 -o mountPoint=<mount-path>
+```
+
+**docker image**:
+```bash
+docker run -it --rm --mount \
+type=bind,source=<host-mount-path>,target=/mnt/mountpoint,bind-propagation=shared \
+--privileged kuberlab/plukefs:latest \
+plukefs --debug -o workspace=<workspace> -o dataset=<dataset-name> \
+-o version=<version> -o server=http://<IP>:8082 -o mountPoint=/mnt/mountpoint
+```
+
+**Note**: `--privileged` flag is needed to allow using fuse in docker.
+
+**Note**: `bind-propagation=shared` is needed to allow host to see mounts which appear in container.
+
 
 ## CLI reference
 
