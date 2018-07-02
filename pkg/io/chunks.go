@@ -134,7 +134,7 @@ func SaveChunk(hash string, data io.ReadCloser, sendToMaster bool) error {
 
 	if utils.HasMasters() && sendToMaster {
 		// TODO: decide whether it can go in async
-		MasterClient.SaveChunk(hash, buf.Bytes())
+		return MasterClient.SaveChunk(hash, buf.Bytes())
 	}
 	//logrus.Debugf("Save complete! %v", time.Since(t))
 	return nil
