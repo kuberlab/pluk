@@ -14,6 +14,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"fmt"
 )
 
 type API struct {
@@ -57,8 +58,11 @@ func Start() {
 			resp.Write([]byte("Ok\n"))
 		},
 	)
-	logrus.Infoln("Listen at *:8082")
-	if err := http.ListenAndServe(":8082", WrapLogger(r)); err != nil {
+
+	port := utils.HttpPort()
+
+	logrus.Infof("Listen at *:%v", port)
+	if err := http.ListenAndServe(fmt.Sprintf(":%v", port), WrapLogger(r)); err != nil {
 		logrus.Error(err)
 		os.Exit(1)
 	}

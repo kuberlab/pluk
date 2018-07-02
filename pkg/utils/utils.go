@@ -27,6 +27,8 @@ const (
 	dataVar            = "DATA_DIR"
 	dbPathVar          = "DB_PATH"
 	MastersVar         = "MASTERS"
+	portVar            = "PLUK_HTTP_PORT"
+	defaultPort        = "8082"
 	defaultDataDir     = "/data"
 	defaultDBPath      = "/pluk/pluke.db"
 	ChunkDirLength     = 8
@@ -62,6 +64,14 @@ func DataDir() string {
 		return defaultDataDir
 	}
 	return dataDir
+}
+
+func HttpPort() string {
+	port := os.Getenv(portVar)
+	if port == "" {
+		return defaultPort
+	}
+	return port
 }
 
 func DBPath() string {
@@ -133,6 +143,7 @@ func GetHashFromPath(path string) string {
 func PrintEnvInfo() {
 	fmt.Printf("DEBUG = %v\n", DebugEnabled())
 	fmt.Printf("DATA_DIR = %q\n", DataDir())
+	fmt.Printf("HTTP_PORT = %q\n", HttpPort())
 	fmt.Printf("AUTH_VALIDATION = %q\n", AuthValidationURL())
 	fmt.Printf("MASTERS = %q\n", Masters())
 	fmt.Printf("READ_CONCURRENCY = %v\n", ReadConcurrency())
