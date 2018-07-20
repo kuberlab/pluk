@@ -8,6 +8,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/kuberlab/lib/pkg/dealerclient"
+	"github.com/kuberlab/lib/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
@@ -27,8 +28,10 @@ type VersionList struct {
 }
 
 type Version struct {
-	Version   string `json:"version"`
-	SizeBytes int64  `json:"size_bytes"`
+	Version   string     `json:"version"`
+	CreatedAt types.Time `json:"created_at"`
+	UpdatedAt types.Time `json:"updated_at"`
+	SizeBytes int64      `json:"size_bytes"`
 }
 
 type FileStructure struct {

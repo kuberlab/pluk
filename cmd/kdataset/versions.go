@@ -54,9 +54,9 @@ func (cmd *versionsCmd) run() error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 5, 4, 3, ' ', 0)
-	fmt.Fprintln(w, "VERSIONS\tSIZE")
+	fmt.Fprintln(w, "VERSION\tSIZE\tCREATED\tUPDATED")
 	for _, v := range versions.Versions {
-		fmt.Fprintln(w, v.Version+"\t"+sizeString(v.SizeBytes))
+		fmt.Fprintln(w, v.Version+"\t"+sizeString(v.SizeBytes)+"\t"+v.CreatedAt.String()+"\t"+v.UpdatedAt.String())
 	}
 	w.Flush()
 

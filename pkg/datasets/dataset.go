@@ -267,7 +267,12 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 	}
 	versionMap := make(map[string]types.Version)
 	for _, dsv := range dsvs {
-		versionMap[dsv.Version] = types.Version{Version: dsv.Version, SizeBytes: dsv.Size}
+		versionMap[dsv.Version] = types.Version{
+			Version:   dsv.Version,
+			SizeBytes: dsv.Size,
+			UpdatedAt: dsv.UpdatedAt,
+			CreatedAt: dsv.CreatedAt,
+		}
 	}
 	if utils.HasMasters() {
 		vList, err := d.MasterClient.ListVersions(d.Workspace, d.Name)
