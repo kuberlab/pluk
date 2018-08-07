@@ -88,7 +88,7 @@ func (m *Manager) NewDataset(workspace, name string, master io.PlukClient) (*Dat
 	return ds, nil
 }
 
-func (m *Manager) DeleteDataset(workspace, name string, master io.PlukClient) error {
+func (m *Manager) DeleteDataset(workspace, name string, master io.PlukClient, force bool) error {
 	ds, err := m.mgr.GetDataset(workspace, name)
 	if err != nil {
 		return errors.NewStatus(http.StatusNotFound, fmt.Sprintf("Dataset %v not found: %v", name, err))
@@ -110,7 +110,11 @@ func (m *Manager) DeleteDataset(workspace, name string, master io.PlukClient) er
 	}
 
 	if utils.HasMasters() && master != nil {
-		master.DeleteDataset(workspace, name)
+		master.DeleteDataset(workspace, name, force)
+	}
+
+	if force {
+		utils.GCChan <- fmt.Sprintf("Clean dataset %v/%v", workspace, name)
 	}
 
 	return nil

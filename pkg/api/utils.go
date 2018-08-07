@@ -14,6 +14,7 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/lib/pkg/types"
+	"github.com/kuberlab/pluk/pkg/gc"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
@@ -264,4 +265,9 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 	}
 
 	filter.ProcessFilter(req, resp)
+}
+
+func (api *API) runGC(req *restful.Request, resp *restful.Response) {
+	go gc.GoGC()
+	resp.Write([]byte("GC started!\n"))
 }

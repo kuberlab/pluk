@@ -21,7 +21,7 @@ type PlukClient interface {
 	CheckDataset(workspace, dataset string) (*types.Dataset, error)
 	CheckWorkspace(workspace string) (*types.Workspace, error)
 	Close() error
-	DeleteDataset(workspace, name string) error
+	DeleteDataset(workspace, name string, force bool) error
 	DeleteVersion(workspace, name, version string) error
 	DownloadChunk(hash string) (io.ReadCloser, error)
 	DownloadDataset(workspace, name, version string, w io.Writer) error

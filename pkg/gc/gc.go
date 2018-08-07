@@ -21,18 +21,22 @@ const (
 )
 
 func Start() {
-	goGC()
+	GoGC()
 
 	ticker := time.NewTicker(gcInterval)
+	utils.GCChan = make(chan string)
 	for {
 		select {
 		case <-ticker.C:
-			goGC()
+			GoGC()
+		case msg := <-utils.GCChan:
+			logrus.Infof("[GC] %v", msg)
+			GoGC()
 		}
 	}
 }
 
-func goGC() {
+func GoGC() {
 	logrus.Info("Starting garbage collector...")
 	mgr := db.DbMgr
 
@@ -230,7 +234,7 @@ func gcFromMasters(mgr db.DataMgr) {
 
 	for _, candidate := range candidates {
 		logrus.Infof("Delete dataset %v/%v from slave", candidate.Workspace, candidate.Name)
-		if err = dsManager.DeleteDataset(candidate.Workspace, candidate.Name, plukclient.NewInternalMasterClient()); err != nil {
+		if err = dsManager.DeleteDataset(candidate.Workspace, candidate.Name, plukclient.NewInternalMasterClient(), false); err != nil {
 			logrus.Error(err)
 			return
 		}

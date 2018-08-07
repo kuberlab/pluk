@@ -204,8 +204,8 @@ func (c *MultiMasterClient) SaveChunk(hash string, data []byte) (err error) {
 		err = cl.SaveChunk(hash, data)
 		if err != nil {
 			logrus.Errorf("Failed save chunk to %v", base)
+			return
 		}
-		continue
 	}
 	return err
 }
@@ -242,14 +242,14 @@ func (c *MultiMasterClient) CheckChunk(hash string) (res *types.ChunkCheck, err 
 	return nil, err
 }
 
-func (c *MultiMasterClient) DeleteDataset(workspace, name string) (err error) {
+func (c *MultiMasterClient) DeleteDataset(workspace, name string, force bool) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
 		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return err
 		}
-		err = cl.DeleteDataset(workspace, name)
+		err = cl.DeleteDataset(workspace, name, force)
 		if err != nil {
 			continue
 		}

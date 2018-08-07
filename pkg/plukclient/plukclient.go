@@ -374,8 +374,12 @@ func (c *Client) DatasetTarsize(workspace, name, version string) (int64, error) 
 	return strconv.ParseInt(out, 10, 64)
 }
 
-func (c *Client) DeleteDataset(workspace, name string) error {
+func (c *Client) DeleteDataset(workspace, name string, force bool) error {
 	u := fmt.Sprintf("/datasets/%v/%v", workspace, name)
+
+	if force {
+		u = u + "?force=true"
+	}
 
 	req, err := c.NewRequest("DELETE", u, nil)
 	if err != nil {

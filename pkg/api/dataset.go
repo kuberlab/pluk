@@ -115,9 +115,11 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
+	forceRaw := req.QueryParameter("force")
+	force, _ := strconv.ParseBool(forceRaw)
 	master := api.masterClient(req)
 
-	err := api.ds.DeleteDataset(workspace, name, master)
+	err := api.ds.DeleteDataset(workspace, name, master, force)
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -162,6 +164,25 @@ func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
 func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
 	size, exists := plukio.CheckChunk(hash)
+
+	// Check chunk on master
+	if utils.HasMasters() {
+		check, err := plukio.MasterClient.CheckChunk(hash)
+		if err != nil {
+			WriteError(resp, err)
+			return
+		}
+		sizeM := check.Size
+		existsM := check.Exists
+
+		// If chunk on master has a smaller size, then mark it with this size
+		// which will be treated as wrong and will lead to uploading that chunk.
+		if sizeM < size {
+			size = sizeM
+		}
+		// For ignoring uploading chunk, it must exists on master as well.
+		exists = exists && existsM
+	}
 
 	resp.WriteEntity(types.ChunkCheck{Hash: hash, Exists: exists, Size: size})
 }

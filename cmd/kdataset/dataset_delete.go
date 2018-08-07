@@ -10,6 +10,7 @@ import (
 type datasetDeleteCmd struct {
 	workspace string
 	name      string
+	force     bool
 }
 
 func NewDatasetDeleteCmd() *cobra.Command {
@@ -31,6 +32,14 @@ func NewDatasetDeleteCmd() *cobra.Command {
 			return datasets.run()
 		},
 	}
+	f := cmd.Flags()
+	f.BoolVarP(
+		&datasets.force,
+		"force",
+		"f",
+		false,
+		"Delete dataset immediately (run garbage collector).",
+	)
 
 	return cmd
 }
@@ -43,7 +52,7 @@ func (cmd *datasetDeleteCmd) run() (err error) {
 
 	logrus.Debug("Run dataset-delete...")
 
-	err = client.DeleteDataset(cmd.workspace, cmd.name)
+	err = client.DeleteDataset(cmd.workspace, cmd.name, cmd.force)
 	if err != nil {
 		logrus.Fatal(err)
 	}
