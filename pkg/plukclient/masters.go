@@ -237,7 +237,7 @@ func (c *MultiMasterClient) CheckChunk(hash string) (res *types.ChunkCheck, err 
 		if err != nil {
 			continue
 		}
-		return nil, err
+		return res, err
 	}
 	return nil, err
 }
