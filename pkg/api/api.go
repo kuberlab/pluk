@@ -46,6 +46,7 @@ func Start() {
 
 	// Internal API
 	internalContainer := NewApiContainer(api, utils.InternalPrefix)
+	internalContainer.Filter(api.InternalHook)
 
 	r.PathPrefix(utils.ApiPrefix).Handler(apiContainer)
 	r.PathPrefix(utils.InternalPrefix).Handler(internalContainer)

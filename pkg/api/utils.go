@@ -188,6 +188,13 @@ func GetQueryParamDateTime(req *restful.Request, name string, optional bool) *ti
 	return val.(*time.Time)
 }
 
+func (api *API) InternalHook(req *restful.Request, resp *restful.Response, filter *restful.FilterChain) {
+	masterClient := plukclient.NewInternalMasterClient()
+	req.SetAttribute("masterclient", masterClient)
+
+	filter.ProcessFilter(req, resp)
+}
+
 func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *restful.FilterChain) {
 	internal := req.HeaderParameter("Internal")
 	if internal != "" && utils.InternalKey() == internal {
