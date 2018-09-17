@@ -272,6 +272,7 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 			SizeBytes: dsv.Size,
 			UpdatedAt: dsv.UpdatedAt,
 			CreatedAt: dsv.CreatedAt,
+			Editing:   dsv.Editing,
 		}
 	}
 	if utils.HasMasters() {

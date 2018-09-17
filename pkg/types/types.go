@@ -32,6 +32,7 @@ type Version struct {
 	CreatedAt types.Time `json:"created_at"`
 	UpdatedAt types.Time `json:"updated_at"`
 	SizeBytes int64      `json:"size_bytes"`
+	Editing   bool       `json:"editing"`
 }
 
 type FileStructure struct {
