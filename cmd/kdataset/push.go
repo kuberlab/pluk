@@ -220,6 +220,11 @@ func (cmd *pushCmd) run() error {
 		if f.IsDir() {
 			return nil
 		}
+		for _, part := range strings.Split(strings.TrimPrefix(path, cwd), "/") {
+			if strings.HasPrefix(part, ".") {
+				return nil
+			}
+		}
 		logrus.Debugf("processing %v...", path)
 
 		file, err := os.Open(path)
