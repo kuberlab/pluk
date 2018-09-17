@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
-	"fmt"
 )
 
 type API struct {
@@ -88,6 +88,9 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}").To(api.getDataset))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/tarsize").To(api.datasetTarSize))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/fs").To(api.getDatasetFS))
+	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/tree").To(api.fsReadDir))
+	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/tree/{path:*}").To(api.fsReadDir))
+	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/raw/{path:*}").To(api.fsReadFile))
 	ws.Route(ws.DELETE("/datasets/{workspace}/{name}/versions/{version}").To(api.deleteVersion))
 
 	// Check if chunk exists

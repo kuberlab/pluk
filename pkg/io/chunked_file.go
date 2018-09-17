@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -175,6 +176,9 @@ func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error
 	prefix = strings.TrimPrefix(prefix, "/")
 
 	dir := fs.GetDir(prefix)
+	if dir == nil {
+		return nil, fmt.Errorf("No such directory: %v", prefix)
+	}
 	res := make([]os.FileInfo, 0)
 
 	// Add all files and dirs within current directory
@@ -188,7 +192,9 @@ func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error
 	if count == 0 {
 		count = len(res)
 	}
-	return res[:count], nil
+	result := FileInfos(res[:count])
+	sort.Sort(result)
+	return result, nil
 }
 
 type ChunkedFile struct {
@@ -204,6 +210,27 @@ type ChunkedFile struct {
 	Fstat *ChunkedFileInfo `json:"stat"`
 	fs    *ChunkedFileFS
 	lock  sync.RWMutex
+}
+
+type FileInfos []os.FileInfo
+
+func (cf FileInfos) Len() int {
+	return len(cf)
+}
+
+func (cf FileInfos) Less(i, j int) bool {
+	cfi := cf[i]
+	cfj := cf[j]
+	nameFirst := cfi.Name() < cfj.Name()
+	if cfi.IsDir() != cfj.IsDir() {
+		return cfi.IsDir()
+	} else {
+		return nameFirst
+	}
+}
+
+func (cf FileInfos) Swap(i, j int) {
+	cf[i], cf[j] = cf[j], cf[i]
 }
 
 type Chunk struct {
