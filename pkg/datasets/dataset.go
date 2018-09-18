@@ -104,6 +104,7 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 			Workspace: dsv.Workspace,
 			Version:   dsv.Version,
 			Size:      dsv.Size,
+			Editing:   dsv.Editing,
 		})
 		if errD != nil {
 			err = errD
@@ -119,6 +120,7 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 	} else {
 		// Simple update
 		dsvOld.Size = dsv.Size
+		dsvOld.Editing = dsv.Editing
 		if _, err = tx.UpdateDatasetVersion(dsvOld); err != nil {
 			return err
 		}
@@ -360,7 +362,7 @@ func (d *Dataset) CloneVersion(version, targetVersion string) (*db.DatasetVersio
 	}()
 
 	// Clean target version
-	tx.DeleteRelatedFiles(d.Workspace, d.Name, targetVersion)
+	DeleteFile(tx, d.Workspace, d.Name, targetVersion, "")
 
 	files, err := tx.ListFiles(db.File{Workspace: d.Workspace, DatasetName: d.Name, Version: version})
 	if err != nil {
@@ -421,10 +423,13 @@ func (d *Dataset) CloneVersion(version, targetVersion string) (*db.DatasetVersio
 		}
 	}
 
-	dsv, err := tx.GetDatasetVersion(d.Workspace, d.Name, targetVersion)
-	if err != nil {
-		return nil, err
+	dsv := &db.DatasetVersion{
+		Version:   targetVersion,
+		Size:      totalSize,
+		Name:      d.Name,
+		Workspace: d.Workspace,
+		Editing:   true,
 	}
-	dsv.Size = totalSize
-	return tx.UpdateDatasetVersion(dsv)
+	err = SaveDatasetVersion(tx, dsv)
+	return dsv, err
 }
