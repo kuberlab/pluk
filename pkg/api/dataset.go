@@ -316,8 +316,13 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 
 	dataset := api.ds.GetDataset(workspace, name, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
-		return
+		// Create
+		var err error
+		dataset, err = api.ds.NewDataset(workspace, name, master)
+		if err != nil {
+			WriteError(resp, err)
+			return
+		}
 	}
 	versions, err := dataset.Versions()
 	if err != nil {
