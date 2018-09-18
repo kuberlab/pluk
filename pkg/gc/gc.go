@@ -2,12 +2,14 @@ package gc
 
 import (
 	"fmt"
-	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/jinzhu/gorm"
 	"github.com/kuberlab/pluk/pkg/datasets"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/io"
@@ -18,12 +20,14 @@ import (
 
 const (
 	gcInterval = time.Hour
+	gcChunks   = time.Hour * 24
 )
 
 func Start() {
 	GoGC()
 
 	ticker := time.NewTicker(gcInterval)
+	tickerChunks := time.NewTicker(gcChunks)
 	utils.GCChan = make(chan string)
 	for {
 		select {
@@ -32,6 +36,8 @@ func Start() {
 		case msg := <-utils.GCChan:
 			logrus.Infof("[GC] %v", msg)
 			GoGC()
+		case <-tickerChunks.C:
+			ClearChunks(db.DbMgr)
 		}
 	}
 }
@@ -108,9 +114,12 @@ func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) e
 	for _, fc := range fileChunks {
 		chunk, err := mgr.GetChunkByID(fc.ChunkID)
 		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				continue
+			}
 			return err
 		}
-		if checkAndDeleteChunk(mgr, chunk) {
+		if datasets.CheckAndDeleteChunk(mgr, chunk) {
 			deleted++
 		}
 		if deleted%500 == 0 && deleted != 0 {
@@ -142,36 +151,6 @@ func deleteDataset(mgr db.DataMgr, d *db.Dataset) {
 		return
 	}
 	mgr.DeleteDataset(d.ID)
-}
-
-func checkAndDeleteChunk(mgr db.DataMgr, chunk *db.Chunk) bool {
-	// See if there are more connections on this chunk
-	deleted := false
-	remain, err := mgr.ListFileChunks(db.FileChunk{ChunkID: chunk.ID})
-	if err != nil {
-		logrus.Error(err)
-		return false
-	}
-	// If there are no connections, completely delete this chunk.
-	if len(remain) == 0 {
-		path := utils.GetHashedFilename(chunk.Hash)
-		mgr.DeleteChunk(chunk.ID)
-		os.Remove(path)
-
-		dirName := filepath.Dir(path)
-		remainFiles, err := ioutil.ReadDir(dirName)
-		if err != nil {
-			logrus.Error(err)
-
-		}
-
-		// If there are no files in this directory, delete it.
-		if len(remainFiles) == 0 {
-			os.RemoveAll(dirName)
-		}
-		deleted = true
-	}
-	return deleted
 }
 
 func gcFromMasters(mgr db.DataMgr) {
@@ -238,5 +217,54 @@ func gcFromMasters(mgr db.DataMgr) {
 			logrus.Error(err)
 			return
 		}
+	}
+}
+
+type Answer struct {
+	Size int64 `json:"size"`
+}
+
+func ClearChunks(db db.DataMgr) {
+	var err error
+	tx := db.DB().Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	err = filepath.Walk(utils.DataDir(), func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+		hash := strings.TrimPrefix(path, "/data/")
+		hash = strings.Replace(hash, "/", "", -1)
+
+		size := info.Size()
+		answer := Answer{}
+		sql := fmt.Sprintf(`SELECT size from chunks WHERE hash='%v'`, hash)
+		err = tx.Raw(sql).Scan(&answer).Error
+		if err == gorm.ErrRecordNotFound {
+			// Extra chunk / unneeded.
+			os.Remove(path)
+			logrus.Infof("[GC] Delete wrong chunk at %v", path)
+			return nil
+		}
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		if answer.Size != 0 && answer.Size != size {
+			os.Remove(path)
+			logrus.Infof("[GC] Delete wrong chunk at %v", path)
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Println(err)
+		return
 	}
 }

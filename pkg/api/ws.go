@@ -84,7 +84,7 @@ func (api *API) wsReader(client *types.WebsocketClient) {
 				logrus.Error(err)
 				return
 			}
-			size, exists := plukio.CheckChunk(check.Hash)
+			size, exists := plukio.CheckLocalChunk(check.Hash)
 			check.Exists = exists
 			check.Size = size
 			if err := client.WriteMessage(check.Type(), check); err != nil {

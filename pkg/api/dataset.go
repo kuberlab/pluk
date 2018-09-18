@@ -11,6 +11,7 @@ import (
 	"github.com/kuberlab/lib/pkg/dealerclient"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/datasets"
+	"github.com/kuberlab/pluk/pkg/db"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
@@ -163,28 +164,13 @@ func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
 
 func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
-	size, exists := plukio.CheckChunk(hash)
 
-	// Check chunk on master
-	if utils.HasMasters() {
-		check, err := plukio.MasterClient.CheckChunk(hash)
-		if err != nil {
-			WriteError(resp, err)
-			return
-		}
-		sizeM := check.Size
-		existsM := check.Exists
-
-		// If chunk on master has a smaller size, then mark it with this size
-		// which will be treated as wrong and will lead to uploading that chunk.
-		if sizeM < size {
-			size = sizeM
-		}
-		// For ignoring uploading chunk, it must exists on master as well.
-		exists = exists && existsM
+	chunkCheck, err := plukio.CheckChunk(hash)
+	if err != nil {
+		WriteError(resp, err)
+		return
 	}
-
-	resp.WriteEntity(types.ChunkCheck{Hash: hash, Exists: exists, Size: size})
+	resp.WriteEntity(chunkCheck)
 }
 
 func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
@@ -280,6 +266,108 @@ func (api *API) versions(req *restful.Request, resp *restful.Response) {
 	}
 	go api.cacheFS(dataset, utils.GetFirstN(onlyVersions, 3))
 	resp.WriteEntity(types.VersionList{Versions: versions})
+}
+
+func (api *API) createDataset(req *restful.Request, resp *restful.Response) {
+	workspace := req.PathParameter("workspace")
+	name := req.PathParameter("name")
+	master := api.masterClient(req)
+
+	dataset := api.ds.GetDataset(workspace, name, master)
+	if dataset != nil {
+		WriteStatusError(resp, http.StatusConflict, fmt.Errorf("Dataset '%v' already exists", name))
+		return
+	}
+
+	ds := &db.Dataset{Workspace: workspace, Name: name}
+	if err := api.mgr.CreateDataset(ds); err != nil {
+		WriteError(resp, err)
+		return
+	}
+	resp.WriteEntity(ds)
+}
+
+func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
+	workspace := req.PathParameter("workspace")
+	name := req.PathParameter("name")
+	version := req.PathParameter("version")
+	targetVersion := req.PathParameter("targetVersion")
+	master := api.masterClient(req)
+
+	dataset := api.ds.GetDataset(workspace, name, master)
+	if dataset == nil {
+		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		return
+	}
+	dsv, err := dataset.CloneVersion(version, targetVersion)
+	if err != nil {
+		WriteStatusError(resp, http.StatusInternalServerError, err)
+		return
+	}
+
+	resp.WriteEntity(dsv)
+}
+
+func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
+	workspace := req.PathParameter("workspace")
+	name := req.PathParameter("name")
+	version := req.PathParameter("version")
+	master := api.masterClient(req)
+
+	dataset := api.ds.GetDataset(workspace, name, master)
+	if dataset == nil {
+		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		return
+	}
+	versions, err := dataset.Versions()
+	if err != nil {
+		WriteStatusError(resp, http.StatusInternalServerError, err)
+		return
+	}
+
+	for _, v := range versions {
+		if v.Version == version {
+			WriteStatusError(
+				resp,
+				http.StatusConflict,
+				fmt.Errorf("Version %v for dataset %v/%v already exists", version, workspace, name),
+			)
+		}
+	}
+
+	dsv := &db.DatasetVersion{
+		Version:   version,
+		Name:      name,
+		Workspace: workspace,
+		Editing:   true,
+	}
+	if err := api.mgr.CreateDatasetVersion(dsv); err != nil {
+		WriteError(resp, err)
+		return
+	}
+
+	resp.WriteEntity(dsv)
+}
+
+func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {
+	workspace := req.PathParameter("workspace")
+	name := req.PathParameter("name")
+	version := req.PathParameter("version")
+	master := api.masterClient(req)
+
+	dataset := api.ds.GetDataset(workspace, name, master)
+	if dataset == nil {
+		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		return
+	}
+
+	dsv, err := dataset.CommitVersion(version)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
+
+	resp.WriteEntity(dsv)
 }
 
 func (api *API) allDatasets(req *restful.Request, resp *restful.Response) {

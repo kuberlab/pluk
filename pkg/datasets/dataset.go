@@ -53,36 +53,30 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 	}()
 
 	var totalSize int64 = 0
+	var fileSizeMap = make(map[string]int64)
 	for _, f := range structure.Files {
 		totalSize += f.Size
+		fileSizeMap[f.Path] = f.Size
 	}
 
-	dsv, err := tx.GetDatasetVersion(d.Workspace, d.Name, version)
+	files, err := tx.ListFiles(db.File{Workspace: d.Workspace, Version: version, DatasetName: d.Name})
 	if err != nil {
-		err = nil
-		errD := tx.CreateDatasetVersion(&db.DatasetVersion{
-			Name:      d.Name,
-			Workspace: d.Workspace,
-			Version:   version,
-			Size:      totalSize,
-		})
-		if errD != nil {
-			err = errD
-			return
+		return err
+	}
+	for _, f := range files {
+		if _, ok := fileSizeMap[f.Path]; !ok {
+			totalSize += f.Size
 		}
-	} else if dsv.Deleted {
-		// Recover it.
-		dsv.Deleted = false
-		dsv.Size = totalSize
-		if err = tx.RecoverDatasetVersion(dsv); err != nil {
-			return err
-		}
-	} else {
-		// Simple update
-		dsv.Size = totalSize
-		if _, err = tx.UpdateDatasetVersion(dsv); err != nil {
-			return err
-		}
+	}
+
+	dsv := &db.DatasetVersion{
+		Size:      totalSize,
+		Version:   version,
+		Name:      d.Name,
+		Workspace: d.Workspace,
+	}
+	if err := SaveDatasetVersion(tx, dsv); err != nil {
+		return err
 	}
 
 	// For batch insert:
@@ -93,58 +87,96 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 	// 5. Get all file_ids for workspace + dataset + version
 	// 6. Generate insert query for file_chunks connections
 	// 7. Batch insert file_chunks
-
 	for _, f := range structure.Files {
-		var fPath = f.Path
-		//if !strings.HasPrefix(fPath, "/") {
-		//	fPath = "/" + fPath
-		//}
-		fileDB := &db.File{
-			Size:        int64(f.Size),
-			Path:        fPath,
-			Version:     version,
-			Workspace:   d.Workspace,
-			DatasetName: d.Name,
+		if err = SaveFile(tx, d.Workspace, d.Name, version, f); err != nil {
+			return err
 		}
-		if existing, errD := tx.GetFile(d.Workspace, d.Name, fPath, version); errD != nil {
-			// Create
-			err = tx.CreateFile(fileDB)
+	}
+	return nil
+}
+
+func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
+	dsvOld, err := tx.GetDatasetVersion(dsv.Workspace, dsv.Name, dsv.Version)
+	if err != nil {
+		err = nil
+		errD := tx.CreateDatasetVersion(&db.DatasetVersion{
+			Name:      dsv.Name,
+			Workspace: dsv.Workspace,
+			Version:   dsv.Version,
+			Size:      dsv.Size,
+		})
+		if errD != nil {
+			err = errD
+			return err
+		}
+	} else if dsvOld.Deleted {
+		// Recover it.
+		dsvOld.Deleted = false
+		dsvOld.Size = dsv.Size
+		if err = tx.RecoverDatasetVersion(dsvOld); err != nil {
+			return err
+		}
+	} else {
+		// Simple update
+		dsvOld.Size = dsv.Size
+		if _, err = tx.UpdateDatasetVersion(dsvOld); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func SaveFile(tx db.DataMgr, ws, dataset, version string, f *types.HashedFile) error {
+	var fPath = f.Path
+	var err error
+	//if !strings.HasPrefix(fPath, "/") {
+	//	fPath = "/" + fPath
+	//}
+	fileDB := &db.File{
+		Size:        int64(f.Size),
+		Path:        fPath,
+		Version:     version,
+		Workspace:   ws,
+		DatasetName: dataset,
+	}
+	if existing, errD := tx.GetFile(ws, dataset, fPath, version); errD != nil {
+		// Create
+		err = tx.CreateFile(fileDB)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Update
+		fileDB.ID = existing.ID
+		if existing.Size != fileDB.Size {
+			_, err = tx.UpdateFile(fileDB)
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	for i, hash := range f.Hashes {
+		chunk := &db.Chunk{Hash: hash.Hash, Size: hash.Size}
+		if eChunk, errD := tx.GetChunk(hash.Hash); errD != nil {
+			if err = tx.CreateChunk(chunk); err != nil {
+				return err
+			}
 		} else {
-			// Update
-			fileDB.ID = existing.ID
-			if existing.Size != fileDB.Size {
-				_, err = tx.UpdateFile(fileDB)
+			chunk.ID = eChunk.ID
+			if eChunk.Size != chunk.Size {
+				_, err = tx.UpdateChunk(chunk)
 				if err != nil {
 					return err
 				}
 			}
 		}
+		// Create connection
+		fileChunk := &db.FileChunk{ChunkID: chunk.ID, FileID: fileDB.ID, ChunkIndex: uint(i)}
 
-		for i, hash := range f.Hashes {
-			chunk := &db.Chunk{Hash: hash.Hash, Size: hash.Size}
-			if eChunk, errD := tx.GetChunk(hash.Hash); errD != nil {
-				if err = tx.CreateChunk(chunk); err != nil {
-					return err
-				}
-			} else {
-				chunk.ID = eChunk.ID
-				if eChunk.Size != chunk.Size {
-					_, err = tx.UpdateChunk(chunk)
-					if err != nil {
-						return err
-					}
-				}
-			}
-			// Create connection
-			fileChunk := &db.FileChunk{ChunkID: chunk.ID, FileID: fileDB.ID, ChunkIndex: uint(i)}
-
-			if _, errD := tx.GetFileChunk(fileDB.ID, chunk.ID, i); errD != nil {
-				if err = tx.CreateFileChunk(fileChunk); err != nil {
-					return err
-				}
+		if _, errD := tx.GetFileChunk(fileDB.ID, chunk.ID, i); errD != nil {
+			if err = tx.CreateFileChunk(fileChunk); err != nil {
+				return err
 			}
 		}
 	}
@@ -303,4 +335,96 @@ func (d *Dataset) DeleteVersion(version string) error {
 		return err
 	}
 	return nil
+}
+
+func (d *Dataset) CommitVersion(version string) (*db.DatasetVersion, error) {
+	exist, err := d.CheckVersion(version)
+	if !exist {
+		return nil, fmt.Errorf("Version %v for dataset %v/%v doesn't exist.", version, d.Workspace, d.Name)
+	} else if err != nil {
+		return nil, err
+	}
+
+	return d.mgr.CommitVersion(d.Workspace, d.Name, version)
+}
+
+func (d *Dataset) CloneVersion(version, targetVersion string) (*db.DatasetVersion, error) {
+	var err error
+	tx := d.mgr.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	// Clean target version
+	tx.DeleteRelatedFiles(d.Workspace, d.Name, targetVersion)
+
+	files, err := tx.ListFiles(db.File{Workspace: d.Workspace, DatasetName: d.Name, Version: version})
+	if err != nil {
+		return nil, err
+	}
+	fileChunks, err := tx.ListRelatedChunks(d.Workspace, d.Name, version)
+	if err != nil {
+		return nil, err
+	}
+	var fileChunksMap = make(map[uint][]*db.FileChunk)
+
+	for _, fc := range fileChunks {
+		if _, ok := fileChunksMap[fc.FileID]; ok {
+			fileChunksMap[fc.FileID] = append(fileChunksMap[fc.FileID], fc)
+		} else {
+			fileChunksMap[fc.FileID] = []*db.FileChunk{fc}
+		}
+	}
+	var totalSize int64 = 0
+
+	// Create the same files with different versions
+	for _, f := range files {
+		totalSize += f.Size
+		newF := &db.File{
+			Workspace:   f.Workspace,
+			Version:     targetVersion,
+			DatasetName: f.DatasetName,
+			Size:        f.Size,
+			Path:        f.Path,
+		}
+		if existing, errD := tx.GetFile(d.Workspace, d.Name, f.Path, targetVersion); errD != nil {
+			// Create
+			err = tx.CreateFile(newF)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			// Update
+			newF.ID = existing.ID
+			if existing.Size != newF.Size {
+				_, err = tx.UpdateFile(newF)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		// Create another chunk links for new file
+		for _, oldFC := range fileChunksMap[f.ID] {
+			newFC := &db.FileChunk{
+				FileID:     newF.ID,
+				ChunkID:    oldFC.ChunkID,
+				ChunkIndex: oldFC.ChunkIndex,
+			}
+			if err = tx.CreateFileChunk(newFC); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	dsv, err := tx.GetDatasetVersion(d.Workspace, d.Name, targetVersion)
+	if err != nil {
+		return nil, err
+	}
+	dsv.Size = totalSize
+	return tx.UpdateDatasetVersion(dsv)
 }

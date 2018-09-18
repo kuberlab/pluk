@@ -19,6 +19,7 @@ import (
 
 type API struct {
 	ds      *datasets.Manager
+	mgr     db.DataMgr
 	cache   *utils.RequestCache
 	fsCache *utils.RequestCache
 	client  *http.Client
@@ -34,6 +35,7 @@ func Start() {
 		fsCache: utils.NewRequestCache(),
 		client:  &http.Client{Timeout: time.Minute},
 		ds:      datasets.NewManager(db.DbMgr),
+		mgr:     db.DbMgr,
 		hub:     types.NewHub(),
 	}
 
@@ -84,14 +86,20 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	// Datasets
 	ws.Route(ws.GET("/datasets").To(api.datasets))
 	ws.Route(ws.GET("/datasets/{workspace}").To(api.datasets))
+	ws.Route(ws.POST("/datasets/{workspace}/{name}").To(api.createDataset))
 	ws.Route(ws.DELETE("/datasets/{workspace}/{name}").To(api.deleteDataset))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions").To(api.versions))
+	ws.Route(ws.POST("/datasets/{workspace}/{name}/versions/{version}").To(api.createVersion))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}").To(api.getDataset))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/tarsize").To(api.datasetTarSize))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/fs").To(api.getDatasetFS))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/tree").To(api.fsReadDir))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/tree/{path:*}").To(api.fsReadDir))
 	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/raw/{path:*}").To(api.fsReadFile))
+	ws.Route(ws.POST("/datasets/{workspace}/{name}/versions/{version}/upload/{path:*}").To(api.uploadDatasetFile))
+	ws.Route(ws.DELETE("/datasets/{workspace}/{name}/versions/{version}/upload/{path:*}").To(api.deleteDatasetFile))
+	ws.Route(ws.POST("/datasets/{workspace}/{name}/versions/{version}/commit").To(api.commitVersion))
+	ws.Route(ws.POST("/datasets/{workspace}/{name}/versions/{version}/clone/{targetVersion}").To(api.cloneVersion))
 	ws.Route(ws.DELETE("/datasets/{workspace}/{name}/versions/{version}").To(api.deleteVersion))
 
 	// Check if chunk exists

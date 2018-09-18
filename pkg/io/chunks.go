@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 	"golang.org/x/sync/semaphore"
 )
@@ -43,7 +44,30 @@ func (c *ChunkedReader) NextChunk() ([]byte, string, error) {
 	return nil, "", io.EOF
 }
 
-func CheckChunk(hash string) (int64, bool) {
+func CheckChunk(hash string) (*types.ChunkCheck, error) {
+	size, exists := CheckLocalChunk(hash)
+
+	// Check chunk on master
+	if utils.HasMasters() {
+		check, err := MasterClient.CheckChunk(hash)
+		if err != nil {
+			return nil, err
+		}
+		sizeM := check.Size
+		existsM := check.Exists
+
+		// If chunk on master has a smaller size, then mark it with this size
+		// which will be treated as wrong and will lead to uploading that chunk.
+		if sizeM < size {
+			size = sizeM
+		}
+		// For ignoring uploading chunk, it must exists on master as well.
+		exists = exists && existsM
+	}
+	return &types.ChunkCheck{Hash: hash, Exists: exists, Size: size}, nil
+}
+
+func CheckLocalChunk(hash string) (int64, bool) {
 	filePath := utils.GetHashedFilename(hash)
 	stat, err := os.Stat(filePath)
 	if err != nil {
