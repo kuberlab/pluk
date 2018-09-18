@@ -132,9 +132,10 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 			WriteErrorString(resp, http.StatusBadRequest, fmt.Sprintf("Can not delete dataset '%v' from API: %v", name, err))
 			return
 		}
-		if err = dealer.DeleteDataset(workspace, name); err != nil {
-			WriteErrorString(resp, http.StatusBadRequest, fmt.Sprintf("Can not delete dataset '%v' from API: %v", name, err))
-			return
+		// Skip error
+		err = dealer.DeleteDataset(workspace, name)
+		if err != nil {
+			logrus.Error(err)
 		}
 	}
 

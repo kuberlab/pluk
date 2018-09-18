@@ -120,7 +120,7 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 	} else {
 		// Simple update
 		dsvOld.Size = dsv.Size
-		dsvOld.Editing = dsv.Editing
+		dsvOld.Editing = dsv.Editing || dsvOld.Editing
 		if _, err = tx.UpdateDatasetVersion(dsvOld); err != nil {
 			return err
 		}
