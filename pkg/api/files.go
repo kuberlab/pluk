@@ -233,5 +233,5 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 	}
 	// Invalidate cache
 	api.fsCache.Cache.Delete(api.fsCacheKey(dataset, version))
-	resp.WriteEntity(f)
+	resp.WriteHeaderAndEntity(http.StatusCreated, f)
 }

@@ -114,6 +114,7 @@ func dbPrepare(t *testing.T) {
 			Workspace: "workspace",
 			Name:      "dataset",
 			Version:   "1.0.0",
+			Editing:   true,
 		}); err != nil {
 		t.Fatal(err)
 	}

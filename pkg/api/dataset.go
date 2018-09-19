@@ -285,8 +285,7 @@ func (api *API) createDataset(req *restful.Request, resp *restful.Response) {
 		WriteError(resp, err)
 		return
 	}
-	resp.WriteHeader(http.StatusCreated)
-	resp.WriteEntity(ds)
+	resp.WriteHeaderAndEntity(http.StatusCreated, ds)
 }
 
 func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
@@ -359,8 +358,7 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	resp.WriteHeader(http.StatusCreated)
-	resp.WriteEntity(dsv)
+	resp.WriteHeaderAndEntity(http.StatusCreated, dsv)
 }
 
 func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {
