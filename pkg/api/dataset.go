@@ -326,6 +326,12 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 			return
 		}
 	}
+
+	if err := utils.CheckVersion(version); err != nil {
+		WriteStatusError(resp, http.StatusBadRequest, err)
+		return
+	}
+
 	versions, err := dataset.Versions()
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
@@ -353,6 +359,7 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	resp.WriteHeader(http.StatusCreated)
 	resp.WriteEntity(dsv)
 }
 

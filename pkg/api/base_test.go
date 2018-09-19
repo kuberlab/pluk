@@ -11,6 +11,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"io"
+	"io/ioutil"
 )
 
 var (
@@ -40,4 +42,10 @@ func teardown() {
 func buildURL(urlStr string) string {
 	strings.TrimPrefix(urlStr, "/")
 	return fmt.Sprintf("%v%v/%v", server.URL, utils.ApiPrefix, urlStr)
+}
+
+func mustRead(r io.ReadCloser) string {
+	data, _ := ioutil.ReadAll(r)
+	r.Close()
+	return string(data)
 }
