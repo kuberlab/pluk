@@ -15,7 +15,7 @@ import (
 type Workspace dealerclient.Workspace
 
 type DataSetList struct {
-	Datasets []*Dataset `json:"datasets"`
+	Datasets []Dataset `json:"datasets"`
 }
 
 type Dataset struct {

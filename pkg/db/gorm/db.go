@@ -1,8 +1,6 @@
 package db
 
 import (
-	"fmt"
-
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"github.com/kuberlab/pluk/pkg/utils"
@@ -13,9 +11,13 @@ var mainDB *gorm.DB
 type postCreateFunc func(*gorm.DB) error
 
 func InitFake(postCreate postCreateFunc) *gorm.DB {
-	db, err := gorm.Open("sqlite3", fmt.Sprintf("%v/pluke.db", utils.DataDir()))
+	db, err := gorm.Open("sqlite3", ":memory:")
 	if err != nil {
 		logrus.Panic("Can't create sqlite database: ", err)
+	}
+	_, err = db.DB().Exec("PRAGMA journal_mode=WAL")
+	if err != nil {
+		logrus.Panic(err)
 	}
 	db.DB().SetMaxIdleConns(10)
 	db.DB().SetMaxOpenConns(100)

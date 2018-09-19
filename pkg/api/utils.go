@@ -24,7 +24,9 @@ type LogRecordHandler struct {
 }
 
 func (r *LogRecordHandler) WriteHeader(status int) {
-	r.status = status
+	if r.status == 0 {
+		r.status = status
+	}
 	r.ResponseWriter.WriteHeader(status)
 }
 
@@ -44,7 +46,7 @@ func WrapLogger(f http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		record := &LogRecordHandler{
 			ResponseWriter: w,
-			status:         200,
+			status:         0,
 		}
 		t := time.Now()
 		f.ServeHTTP(record, r)

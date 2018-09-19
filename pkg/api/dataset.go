@@ -285,6 +285,7 @@ func (api *API) createDataset(req *restful.Request, resp *restful.Response) {
 		WriteError(resp, err)
 		return
 	}
+	resp.WriteHeader(http.StatusCreated)
 	resp.WriteEntity(ds)
 }
 
@@ -380,10 +381,10 @@ func (api *API) allDatasets(req *restful.Request, resp *restful.Response) {
 	sets := api.ds.ListDatasets("")
 	ds := types.DataSetList{}
 	for _, d := range sets {
-		ds.Datasets = append(ds.Datasets, &types.Dataset{Name: d.Name, Workspace: d.Workspace})
+		ds.Datasets = append(ds.Datasets, types.Dataset{Name: d.Name, Workspace: d.Workspace})
 	}
 	if len(ds.Datasets) == 0 {
-		ds.Datasets = make([]*types.Dataset, 0)
+		ds.Datasets = make([]types.Dataset, 0)
 	}
 	resp.WriteEntity(ds)
 }
@@ -394,10 +395,10 @@ func (api *API) datasets(req *restful.Request, resp *restful.Response) {
 	sets := api.ds.ListDatasets(workspace)
 	ds := types.DataSetList{}
 	for _, d := range sets {
-		ds.Datasets = append(ds.Datasets, &types.Dataset{Name: d.Name, Workspace: d.Workspace})
+		ds.Datasets = append(ds.Datasets, types.Dataset{Name: d.Name, Workspace: d.Workspace})
 	}
 	if len(ds.Datasets) == 0 {
-		ds.Datasets = make([]*types.Dataset, 0)
+		ds.Datasets = make([]types.Dataset, 0)
 	}
 	resp.WriteEntity(ds)
 }

@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -176,6 +179,17 @@ func WriteMessage(ws *websocket.Conn, sType, id string, content interface{}) err
 		Content: content,
 	}
 	return ws.WriteJSON(msg)
+}
+
+func Assert(want, got interface{}, t *testing.T) {
+	if want == nil && got == nil {
+		return
+	}
+	if !reflect.DeepEqual(want, got) {
+		_, file, line, _ := runtime.Caller(1)
+		splitted := strings.Split(file, string(os.PathSeparator))
+		t.Fatalf("%v:%v: Failed: got %v, want %v", splitted[len(splitted)-1], line, got, want)
+	}
 }
 
 func LoadAsJson(m map[string]interface{}, v interface{}) error {

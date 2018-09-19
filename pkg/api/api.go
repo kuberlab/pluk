@@ -29,6 +29,15 @@ type API struct {
 func Start() {
 	logrus.Info("Starting pluk...")
 	utils.PrintEnvInfo()
+
+	port := utils.HttpPort()
+	if err := http.ListenAndServe(fmt.Sprintf(":%v", port), GlobalHandler()); err != nil {
+		logrus.Error(err)
+		os.Exit(1)
+	}
+}
+
+func GlobalHandler() http.Handler {
 	plukio.MasterClient = plukclient.NewInternalMasterClient()
 	api := &API{
 		cache:   utils.NewRequestCache(),
@@ -65,10 +74,7 @@ func Start() {
 	port := utils.HttpPort()
 
 	logrus.Infof("Listen at *:%v", port)
-	if err := http.ListenAndServe(fmt.Sprintf(":%v", port), WrapLogger(r)); err != nil {
-		logrus.Error(err)
-		os.Exit(1)
-	}
+	return WrapLogger(r)
 }
 
 func NewApiContainer(api *API, prefix string) *restful.Container {
