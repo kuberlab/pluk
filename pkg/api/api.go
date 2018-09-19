@@ -114,7 +114,9 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	// Websocket
 	ws.Route(ws.GET("/websocket").To(api.websocket))
 
+	// admin
 	ws.Route(ws.GET("/admin/gc").To(api.runGC))
+	ws.Route(ws.GET("/admin/clear-chunks").To(api.runClearChunks))
 
 	container.Add(ws)
 	return container

@@ -272,8 +272,3 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 
 	filter.ProcessFilter(req, resp)
 }
-
-func (api *API) runGC(req *restful.Request, resp *restful.Response) {
-	utils.GCChan <- "Run GC by API request"
-	resp.Write([]byte("GC started!\n"))
-}

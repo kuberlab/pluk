@@ -29,6 +29,7 @@ func Start() {
 	ticker := time.NewTicker(gcInterval)
 	tickerChunks := time.NewTicker(gcChunks)
 	utils.GCChan = make(chan string, 2)
+	utils.GCClearChunks = make(chan string, 2)
 	for {
 		select {
 		case <-ticker.C:
@@ -36,6 +37,9 @@ func Start() {
 		case msg := <-utils.GCChan:
 			logrus.Infof("[GC] %v", msg)
 			GoGC()
+		case msg := <-utils.GCClearChunks:
+			logrus.Infof("[ClearChunks] %v", msg)
+			ClearChunks(db.DbMgr)
 		case <-tickerChunks.C:
 			ClearChunks(db.DbMgr)
 		}
@@ -249,7 +253,7 @@ func ClearChunks(db db.DataMgr) {
 		if err == gorm.ErrRecordNotFound {
 			// Extra chunk / unneeded.
 			os.Remove(path)
-			logrus.Infof("[GC] Delete wrong chunk at %v", path)
+			logrus.Infof("[ClearChunks] Delete wrong chunk at %v", path)
 			return nil
 		}
 		if err != nil {
@@ -258,7 +262,7 @@ func ClearChunks(db db.DataMgr) {
 		}
 		if answer.Size != 0 && answer.Size != size {
 			os.Remove(path)
-			logrus.Infof("[GC] Delete wrong chunk at %v", path)
+			logrus.Infof("[ClearChunks] Delete wrong chunk at %v", path)
 		}
 
 		return nil
@@ -267,4 +271,5 @@ func ClearChunks(db db.DataMgr) {
 		log.Println(err)
 		return
 	}
+	logrus.Info("[ClearChunks] Done.")
 }
