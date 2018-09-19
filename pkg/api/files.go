@@ -89,11 +89,11 @@ func (api *API) findDatasetVersion(ds *datasets.Dataset, version string, allowEd
 	}
 
 	if !found {
-		return nil, errors.NewStatus(http.StatusInternalServerError, fmt.Sprintf("Dataset version not found: %v", version))
+		return nil, errors.NewStatus(http.StatusNotFound, fmt.Sprintf("Dataset version not found: %v", version))
 	}
 
 	if !vs.Editing && !allowEditing {
-		return nil, errors.NewStatus(http.StatusConflict, "Dataset already committed")
+		return nil, errors.NewStatus(http.StatusForbidden, "Dataset already committed")
 	}
 	return vs, nil
 }
