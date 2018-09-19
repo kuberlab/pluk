@@ -28,7 +28,7 @@ func Start() {
 
 	ticker := time.NewTicker(gcInterval)
 	tickerChunks := time.NewTicker(gcChunks)
-	utils.GCChan = make(chan string)
+	utils.GCChan = make(chan string, 2)
 	for {
 		select {
 		case <-ticker.C:
