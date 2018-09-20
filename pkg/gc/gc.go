@@ -47,7 +47,7 @@ func Start() {
 }
 
 func GoGC() {
-	logrus.Info("Starting garbage collector...")
+	logrus.Info("[GC] Starting garbage collector...")
 	mgr := db.DbMgr
 
 	vDatasets, err := mgr.ListDatasets(db.Dataset{Deleted: true})
@@ -99,7 +99,7 @@ func GoGC() {
 		// Sync with master and delete obsolete datasets.
 		gcFromMasters(mgr)
 	}
-	logrus.Infof("Done garbage collecting.")
+	logrus.Infof("[GC] Done garbage collecting.")
 }
 
 func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) error {
@@ -114,7 +114,7 @@ func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) e
 		return err
 	}
 	var deleted = 0
-	logrus.Infof("Deleted %v virtual files.", rows)
+	logrus.Infof("[GC] Deleted %v virtual files.", rows)
 	for _, fc := range fileChunks {
 		chunk, err := mgr.GetChunkByID(fc.ChunkID)
 		if err != nil {
@@ -127,10 +127,10 @@ func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) e
 			deleted++
 		}
 		if deleted%500 == 0 && deleted != 0 {
-			logrus.Infof("Deleted %v chunks.", deleted)
+			logrus.Infof("[GC] Deleted %v chunks.", deleted)
 		}
 	}
-	logrus.Infof("Deleted %v chunks.", deleted)
+	logrus.Infof("[GC] Deleted %v chunks.", deleted)
 
 	if version != "" {
 		dsv, err := mgr.GetDatasetVersion(dataset.Workspace, dataset.Name, version)
@@ -216,7 +216,7 @@ func gcFromMasters(mgr db.DataMgr) {
 	}
 
 	for _, candidate := range candidates {
-		logrus.Infof("Delete dataset %v/%v from slave", candidate.Workspace, candidate.Name)
+		logrus.Infof("[GC] Delete dataset %v/%v from slave", candidate.Workspace, candidate.Name)
 		if err = dsManager.DeleteDataset(candidate.Workspace, candidate.Name, plukclient.NewInternalMasterClient(), false); err != nil {
 			logrus.Error(err)
 			return
