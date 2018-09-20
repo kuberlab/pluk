@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,8 +13,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/utils"
-	"io"
-	"io/ioutil"
 )
 
 var (
