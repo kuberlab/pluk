@@ -110,6 +110,50 @@ func TestUploadSameFile(t *testing.T) {
 	utils.Assert(1, len(f.Hashes), t)
 }
 
+func TestUploadSameFileDeleteRead(t *testing.T) {
+	setup()
+	dbPrepare(t)
+	defer teardown()
+
+	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
+	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file2.txt")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	var f types.HashedFile
+	if err := json.NewDecoder(resp.Body).Decode(&f); err != nil {
+		t.Fatal(err)
+	}
+
+	// Now, delete file file.txt and check read file2.txt
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
+	req, _ := http.NewRequest(http.MethodDelete, url, nil)
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/raw/file2.txt")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := mustRead(resp.Body)
+
+	utils.Assert(fileData1, data, t)
+}
+
 func TestUploadHierarchy(t *testing.T) {
 	setup()
 	dbPrepare(t)
