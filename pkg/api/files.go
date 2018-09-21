@@ -210,6 +210,10 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 			return
 		}
 		if check.Exists && int(check.Size) == read {
+			if errRead == io.EOF {
+				// Nothing to read or save
+				break
+			}
 			// Skip
 			continue
 		}
