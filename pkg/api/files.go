@@ -209,6 +209,8 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 			WriteError(resp, err)
 			return
 		}
+		f.Hashes = append(f.Hashes, types.Hash{Hash: hash, Size: int64(read)})
+
 		if check.Exists && int(check.Size) == read {
 			if errRead == io.EOF {
 				// Nothing to read or save
@@ -222,7 +224,6 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 			WriteError(resp, err)
 			return
 		}
-		f.Hashes = append(f.Hashes, types.Hash{Hash: hash, Size: int64(read)})
 
 		if errRead == io.EOF {
 			break
