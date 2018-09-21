@@ -362,7 +362,7 @@ func (d *Dataset) CloneVersion(version, targetVersion string) (*db.DatasetVersio
 	}()
 
 	// Clean target version
-	DeleteFile(tx, d.Workspace, d.Name, targetVersion, "")
+	DeleteFiles(tx, d.Workspace, d.Name, targetVersion, "")
 
 	files, err := tx.ListFiles(db.File{Workspace: d.Workspace, DatasetName: d.Name, Version: version})
 	if err != nil {

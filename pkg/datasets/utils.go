@@ -1,19 +1,29 @@
 package datasets
 
 import (
+	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
-func DeleteFile(mgr db.DataMgr, ws, dataset, version, path string) error {
+func DeleteFiles(mgr db.DataMgr, ws, dataset, version, path string) error {
 	fileChunks, err := mgr.ListRelatedChunksForFiles(ws, dataset, version, path)
 	if err != nil {
 		return err
+	}
+
+	if len(fileChunks) == 0 {
+		return errors.NewStatus(
+			http.StatusNotFound,
+			fmt.Sprintf("Path %v not found in dataset %v/%v:%v", path, ws, dataset, version),
+		)
 	}
 
 	rows, err := mgr.DeleteFiles(ws, dataset, version, path)

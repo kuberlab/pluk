@@ -122,16 +122,16 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 		return
 	}
 
-	_, err = api.mgr.GetFile(workspace, name, path, version)
-	if err != nil {
-		// File does not exists, need overwrite
-		WriteErrorString(
-			resp,
-			http.StatusNotFound,
-			fmt.Sprintf("File %v for %v/%v:%v not found", path, workspace, name, version),
-		)
-		return
-	}
+	//_, err = api.mgr.GetFile(workspace, name, path, version)
+	//if err != nil {
+	//	// File does not exists
+	//	WriteErrorString(
+	//		resp,
+	//		http.StatusNotFound,
+	//		fmt.Sprintf("File %v for %v/%v:%v not found", path, workspace, name, version),
+	//	)
+	//	return
+	//}
 	tx := api.mgr.Begin()
 	defer func() {
 		if err != nil {
@@ -140,7 +140,7 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 			tx.Commit()
 		}
 	}()
-	if err = datasets.DeleteFile(tx, workspace, name, version, path); err != nil {
+	if err = datasets.DeleteFiles(tx, workspace, name, version, path); err != nil {
 		WriteError(resp, err)
 		return
 	}
@@ -178,7 +178,7 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 		// File exists, need overwrite
 		// TODO: overwrite
 		// Delete related chunks
-		if err = datasets.DeleteFile(api.mgr, workspace, name, version, path); err != nil {
+		if err = datasets.DeleteFiles(api.mgr, workspace, name, version, path); err != nil {
 			WriteError(resp, err)
 			return
 		}

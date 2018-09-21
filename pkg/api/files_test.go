@@ -21,6 +21,7 @@ one line
 two line
 three line
 `
+var fileData3 = "dummy content"
 
 func TestUploadSingleFile(t *testing.T) {
 	setup()
@@ -44,6 +45,50 @@ func TestUploadSingleFile(t *testing.T) {
 	utils.Assert(int64(15), f.Size, t)
 	utils.Assert(uint32(0644), uint32(f.Mode), t)
 	utils.Assert(1, len(f.Hashes), t)
+}
+
+func TestUploadFileNotFound(t *testing.T) {
+	setup()
+	dbPrepare(t)
+	defer teardown()
+
+	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
+	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/raw/wrong.txt")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	utils.Assert(http.StatusNotFound, resp.StatusCode, t)
+}
+
+func TestDeleteFileNotFound(t *testing.T) {
+	setup()
+	dbPrepare(t)
+	defer teardown()
+
+	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
+	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/wrong.txt")
+	req, _ := http.NewRequest(http.MethodDelete, url, nil)
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusNotFound, resp.StatusCode, t)
 }
 
 func TestUploadMultipleFiles(t *testing.T) {
@@ -144,6 +189,8 @@ func TestUploadSameFileDeleteRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	utils.Assert(http.StatusNoContent, resp.StatusCode, t)
+
 	url = buildURL("datasets/workspace/dataset/versions/1.0.0/raw/file2.txt")
 	resp, err = client.Get(url)
 	if err != nil {
@@ -211,6 +258,64 @@ func TestUploadHierarchy(t *testing.T) {
 	f = fs[0]
 	utils.Assert("file2.txt", f.Fname, t)
 	utils.Assert(int64(30), f.Fsize, t)
+	utils.Assert(uint32(0644), uint32(f.Fmode), t)
+}
+
+func TestDeleteDirectory(t *testing.T) {
+	setup()
+	dbPrepare(t)
+	defer teardown()
+
+	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file1.txt")
+	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/folder/file2.txt")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/folder/file3.txt")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData3))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	// Delete the whole directory
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/folder")
+	req, _ := http.NewRequest(http.MethodDelete, url, nil)
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusNoContent, resp.StatusCode, t)
+
+	// Check the file tree
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/tree")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fs []io.ChunkedFileInfo
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(1, len(fs), t)
+	f := fs[0]
+
+	utils.Assert("file1.txt", f.Fname, t)
+	utils.Assert(int64(15), f.Fsize, t)
 	utils.Assert(uint32(0644), uint32(f.Fmode), t)
 }
 
