@@ -50,6 +50,12 @@ func CreateAll(db *gorm.DB) error {
 	).Error; err != nil {
 		logrus.Error(err)
 	}
+	if err := db.Debug().Model(&File{}).AddIndex(
+		"idx_dataset_workspace_version",
+		"dataset_name", "workspace", "version",
+	).Error; err != nil {
+		logrus.Error(err)
+	}
 	if err := db.Debug().Model(&FileChunk{}).AddIndex(
 		"idx_file_chunk_index_id",
 		"chunk_id", "file_id", "chunk_index",

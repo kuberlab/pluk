@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -80,11 +79,12 @@ func (api *API) findDatasetVersion(ds *datasets.Dataset, version string, allowEd
 	}
 
 	found := false
-	var vs *types.Version
+	var vs types.Version
 	for _, v := range versions {
 		if v.Version == version {
-			vs = &v
+			vs = v
 			found = true
+			break
 		}
 	}
 
@@ -95,7 +95,7 @@ func (api *API) findDatasetVersion(ds *datasets.Dataset, version string, allowEd
 	if !vs.Editing && !allowEditing {
 		return nil, errors.NewStatus(http.StatusForbidden, "Dataset already committed")
 	}
-	return vs, nil
+	return &vs, nil
 }
 
 func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) {
@@ -188,7 +188,8 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 	f := &types.HashedFile{Path: path, Mode: 0644, ModeTime: time.Now(), Hashes: make([]types.Hash, 0)}
 	var total int64 = 0
 	chunkSize := 1024000
-	reader := bufio.NewReader(req.Request.Body)
+	reader := utils.NewPreciseReader(req.Request.Body)
+	defer req.Request.Body.Close()
 	for {
 		buf := make([]byte, chunkSize)
 		read, errRead := reader.Read(buf)
