@@ -13,8 +13,8 @@ import (
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
-func DeleteFiles(mgr db.DataMgr, ws, dataset, version, path string) error {
-	fileChunks, err := mgr.ListRelatedChunksForFiles(ws, dataset, version, path)
+func DeleteFiles(mgr db.DataMgr, ws, dataset, version, prefix string) error {
+	fileChunks, err := mgr.ListRelatedChunksForFiles(ws, dataset, version, prefix)
 	if err != nil {
 		return err
 	}
@@ -22,11 +22,11 @@ func DeleteFiles(mgr db.DataMgr, ws, dataset, version, path string) error {
 	if len(fileChunks) == 0 {
 		return errors.NewStatus(
 			http.StatusNotFound,
-			fmt.Sprintf("Path %v not found in dataset %v/%v:%v", path, ws, dataset, version),
+			fmt.Sprintf("Path %v not found in dataset %v/%v:%v", prefix, ws, dataset, version),
 		)
 	}
 
-	rows, err := mgr.DeleteFiles(ws, dataset, version, path)
+	rows, err := mgr.DeleteFiles(ws, dataset, version, prefix)
 	if err != nil {
 		return err
 	}
