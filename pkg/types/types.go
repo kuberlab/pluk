@@ -18,6 +18,18 @@ type DataSetList struct {
 	Datasets []Dataset `json:"datasets"`
 }
 
+func (d DataSetList) Len() int {
+	return len(d.Datasets)
+}
+
+func (d DataSetList) Less(i, j int) bool {
+	return d.Datasets[i].Name < d.Datasets[j].Name
+}
+
+func (d DataSetList) Swap(i, j int) {
+	d.Datasets[i], d.Datasets[j] = d.Datasets[j], d.Datasets[i]
+}
+
 type Dataset struct {
 	Workspace string `json:"workspace"`
 	Name      string `json:"name"`

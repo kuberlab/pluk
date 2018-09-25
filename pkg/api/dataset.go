@@ -15,6 +15,7 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"sort"
 )
 
 func (api *API) masterClient(req *restful.Request) plukio.PlukClient {
@@ -391,6 +392,7 @@ func (api *API) allDatasets(req *restful.Request, resp *restful.Response) {
 	if len(ds.Datasets) == 0 {
 		ds.Datasets = make([]types.Dataset, 0)
 	}
+	sort.Sort(ds)
 	resp.WriteEntity(ds)
 }
 
@@ -405,6 +407,7 @@ func (api *API) datasets(req *restful.Request, resp *restful.Response) {
 	if len(ds.Datasets) == 0 {
 		ds.Datasets = make([]types.Dataset, 0)
 	}
+	sort.Sort(ds)
 	resp.WriteEntity(ds)
 }
 
