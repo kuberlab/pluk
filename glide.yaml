@@ -2,7 +2,9 @@ package: github.com/kuberlab/pluk
 import:
 - package: github.com/Sirupsen/logrus
 - package: github.com/spf13/cobra
+  version: v0.0.3
 - package: github.com/spf13/pflag
+  version: v1.0.1
 - package: github.com/gogits/git-module
 - package: github.com/emicklei/go-restful
 - package: github.com/gorilla/mux
