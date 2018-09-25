@@ -5,9 +5,6 @@ import:
 - package: github.com/spf13/pflag
 - package: github.com/gogits/git-module
 - package: github.com/emicklei/go-restful
-  version: ff4f55a206334ef123e4f79bbf348980da81ca46
-  subpackages:
-  - log
 - package: github.com/gorilla/mux
 - package: github.com/pborman/uuid
 - package: gopkg.in/robfig/cron.v2
@@ -15,8 +12,6 @@ import:
   repo: ssh://git@github.com/kuberlab/lib.git
 - package: github.com/patrickmn/go-cache
 - package: gopkg.in/yaml.v2
-  version: a5b47d31c556af34a302ce5d659e6fea44d90de0
-  repo: https://gopkg.in/yaml.v2
 - package: golang.org/x/net
   subpackages:
   - webdav
