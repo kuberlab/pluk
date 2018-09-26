@@ -13,6 +13,7 @@ type DatasetVersionVersionMgr interface {
 	DeleteDatasetVersion(id uint) error
 	RecoverDatasetVersion(dsv *DatasetVersion) error
 	CommitVersion(workspace, name, version string) (*DatasetVersion, error)
+	UpdateDatasetVersionSize(workspace, name, version string) error
 }
 
 type DatasetVersion struct {
@@ -77,4 +78,18 @@ func (mgr *DatabaseMgr) CommitVersion(workspace, name, version string) (*Dataset
 		return nil, err
 	}
 	return mgr.GetDatasetVersion(workspace, name, version)
+}
+
+func (mgr *DatabaseMgr) UpdateDatasetVersionSize(workspace, name, version string) error {
+	sql := `UPDATE dataset_versions
+	SET
+	size = (
+		SELECT sum(size) as size from files where files.workspace = dataset_versions.workspace
+		AND files.dataset_name = dataset_versions.name
+		AND files.version = dataset_versions.version
+	)
+	WHERE dataset_versions.workspace = ? AND
+	dataset_versions.name = ? AND
+	dataset_versions.version = ?`
+	return mgr.db.Exec(sql, workspace, name, version).Error
 }

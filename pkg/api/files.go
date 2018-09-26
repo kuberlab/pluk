@@ -14,6 +14,8 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"mime"
+	"path"
 )
 
 func (api *API) fsReadDir(req *restful.Request, resp *restful.Response) {
@@ -67,9 +69,19 @@ func (api *API) fsReadFile(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	resp.WriteHeader(http.StatusOK)
-	resp.AddHeader("Content-Length", fmt.Sprintf("%v", file.Size))
+	resp.Header().Add("Content-Length", fmt.Sprintf("%v", file.Size))
+	setContentTypeByFile(path, resp)
+	resp.ResponseWriter.WriteHeader(http.StatusOK)
+
 	io.Copy(resp, file)
+}
+
+func setContentTypeByFile(filepath string, resp *restful.Response) {
+	ext := path.Ext(filepath)
+	sType := mime.TypeByExtension(ext)
+	if sType != "" {
+		resp.Header().Add("Content-Type", sType)
+	}
 }
 
 func (api *API) findDatasetVersion(ds *datasets.Dataset, version string, allowEditing bool) (*types.Version, error) {
@@ -102,7 +114,7 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
 	version := req.PathParameter("version")
-	path := req.PathParameter("path")
+	filepath := req.PathParameter("filepath")
 	master := api.masterClient(req)
 
 	dataset := api.ds.GetDataset(workspace, name, master)
@@ -111,8 +123,8 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 		return
 	}
 
-	if path == "" {
-		WriteStatusError(resp, http.StatusBadRequest, fmt.Errorf("Provide path"))
+	if filepath == "" {
+		WriteStatusError(resp, http.StatusBadRequest, fmt.Errorf("Provide filepath"))
 		return
 	}
 
@@ -122,13 +134,13 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 		return
 	}
 
-	//_, err = api.mgr.GetFile(workspace, name, path, version)
+	//_, err = api.mgr.GetFile(workspace, name, filepath, version)
 	//if err != nil {
 	//	// File does not exists
 	//	WriteErrorString(
 	//		resp,
 	//		http.StatusNotFound,
-	//		fmt.Sprintf("File %v for %v/%v:%v not found", path, workspace, name, version),
+	//		fmt.Sprintf("File %v for %v/%v:%v not found", filepath, workspace, name, version),
 	//	)
 	//	return
 	//}
@@ -140,7 +152,13 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 			tx.Commit()
 		}
 	}()
-	if err = datasets.DeleteFiles(tx, workspace, name, version, path); err != nil {
+	if err = datasets.DeleteFiles(tx, workspace, name, version, filepath); err != nil {
+		WriteError(resp, err)
+		return
+	}
+	// Invalidate dataset size
+	err = tx.UpdateDatasetVersionSize(workspace, name, version)
+	if err != nil {
 		WriteError(resp, err)
 		return
 	}
@@ -153,7 +171,7 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
 	version := req.PathParameter("version")
-	path := req.PathParameter("path")
+	filepath := req.PathParameter("filepath")
 	master := api.masterClient(req)
 
 	dataset := api.ds.GetDataset(workspace, name, master)
@@ -162,8 +180,8 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 		return
 	}
 
-	if path == "" {
-		WriteStatusError(resp, http.StatusBadRequest, fmt.Errorf("Provide path"))
+	if filepath == "" {
+		WriteStatusError(resp, http.StatusBadRequest, fmt.Errorf("Provide filepath"))
 		return
 	}
 
@@ -173,19 +191,19 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 		return
 	}
 
-	_, err = api.mgr.GetFile(workspace, name, path, version)
+	_, err = api.mgr.GetFile(workspace, name, filepath, version)
 	if err == nil {
 		// File exists, need overwrite
 		// TODO: overwrite
 		// Delete related chunks
-		if err = datasets.DeleteFiles(api.mgr, workspace, name, version, path); err != nil {
+		if err = datasets.DeleteFiles(api.mgr, workspace, name, version, filepath); err != nil {
 			WriteError(resp, err)
 			return
 		}
 
 	}
 
-	f := &types.HashedFile{Path: path, Mode: 0644, ModeTime: time.Now(), Hashes: make([]types.Hash, 0)}
+	f := &types.HashedFile{Path: filepath, Mode: 0644, ModeTime: time.Now(), Hashes: make([]types.Hash, 0)}
 	var total int64 = 0
 	chunkSize := 1024000
 	reader := utils.NewPreciseReader(req.Request.Body)
