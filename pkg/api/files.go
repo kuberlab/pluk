@@ -114,7 +114,7 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
 	version := req.PathParameter("version")
-	filepath := req.PathParameter("filepath")
+	filepath := req.PathParameter("path")
 	master := api.masterClient(req)
 
 	dataset := api.ds.GetDataset(workspace, name, master)
@@ -124,7 +124,7 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 	}
 
 	if filepath == "" {
-		WriteStatusError(resp, http.StatusBadRequest, fmt.Errorf("Provide filepath"))
+		WriteStatusError(resp, http.StatusBadRequest, fmt.Errorf("Provide path"))
 		return
 	}
 
@@ -171,7 +171,7 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
 	version := req.PathParameter("version")
-	filepath := req.PathParameter("filepath")
+	filepath := req.PathParameter("path")
 	master := api.masterClient(req)
 
 	dataset := api.ds.GetDataset(workspace, name, master)
@@ -181,7 +181,7 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 	}
 
 	if filepath == "" {
-		WriteStatusError(resp, http.StatusBadRequest, fmt.Errorf("Provide filepath"))
+		WriteStatusError(resp, http.StatusBadRequest, fmt.Errorf("Provide path"))
 		return
 	}
 
