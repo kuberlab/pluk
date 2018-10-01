@@ -17,9 +17,9 @@ type FileChunkMgr interface {
 	DeleteFileChunk(fileID, chunkID uint) error
 	GetFS(workspace, dataset, version string) (*io.ChunkedFileFS, error)
 	DeleteRelatedFiles(workspace, dataset, version string) (int64, error)
-	DeleteFiles(workspace, dataset, version, prefix string) (int64, error)
+	DeleteFiles(workspace, dataset, version, prefix string, preciseName bool) (int64, error)
 	ListRelatedChunks(workspace, dataset, version string) ([]*FileChunk, error)
-	ListRelatedChunksForFiles(workspace, dataset, version, prefix string) ([]*FileChunk, error)
+	ListRelatedChunksForFiles(workspace, dataset, version, prefix string, preciseName bool) ([]*FileChunk, error)
 }
 
 type FileChunk struct {
@@ -52,7 +52,8 @@ func (mgr *DatabaseMgr) DeleteFileChunk(fileID, chunkID uint) error {
 	return mgr.db.Delete(FileChunk{}, FileChunk{FileID: fileID, ChunkID: chunkID}).Error
 }
 
-func (mgr *DatabaseMgr) ListRelatedChunksForFiles(workspace, dataset, version, prefix string) ([]*FileChunk, error) {
+func (mgr *DatabaseMgr) ListRelatedChunksForFiles(
+	workspace, dataset, version, prefix string, preciseName bool) ([]*FileChunk, error) {
 	/*
 		SELECT chunk_id FROM file_chunks
 		INNER JOIN files ON
@@ -70,7 +71,13 @@ func (mgr *DatabaseMgr) ListRelatedChunksForFiles(workspace, dataset, version, p
 		conditions = append(conditions, fmt.Sprintf("files.version='%v'", version))
 	}
 	if prefix != "" {
-		conditions = append(conditions, fmt.Sprintf("files.path LIKE '%v%%'", prefix))
+		var cond string
+		if preciseName {
+			cond = fmt.Sprintf("files.path = '%v'", prefix)
+		} else {
+			cond = fmt.Sprintf("files.path LIKE '%v%%'", prefix)
+		}
+		conditions = append(conditions, cond)
 	}
 	join := fmt.Sprintf("INNER JOIN files ON %v", strings.Join(conditions, " AND "))
 
@@ -85,10 +92,10 @@ func (mgr *DatabaseMgr) ListRelatedChunksForFiles(workspace, dataset, version, p
 }
 
 func (mgr *DatabaseMgr) ListRelatedChunks(workspace, dataset, version string) ([]*FileChunk, error) {
-	return mgr.ListRelatedChunksForFiles(workspace, dataset, version, "")
+	return mgr.ListRelatedChunksForFiles(workspace, dataset, version, "", false)
 }
 
-func (mgr *DatabaseMgr) DeleteFiles(workspace, dataset, version, prefix string) (int64, error) {
+func (mgr *DatabaseMgr) DeleteFiles(workspace, dataset, version, prefix string, preciseName bool) (int64, error) {
 	conditions := []string{
 		fmt.Sprintf("files.workspace='%v'", workspace),
 		fmt.Sprintf("files.dataset_name='%v'", dataset),
@@ -97,7 +104,13 @@ func (mgr *DatabaseMgr) DeleteFiles(workspace, dataset, version, prefix string) 
 		conditions = append(conditions, fmt.Sprintf("files.version='%v'", version))
 	}
 	if prefix != "" {
-		conditions = append(conditions, fmt.Sprintf("files.path LIKE '%v%%'", prefix))
+		var cond string
+		if preciseName {
+			cond = fmt.Sprintf("files.path = '%v'", prefix)
+		} else {
+			cond = fmt.Sprintf("files.path LIKE '%v%%'", prefix)
+		}
+		conditions = append(conditions, cond)
 	}
 	condition := strings.Join(conditions, " AND ")
 	sqlDeleteRelation := fmt.Sprintf(
@@ -117,7 +130,7 @@ func (mgr *DatabaseMgr) DeleteFiles(workspace, dataset, version, prefix string) 
 }
 
 func (mgr *DatabaseMgr) DeleteRelatedFiles(workspace, dataset, version string) (int64, error) {
-	return mgr.DeleteFiles(workspace, dataset, version, "")
+	return mgr.DeleteFiles(workspace, dataset, version, "", false)
 }
 
 type rawFile struct {

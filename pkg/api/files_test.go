@@ -155,6 +155,57 @@ func TestUploadSameFile(t *testing.T) {
 	utils.Assert(1, len(f.Hashes), t)
 }
 
+func TestUploadFileWithPrefixRepeated(t *testing.T) {
+	setup()
+	dbPrepare(t)
+	defer teardown()
+
+	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file11")
+	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file1")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file1")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/raw/file11")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := mustRead(resp.Body)
+
+	utils.Assert(fileData1, data, t)
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/tree")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fs []io.ChunkedFileInfo
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(2, len(fs), t)
+}
+
 func TestUploadSameFileDeleteRead(t *testing.T) {
 	setup()
 	dbPrepare(t)
