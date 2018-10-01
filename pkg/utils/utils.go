@@ -160,6 +160,7 @@ func PrintEnvInfo() {
 	fmt.Printf("AUTH_VALIDATION = %q\n", AuthValidationURL())
 	fmt.Printf("MASTERS = %q\n", Masters())
 	fmt.Printf("READ_CONCURRENCY = %v\n", ReadConcurrency())
+	fmt.Printf("UPLOAD_CONCURRENCY = %v\n", UploadConcurrency())
 	fmt.Printf("SAVE_CHUNKS = %v\n", SaveChunks())
 }
 
