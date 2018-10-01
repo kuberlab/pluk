@@ -18,23 +18,24 @@ import (
 )
 
 const (
-	ApiVersion         = "v1"
-	ApiPrefix          = "/pluk/" + ApiVersion
-	InternalPrefix     = "/internal"
-	debug              = "DEBUG"
-	logLevel           = "LOG_LEVEL"
-	authValidationVar  = "AUTH_VALIDATION"
-	DoNotSaveChunks    = "DO_NOT_SAVE_CHUNKS"
-	internalKeyVar     = "INTERNAL_KEY"
-	readConcurrencyVar = "READ_CONCURRENCY"
-	dataVar            = "DATA_DIR"
-	dbPathVar          = "DB_PATH"
-	MastersVar         = "MASTERS"
-	portVar            = "PLUK_HTTP_PORT"
-	defaultPort        = "8082"
-	defaultDataDir     = "/data"
-	defaultDBPath      = "/pluk/pluke.db"
-	ChunkDirLength     = 8
+	ApiVersion           = "v1"
+	ApiPrefix            = "/pluk/" + ApiVersion
+	InternalPrefix       = "/internal"
+	debug                = "DEBUG"
+	logLevel             = "LOG_LEVEL"
+	authValidationVar    = "AUTH_VALIDATION"
+	DoNotSaveChunks      = "DO_NOT_SAVE_CHUNKS"
+	internalKeyVar       = "INTERNAL_KEY"
+	readConcurrencyVar   = "READ_CONCURRENCY"
+	uploadConcurrencyVar = "UPLOAD_CONCURRENCY"
+	dataVar              = "DATA_DIR"
+	dbPathVar            = "DB_PATH"
+	MastersVar           = "MASTERS"
+	portVar              = "PLUK_HTTP_PORT"
+	defaultPort          = "8082"
+	defaultDataDir       = "/data"
+	defaultDBPath        = "/pluk/pluke.db"
+	ChunkDirLength       = 8
 )
 
 func MustParse(date string) time.Time {
@@ -95,6 +96,15 @@ func InternalKey() string {
 
 func ReadConcurrency() int64 {
 	raw := os.Getenv(readConcurrencyVar)
+	c, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		return 4
+	}
+	return c
+}
+
+func UploadConcurrency() int64 {
+	raw := os.Getenv(uploadConcurrencyVar)
 	c, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
 		return 4

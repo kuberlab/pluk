@@ -2,10 +2,13 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime"
 	"net/http"
+	"path"
 	"time"
 
 	"github.com/emicklei/go-restful"
@@ -14,15 +17,14 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
-	"mime"
-	"path"
+	"golang.org/x/sync/semaphore"
 )
 
 func (api *API) fsReadDir(req *restful.Request, resp *restful.Response) {
 	version := req.PathParameter("version")
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
-	path := req.PathParameter("path")
+	filepath := req.PathParameter("path")
 	master := api.masterClient(req)
 
 	dataset := api.ds.GetDataset(workspace, name, master)
@@ -36,7 +38,7 @@ func (api *API) fsReadDir(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	result, err := fs.Readdir(path, 0)
+	result, err := fs.Readdir(filepath, 0)
 	if err != nil {
 		WriteStatusError(resp, http.StatusNotFound, err)
 		return
@@ -167,12 +169,20 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 	resp.WriteHeader(http.StatusNoContent)
 }
 
+var (
+	sem = semaphore.NewWeighted(utils.UploadConcurrency())
+	ctx = context.TODO()
+)
+
 func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
 	version := req.PathParameter("version")
 	filepath := req.PathParameter("path")
 	master := api.masterClient(req)
+
+	sem.Acquire(ctx, 1)
+	defer sem.Release(1)
 
 	dataset := api.ds.GetDataset(workspace, name, master)
 	if dataset == nil {
@@ -191,30 +201,58 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 		return
 	}
 
-	_, err = api.mgr.GetFile(workspace, name, filepath, version)
+	f, err := api.readAndSaveFile(req, resp)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
+	fs := types.FileStructure{Files: []*types.HashedFile{f}}
+
+	if err := dataset.Save(fs, version, "", false, false, true); err != nil {
+		WriteError(resp, err)
+		return
+	}
+	// Invalidate cache
+	api.fsCache.Cache.Delete(api.fsCacheKey(dataset, version))
+	resp.WriteHeaderAndEntity(http.StatusCreated, f)
+}
+
+func (api *API) readAndSaveFile(req *restful.Request, resp *restful.Response) (f *types.HashedFile, err error) {
+	workspace := req.PathParameter("workspace")
+	name := req.PathParameter("name")
+	version := req.PathParameter("version")
+	filepath := req.PathParameter("path")
+	tx := api.mgr.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+	_, err = tx.GetFile(workspace, name, filepath, version)
 	if err == nil {
 		// File exists, need overwrite
 		// TODO: overwrite
 		// Delete related chunks
-		if err = datasets.DeleteFiles(api.mgr, workspace, name, version, filepath, true); err != nil {
-			WriteError(resp, err)
-			return
+		if err = datasets.DeleteFiles(tx, workspace, name, version, filepath, true); err != nil {
+			return nil, err
 		}
 
 	}
 
-	f := &types.HashedFile{Path: filepath, Mode: 0644, ModeTime: time.Now(), Hashes: make([]types.Hash, 0)}
+	f = &types.HashedFile{Path: filepath, Mode: 0644, ModeTime: time.Now(), Hashes: make([]types.Hash, 0)}
 	var total int64 = 0
 	chunkSize := 1024000
 	reader := utils.NewPreciseReader(req.Request.Body)
 	defer req.Request.Body.Close()
+	var check *types.ChunkCheck
 	for {
 		buf := make([]byte, chunkSize)
 		read, errRead := reader.Read(buf)
 		if errRead != nil {
 			if errRead != io.EOF {
-				WriteError(resp, errRead)
-				return
+				return nil, err
 			}
 		}
 		total += int64(read)
@@ -222,10 +260,9 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 		// Calc hash
 		hash := utils.CalcHash(buf)
 		// Check and save
-		check, err := plukio.CheckChunk(hash)
+		check, err = plukio.CheckChunk(hash)
 		if err != nil {
-			WriteError(resp, err)
-			return
+			return nil, err
 		}
 		f.Hashes = append(f.Hashes, types.Hash{Hash: hash, Size: int64(read)})
 
@@ -239,8 +276,7 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 		}
 
 		if err = plukio.SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(buf[:read])), true); err != nil {
-			WriteError(resp, err)
-			return
+			return nil, err
 		}
 
 		if errRead == io.EOF {
@@ -249,13 +285,5 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 	}
 
 	f.Size = total
-	fs := types.FileStructure{Files: []*types.HashedFile{f}}
-
-	if err := dataset.Save(fs, version, "", false, false, true); err != nil {
-		WriteError(resp, err)
-		return
-	}
-	// Invalidate cache
-	api.fsCache.Cache.Delete(api.fsCacheKey(dataset, version))
-	resp.WriteHeaderAndEntity(http.StatusCreated, f)
+	return f, nil
 }

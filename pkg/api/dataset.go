@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
@@ -15,7 +16,6 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
-	"sort"
 )
 
 func (api *API) masterClient(req *restful.Request) plukio.PlukClient {
