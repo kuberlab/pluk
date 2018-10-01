@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -24,6 +25,9 @@ type API struct {
 	fsCache *utils.RequestCache
 	client  *http.Client
 	hub     *types.Hub
+
+	lock      sync.RWMutex
+	saveLocks map[string]*sync.RWMutex
 }
 
 func Start() {
@@ -40,12 +44,13 @@ func Start() {
 func GlobalHandler() http.Handler {
 	plukio.MasterClient = plukclient.NewInternalMasterClient()
 	api := &API{
-		cache:   utils.NewRequestCache(),
-		fsCache: utils.NewRequestCache(),
-		client:  &http.Client{Timeout: time.Minute},
-		ds:      datasets.NewManager(db.DbMgr),
-		mgr:     db.DbMgr,
-		hub:     types.NewHub(),
+		cache:     utils.NewRequestCache(),
+		fsCache:   utils.NewRequestCache(),
+		client:    &http.Client{Timeout: time.Minute},
+		ds:        datasets.NewManager(db.DbMgr),
+		mgr:       db.DbMgr,
+		hub:       types.NewHub(),
+		saveLocks: make(map[string]*sync.RWMutex),
 	}
 
 	r := mux.NewRouter()

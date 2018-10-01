@@ -9,6 +9,7 @@ import (
 	"mime"
 	"net/http"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/emicklei/go-restful"
@@ -208,6 +209,8 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 	}
 	fs := types.FileStructure{Files: []*types.HashedFile{f}}
 
+	api.lockForSave(workspace, name, version)
+	defer api.unlockForSave(workspace, name, version)
 	if err := dataset.Save(fs, version, "", false, false, true); err != nil {
 		WriteError(resp, err)
 		return
@@ -215,6 +218,27 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 	// Invalidate cache
 	api.fsCache.Cache.Delete(api.fsCacheKey(dataset, version))
 	resp.WriteHeaderAndEntity(http.StatusCreated, f)
+}
+
+func (api *API) lockForSave(ws, ds, version string) {
+	key := fmt.Sprintf("%v-%v-%v", ws, ds, version)
+	api.lock.Lock()
+	defer api.lock.Unlock()
+	lock, ok := api.saveLocks[key]
+	if ok {
+		lock.Lock()
+	} else {
+		api.saveLocks[key] = &sync.RWMutex{}
+		api.saveLocks[key].Lock()
+	}
+}
+
+func (api *API) unlockForSave(ws, ds, version string) {
+	key := fmt.Sprintf("%v-%v-%v", ws, ds, version)
+	lock, ok := api.saveLocks[key]
+	if ok {
+		lock.Unlock()
+	}
 }
 
 func (api *API) readAndSaveFile(req *restful.Request, resp *restful.Response) (f *types.HashedFile, err error) {
