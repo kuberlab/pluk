@@ -301,6 +301,12 @@ func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
 	}
+
+	if err := utils.CheckVersion(targetVersion); err != nil {
+		WriteStatusError(resp, http.StatusBadRequest, err)
+		return
+	}
+
 	dsv, err := dataset.CloneVersion(version, targetVersion)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
