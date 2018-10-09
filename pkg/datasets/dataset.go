@@ -14,11 +14,6 @@ import (
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
-const (
-	Author      = "pluk"
-	AuthorEmail = "pluk@kuberlab.io"
-)
-
 type Dataset struct {
 	*db.Dataset
 	mgr          db.DataMgr
