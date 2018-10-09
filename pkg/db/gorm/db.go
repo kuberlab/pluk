@@ -10,8 +10,8 @@ var mainDB *gorm.DB
 
 type postCreateFunc func(*gorm.DB) error
 
-func InitFake(postCreate postCreateFunc) *gorm.DB {
-	db, err := gorm.Open("sqlite3", ":memory:")
+func InitFake(postCreate postCreateFunc, fname string) *gorm.DB {
+	db, err := gorm.Open("sqlite3", fname)
 	if err != nil {
 		logrus.Panic("Can't create sqlite database: ", err)
 	}

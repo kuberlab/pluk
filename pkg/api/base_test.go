@@ -7,12 +7,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/db"
+	"github.com/kuberlab/pluk/pkg/gc"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"github.com/pborman/uuid"
 )
 
 var (
@@ -23,20 +26,32 @@ var (
 	client *http.Client
 )
 
-func setup() {
+func runGC() {
+	go gc.Start()
+}
+
+func getFname() string {
+	id := uuid.New()
+	fname := filepath.Join("/tmp/", id)
+	return fname
+}
+
+func setup(fname string) {
 	// test server
-	db.DbMgr = db.NewFakeDatabaseMgr()
+	db.DbMgr = db.NewFakeDatabaseMgr(fname)
 	logrus.SetLevel(logrus.DebugLevel)
 	server = httptest.NewServer(GlobalHandler())
 	client = &http.Client{Timeout: time.Second * 10}
 	os.Setenv("DATA_DIR", "/tmp/tmp_pluk")
+	runGC()
 }
 
 // teardown closes the test HTTP server.
-func teardown() {
+func teardown(fname string) {
 	server.Close()
 	db.DbMgr.Close()
 	os.RemoveAll("/tmp/tmp_pluk")
+	os.RemoveAll(fname)
 }
 
 func buildURL(urlStr string) string {

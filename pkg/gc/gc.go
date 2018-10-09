@@ -23,13 +23,50 @@ const (
 	gcChunks   = time.Hour * 24
 )
 
+var (
+	active *bool
+)
+
+func setActive() {
+	if active == nil {
+		ac := true
+		active = &ac
+	} else {
+		*active = true
+	}
+}
+
+func setInactive() {
+	*active = false
+}
+
+func WaitGCCompleted() {
+	if active != nil && !(*active) {
+		return
+	}
+
+	timeout := time.NewTimer(time.Second * 30)
+	ticker := time.NewTicker(time.Millisecond * 100)
+	for {
+		select {
+		case <-ticker.C:
+			if active != nil && !(*active) {
+				return
+			}
+		case <-timeout.C:
+			return
+		}
+	}
+}
+
 func Start() {
+	utils.GCChan = make(chan string, 2)
+	utils.GCClearChunks = make(chan string, 2)
+
 	GoGC()
 
 	ticker := time.NewTicker(gcInterval)
 	tickerChunks := time.NewTicker(gcChunks)
-	utils.GCChan = make(chan string, 2)
-	utils.GCClearChunks = make(chan string, 2)
 	for {
 		select {
 		case <-ticker.C:
@@ -47,6 +84,8 @@ func Start() {
 }
 
 func GoGC() {
+	setActive()
+	defer setInactive()
 	logrus.Info("[GC] Starting garbage collector...")
 	mgr := db.DbMgr
 

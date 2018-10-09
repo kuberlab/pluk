@@ -13,6 +13,7 @@ import (
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/datasets"
 	"github.com/kuberlab/pluk/pkg/db"
+	"github.com/kuberlab/pluk/pkg/gc"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
@@ -117,11 +118,9 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
-	forceRaw := req.QueryParameter("force")
-	force, _ := strconv.ParseBool(forceRaw)
 	master := api.masterClient(req)
 
-	err := api.ds.DeleteDataset(workspace, name, master, force)
+	err := api.ds.DeleteDataset(workspace, name, master, true)
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -155,7 +154,7 @@ func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	err := dataset.DeleteVersion(version)
+	err := dataset.DeleteVersion(version, true)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
@@ -282,12 +281,15 @@ func (api *API) createDataset(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	ds := &db.Dataset{Workspace: workspace, Name: name}
-	if err := api.mgr.CreateDataset(ds); err != nil {
+	// Wait
+	gc.WaitGCCompleted()
+
+	if ds, err := api.ds.NewDataset(workspace, name, master); err != nil {
 		WriteError(resp, err)
 		return
+	} else {
+		resp.WriteHeaderAndEntity(http.StatusCreated, ds)
 	}
-	resp.WriteHeaderAndEntity(http.StatusCreated, ds)
 }
 
 func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
@@ -322,6 +324,9 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	version := req.PathParameter("version")
 	master := api.masterClient(req)
+
+	// Wait
+	gc.WaitGCCompleted()
 
 	dataset := api.ds.GetDataset(workspace, name, master)
 	if dataset == nil {
@@ -361,7 +366,8 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 		Workspace: workspace,
 		Editing:   true,
 	}
-	if err := api.mgr.CreateDatasetVersion(dsv); err != nil {
+
+	if err := datasets.SaveDatasetVersion(api.mgr, dsv); err != nil {
 		WriteError(resp, err)
 		return
 	}

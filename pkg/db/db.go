@@ -37,8 +37,8 @@ func NewDatabaseMgr(db *gorm.DB) *DatabaseMgr {
 func NewMainDatabaseMgr() *DatabaseMgr {
 	return NewDatabaseMgr(db.InitMain(CreateAll))
 }
-func NewFakeDatabaseMgr() *DatabaseMgr {
-	return NewDatabaseMgr(db.InitFake(CreateTables))
+func NewFakeDatabaseMgr(fname string) *DatabaseMgr {
+	return NewDatabaseMgr(db.InitFake(CreateTables, fname))
 }
 
 func (mgr *DatabaseMgr) DB() *gorm.DB {

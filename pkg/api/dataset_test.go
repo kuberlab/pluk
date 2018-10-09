@@ -8,14 +8,16 @@ import (
 
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/db"
+	"github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
 func TestListDatasets(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	resp, err := client.Get(buildURL("datasets/workspace"))
 	if err != nil {
@@ -33,9 +35,10 @@ func TestListDatasets(t *testing.T) {
 }
 
 func TestCreateDataset(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/new-test")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(""))
@@ -54,9 +57,10 @@ func TestCreateDataset(t *testing.T) {
 }
 
 func TestCreateVersionAuto(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/new-test/versions/1.0.0-new")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(""))
@@ -76,14 +80,80 @@ func TestCreateVersionAuto(t *testing.T) {
 		Version:   "1.0.0-new",
 		ID:        2,
 		Deleted:   false,
-		Editing:   true}
+		Editing:   true,
+	}
 	utils.Assert(want, dsv, t)
 }
 
-func TestCreateVersionWrong(t *testing.T) {
-	setup()
+func TestUploadDeleteCheckDataset(t *testing.T) {
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
+
+	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
+	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file2.txt")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	// Delete dataset version
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0")
+	req, _ := http.NewRequest(http.MethodDelete, url, nil)
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusNoContent, resp.StatusCode, t)
+
+	//time.Sleep(time.Millisecond * 500)
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(""))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	// Upload new file
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file3.txt")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/tree")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fs []io.ChunkedFileInfo
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(1, len(fs), t)
+}
+
+func TestCreateVersionWrong(t *testing.T) {
+	fname := getFname()
+	setup(fname)
+	dbPrepare(t)
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/new-test/versions/new")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(""))

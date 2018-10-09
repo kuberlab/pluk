@@ -99,13 +99,7 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 	dsvOld, err := tx.GetDatasetVersion(dsv.Workspace, dsv.Name, dsv.Version)
 	if err != nil {
 		err = nil
-		errD := tx.CreateDatasetVersion(&db.DatasetVersion{
-			Name:      dsv.Name,
-			Workspace: dsv.Workspace,
-			Version:   dsv.Version,
-			Size:      dsv.Size,
-			Editing:   dsv.Editing,
-		})
+		errD := tx.CreateDatasetVersion(dsv)
 		if errD != nil {
 			err = errD
 			return err
@@ -114,6 +108,7 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 		// Recover it.
 		dsvOld.Deleted = false
 		dsvOld.Size = dsv.Size
+		dsv.Deleted = false
 		if err = tx.RecoverDatasetVersion(dsvOld); err != nil {
 			return err
 		}
@@ -121,6 +116,7 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 		// Simple update
 		dsvOld.Size = dsv.Size
 		dsvOld.Editing = dsv.Editing || dsvOld.Editing
+		dsv.Editing = dsvOld.Editing
 		if _, err = tx.UpdateDatasetVersion(dsvOld); err != nil {
 			return err
 		}
@@ -327,7 +323,7 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 	return result, nil
 }
 
-func (d *Dataset) DeleteVersion(version string) error {
+func (d *Dataset) DeleteVersion(version string, force bool) error {
 	dsv, err := d.mgr.GetDatasetVersion(d.Workspace, d.Name, version)
 	if err != nil {
 		return errors.NewStatus(http.StatusNotFound, fmt.Sprintf("Version %v not found", version))
@@ -336,6 +332,11 @@ func (d *Dataset) DeleteVersion(version string) error {
 	if _, err = d.mgr.UpdateDatasetVersion(dsv); err != nil {
 		return err
 	}
+
+	if force {
+		utils.GCChan <- fmt.Sprintf("Clean version of %v/%v:%v", d.Workspace, d.Name, version)
+	}
+
 	return nil
 }
 

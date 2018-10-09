@@ -7,7 +7,7 @@ import (
 )
 
 func setup() {
-	DbMgr = NewFakeDatabaseMgr()
+	DbMgr = NewFakeDatabaseMgr(":memory:")
 }
 
 func teardown() {

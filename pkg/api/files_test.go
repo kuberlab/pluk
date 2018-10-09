@@ -24,9 +24,10 @@ three line
 var fileData3 = "dummy content"
 
 func TestUploadSingleFile(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -48,9 +49,10 @@ func TestUploadSingleFile(t *testing.T) {
 }
 
 func TestUploadFileNotFound(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -69,9 +71,10 @@ func TestUploadFileNotFound(t *testing.T) {
 }
 
 func TestDeleteFileNotFound(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -92,9 +95,10 @@ func TestDeleteFileNotFound(t *testing.T) {
 }
 
 func TestUploadMultipleFiles(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -124,9 +128,10 @@ func TestUploadMultipleFiles(t *testing.T) {
 }
 
 func TestUploadSameFile(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -156,9 +161,10 @@ func TestUploadSameFile(t *testing.T) {
 }
 
 func TestUploadFileWithPrefixRepeated(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file11")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -207,9 +213,10 @@ func TestUploadFileWithPrefixRepeated(t *testing.T) {
 }
 
 func TestUploadSameFileDeleteRead(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -253,9 +260,10 @@ func TestUploadSameFileDeleteRead(t *testing.T) {
 }
 
 func TestUploadHierarchy(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file1.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -313,9 +321,10 @@ func TestUploadHierarchy(t *testing.T) {
 }
 
 func TestDeleteDirectory(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file1.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -371,9 +380,10 @@ func TestDeleteDirectory(t *testing.T) {
 }
 
 func TestUploadReadFile(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -394,9 +404,10 @@ func TestUploadReadFile(t *testing.T) {
 }
 
 func TestUploadReadTree(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -425,9 +436,10 @@ func TestUploadReadTree(t *testing.T) {
 }
 
 func TestDeleteFile(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -482,9 +494,10 @@ func TestDeleteFile(t *testing.T) {
 }
 
 func TestCommitNoMoreUpload(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
@@ -513,9 +526,10 @@ func TestCommitNoMoreUpload(t *testing.T) {
 }
 
 func TestCommitNoDelete(t *testing.T) {
-	setup()
+	fname := getFname()
+	setup(fname)
 	dbPrepare(t)
-	defer teardown()
+	defer teardown(fname)
 
 	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
