@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	libtypes "github.com/kuberlab/lib/pkg/types"
 	"github.com/kuberlab/pluk/pkg/io"
@@ -188,11 +189,27 @@ func (mgr *DatabaseMgr) GetFS(workspace, dataset, version string) (*io.ChunkedFi
 	if err != nil {
 		return nil, err
 	}
+
+	lastUpdated := libtypes.NewTime(time.Now().Add(-time.Hour))
+	if len(rawFiles) > 0 {
+		lastUpdated = rawFiles[0].UpdatedAt
+	}
 	newFS := func(root string) *io.ChunkedFileFS {
 		return &io.ChunkedFileFS{
 			Files: make(map[string]*io.ChunkedFile),
 			Root:  "/",
 			Dirs:  make(map[string]*io.ChunkedFileFS),
+			FileObj: &io.ChunkedFile{
+				Name: "",
+				Size: 4096,
+				Fstat: &io.ChunkedFileInfo{
+					Fsize:    4096,
+					Fmode:    0775,
+					Dir:      true,
+					FmodTime: lastUpdated.Time,
+					Fname:    "",
+				},
+			},
 		}
 	}
 
@@ -220,11 +237,12 @@ func (mgr *DatabaseMgr) GetFS(workspace, dataset, version string) (*io.ChunkedFi
 							Fsize:    raw.FileSize,
 						},
 					}
+					lastUpdated = raw.UpdatedAt
 				}
 			} else {
 				dirname := "/" + strings.Join(splitted[:i+1], "/")
 				if dirname != "/" {
-					curDir.AddDir(dirname)
+					curDir.AddDir(dirname, lastUpdated.Time)
 					curDir = curDir.Dirs[filepath.Base(dirname)]
 				}
 			}
