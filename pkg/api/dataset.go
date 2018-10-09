@@ -183,6 +183,7 @@ func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	resp.WriteHeader(http.StatusOK)
 	io.Copy(resp, file)
 	err = file.Close()
 	if err != nil {

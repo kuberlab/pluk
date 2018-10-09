@@ -50,6 +50,11 @@ func WrapLogger(f http.Handler) http.Handler {
 		}
 		t := time.Now()
 		f.ServeHTTP(record, r)
+
+		if record.status == 0 {
+			record.status = http.StatusOK
+		}
+
 		logrus.Infof("%v %v => %v, %v", r.Method, r.RequestURI, record.status, time.Since(t))
 	})
 }
