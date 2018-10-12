@@ -12,6 +12,7 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"sort"
 )
 
 type Dataset struct {
@@ -315,6 +316,7 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 		result = append(result, v)
 	}
 
+	sort.Sort(sort.Reverse(types.VersionArr(result)))
 	return result, nil
 }
 

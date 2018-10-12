@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/kuberlab/lib/pkg/dealerclient"
@@ -37,6 +38,31 @@ type Dataset struct {
 
 type VersionList struct {
 	Versions []Version `json:"versions"`
+}
+
+type VersionArr []Version
+
+func (vl VersionArr) Len() int {
+	return len(vl)
+}
+
+func (vl VersionArr) Less(i, j int) bool {
+	v1 := vl[i].Version
+	v2 := vl[j].Version
+	sv1, err := semver.NewVersion(v1)
+	if err != nil {
+		return true
+	}
+
+	sv2, err := semver.NewVersion(v2)
+	if err != nil {
+		return false
+	}
+	return sv1.LessThan(sv2)
+}
+
+func (vl VersionArr) Swap(i, j int) {
+	vl[i], vl[j] = vl[j], vl[i]
 }
 
 type Version struct {
