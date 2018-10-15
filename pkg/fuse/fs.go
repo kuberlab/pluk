@@ -1,6 +1,7 @@
 package fuse
 
 import (
+	"fmt"
 	"math"
 	"regexp"
 	"sync"
@@ -16,7 +17,7 @@ import (
 
 var ChangeDatasetRegex = regexp.MustCompile("\\.([-.a-z0-9_A-Z]+)__([-a-z0-9.]+)")
 
-type PlukFS struct {
+type PlukeFS struct {
 	pathfs.FileSystem
 	workspace string
 	dataset   string
@@ -29,7 +30,7 @@ type PlukFS struct {
 }
 
 func NewPlukFS(workspace, dataset, version, server, secret string) (pathfs.FileSystem, error) {
-	fs := &PlukFS{
+	fs := &PlukeFS{
 		FileSystem: pathfs.NewDefaultFileSystem(),
 		workspace:  workspace,
 		dataset:    dataset,
@@ -53,27 +54,18 @@ func NewPlukFS(workspace, dataset, version, server, secret string) (pathfs.FileS
 	return fs, nil
 }
 
-func (fs *PlukFS) String() string {
+func (fs *PlukeFS) String() string {
 	return "plukefs"
 }
 
-func (fs *PlukFS) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fuse.Status) {
+func (fs *PlukeFS) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fuse.Status) {
 	//fmt.Println("GETATTR", name)
 
 	fs.lock.RLock()
 	f := fs.innerFS.GetFile(name)
 	fs.lock.RUnlock()
 	if f == nil {
-		if ChangeDatasetRegex.MatchString(name) {
-			return &fuse.Attr{
-				Size:  12,
-				Mode:  fuse.S_IFREG | 0644,
-				Atime: uint64(time.Now().Unix()),
-				Ctime: uint64(time.Now().Unix()),
-				Mtime: uint64(time.Now().Unix()),
-			}, fuse.OK
-		}
-		return nil, fuse.ENOENT
+		return fs.serviceGetAttr(name)
 	}
 	var mode uint32
 	if f.Fstat.IsDir() {
@@ -92,24 +84,24 @@ func (fs *PlukFS) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fuse.
 	}, fuse.OK
 }
 
-func (fs *PlukFS) Open(name string, flags uint32, context *fuse.Context) (file nodefs.File, code fuse.Status) {
+func (fs *PlukeFS) Open(name string, flags uint32, context *fuse.Context) (file nodefs.File, code fuse.Status) {
 	if flags&fuse.O_ANYWRITE != 0 {
 		return nil, fuse.EPERM
 	}
 	//fmt.Println("OPEN", name)
-	name = "/" + name
+	fullName := "/" + name
 	fs.lock.RLock()
-	f := fs.innerFS.GetFile(name)
+	f := fs.innerFS.GetFile(fullName)
 	fs.lock.RUnlock()
 	if f == nil {
-		// Check whether if name is provided to change the dataset?
-		return fs.tryChangeDataset(name)
+		// Maybe service filename?
+		return fs.serviceFileRead(name)
 	}
 
 	return NewPlukFile(f), fuse.OK
 }
 
-func (fs *PlukFS) OpenDir(name string, context *fuse.Context) (stream []fuse.DirEntry, status fuse.Status) {
+func (fs *PlukeFS) OpenDir(name string, context *fuse.Context) (stream []fuse.DirEntry, status fuse.Status) {
 	name = "/" + name
 
 	//t := time.Now()
@@ -129,7 +121,7 @@ func (fs *PlukFS) OpenDir(name string, context *fuse.Context) (stream []fuse.Dir
 	return res, fuse.OK
 }
 
-func (fs *PlukFS) StatFs(name string) *fuse.StatfsOut {
+func (fs *PlukeFS) StatFs(name string) *fuse.StatfsOut {
 
 	//  struct statvfs {
 	//    unsigned long  f_bsize;    /* Filesystem block size */
@@ -171,7 +163,53 @@ func (fs *PlukFS) StatFs(name string) *fuse.StatfsOut {
 	}
 }
 
-func (fs *PlukFS) tryChangeDataset(filename string) (file nodefs.File, code fuse.Status) {
+func (fs *PlukeFS) serviceGetAttr(filename string) (*fuse.Attr, fuse.Status) {
+	attr := &fuse.Attr{
+		Mode:  fuse.S_IFREG | 0644,
+		Atime: uint64(time.Now().Unix()),
+		Ctime: uint64(time.Now().Unix()),
+		Mtime: uint64(time.Now().Unix()),
+	}
+
+	if ChangeDatasetRegex.MatchString(filename) {
+		attr.Size = 12
+		return attr, fuse.OK
+	}
+
+	switch filename {
+	case ".current_version":
+		attr.Size = uint64(len(fs.version))
+		return attr, fuse.OK
+	case ".current_dataset":
+		attr.Size = uint64(len(fs.dataset))
+		return attr, fuse.OK
+	case ".current_workspace":
+		attr.Size = uint64(len(fs.workspace))
+		return attr, fuse.OK
+	}
+
+	return nil, fuse.ENOENT
+}
+
+func (fs *PlukeFS) serviceFileRead(filename string) (file nodefs.File, code fuse.Status) {
+	groups := ChangeDatasetRegex.FindStringSubmatch(filename)
+	if len(groups) >= 3 {
+		return fs.tryChangeDataset(filename)
+	}
+
+	switch filename {
+	case ".current_version":
+		return nodefs.NewDataFile([]byte(fs.version + "\n")), fuse.OK
+	case ".current_dataset":
+		return nodefs.NewDataFile([]byte(fs.dataset + "\n")), fuse.OK
+	case ".current_workspace":
+		return nodefs.NewDataFile([]byte(fs.workspace + "\n")), fuse.OK
+	}
+
+	return nil, fuse.ENOENT
+}
+
+func (fs *PlukeFS) tryChangeDataset(filename string) (file nodefs.File, code fuse.Status) {
 	if !ChangeDatasetRegex.MatchString(filename) {
 		return nil, fuse.ENOENT
 	}
@@ -188,8 +226,9 @@ func (fs *PlukFS) tryChangeDataset(filename string) (file nodefs.File, code fuse
 	if dataset != fs.dataset || version != fs.version {
 		newFS, err := fs.client.GetFSStructure(fs.workspace, dataset, version)
 		if err != nil {
-			logrus.Errorf("Failed to change FS to %v:%v: %v", dataset, version, err)
-			return nil, fuse.ENOENT
+			msg := fmt.Sprintf("Failed to change FS to %v:%v: %v", dataset, version, err)
+			logrus.Error(msg)
+			return nodefs.NewDataFile([]byte(msg + "\n")), fuse.OK
 		}
 		fs.lock.Lock()
 		defer fs.lock.Unlock()
