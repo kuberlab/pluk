@@ -119,6 +119,7 @@ func TestUploadDeleteCheckDataset(t *testing.T) {
 
 	//time.Sleep(time.Millisecond * 500)
 
+	// Create version again
 	url = buildURL("datasets/workspace/dataset/versions/1.0.0")
 	resp, err = client.Post(url, "application/json", bytes.NewBufferString(""))
 	if err != nil {
