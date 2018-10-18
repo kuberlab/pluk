@@ -116,7 +116,7 @@ func (m *Manager) ForkDataset(workspace, name, targetWorkspace string, master io
 			if _, err = source.CloneVersionTo(ds, ver.Version, ver.Version); err != nil {
 				return nil, err
 			}
-			if _, err = ds.CommitVersion(ver.Version); err != nil {
+			if _, err = ds.CommitVersion(ver.Version, ver.Message); err != nil {
 				return nil, err
 			}
 		}

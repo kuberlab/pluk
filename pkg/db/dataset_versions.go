@@ -12,7 +12,7 @@ type DatasetVersionVersionMgr interface {
 	ListDatasetVersions(filter DatasetVersion) ([]*DatasetVersion, error)
 	DeleteDatasetVersion(id uint) error
 	RecoverDatasetVersion(dsv *DatasetVersion) error
-	CommitVersion(workspace, name, version string) (*DatasetVersion, error)
+	CommitVersion(workspace, name, version, message string) (*DatasetVersion, error)
 	UpdateDatasetVersionSize(workspace, name, version string) error
 }
 
@@ -68,12 +68,17 @@ func (mgr *DatabaseMgr) DeleteDatasetVersion(id uint) error {
 	return mgr.db.Delete(DatasetVersion{}, DatasetVersion{ID: id}).Error
 }
 
-func (mgr *DatabaseMgr) CommitVersion(workspace, name, version string) (*DatasetVersion, error) {
-	err := mgr.db.Exec(
-		"UPDATE dataset_versions SET editing='false' "+
-			"WHERE workspace=? AND name=? AND version=?",
-		workspace, name, version,
-	).Error
+func (mgr *DatabaseMgr) CommitVersion(workspace, name, version, message string) (*DatasetVersion, error) {
+	set := "editing='false'"
+	values := []interface{}{workspace, name, version}
+	if message != "" {
+		set = set + ", message=?"
+		values = append(values, message)
+	}
+	sql := fmt.Sprintf("UPDATE dataset_versions SET %v "+
+		"WHERE workspace=? AND name=? AND version=?", set)
+
+	err := mgr.db.Exec(sql, values...).Error
 
 	if err != nil {
 		return nil, err

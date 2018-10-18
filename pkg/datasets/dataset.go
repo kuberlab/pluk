@@ -299,6 +299,7 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 			UpdatedAt: dsv.UpdatedAt,
 			CreatedAt: dsv.CreatedAt,
 			Editing:   dsv.Editing,
+			Message:   dsv.Message,
 		}
 	}
 	if utils.HasMasters() {
@@ -337,7 +338,7 @@ func (d *Dataset) DeleteVersion(version string, force bool) error {
 	return nil
 }
 
-func (d *Dataset) CommitVersion(version string) (*db.DatasetVersion, error) {
+func (d *Dataset) CommitVersion(version string, message string) (*db.DatasetVersion, error) {
 	exist, err := d.CheckVersion(version)
 	if !exist {
 		return nil, fmt.Errorf("Version %v for dataset %v/%v doesn't exist.", version, d.Workspace, d.Name)
@@ -345,7 +346,7 @@ func (d *Dataset) CommitVersion(version string) (*db.DatasetVersion, error) {
 		return nil, err
 	}
 
-	return d.mgr.CommitVersion(d.Workspace, d.Name, version)
+	return d.mgr.CommitVersion(d.Workspace, d.Name, version, message)
 }
 
 func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion string) (*db.DatasetVersion, error) {

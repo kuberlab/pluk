@@ -352,6 +352,7 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
 	version := req.PathParameter("version")
+	message := req.QueryParameter("message")
 	master := api.masterClient(req)
 
 	// Wait
@@ -394,6 +395,7 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 		Name:      name,
 		Workspace: workspace,
 		Editing:   true,
+		Message:   message,
 	}
 
 	if err := datasets.SaveDatasetVersion(api.mgr, dsv); err != nil {
@@ -408,6 +410,7 @@ func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
 	version := req.PathParameter("version")
+	message := req.QueryParameter("message")
 	master := api.masterClient(req)
 
 	dataset := api.ds.GetDataset(workspace, name, master)
@@ -416,7 +419,7 @@ func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	dsv, err := dataset.CommitVersion(version)
+	dsv, err := dataset.CommitVersion(version, message)
 	if err != nil {
 		WriteError(resp, err)
 		return
