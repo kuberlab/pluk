@@ -22,6 +22,7 @@ type DatasetVersion struct {
 	Workspace string `json:"workspace" gorm:"index:idx_workspace_name"`
 	Name      string `json:"name" gorm:"index:idx_workspace_name"`
 	Version   string `json:"version" gorm:"index:idx_version"`
+	Message   string `json:"message"`
 	Size      int64  `json:"size"`
 	Deleted   bool   `json:"deleted"`
 	Editing   bool   `json:"editing"`

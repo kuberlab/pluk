@@ -30,7 +30,7 @@ func (api *API) masterClient(req *restful.Request) plukio.PlukClient {
 	return nil
 }
 
-func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
+func (api *API) downloadDataset(req *restful.Request, resp *restful.Response) {
 	version := req.PathParameter("version")
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
@@ -64,6 +64,20 @@ func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 	}
 
 	//resp.Header().Add("Content-Disposition", fmt.Sprintf("attachment;filename=%s-%s.%s.tgz;", workspace, name, version))
+}
+
+func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
+	name := req.PathParameter("name")
+	workspace := req.PathParameter("workspace")
+	master := api.masterClient(req)
+
+	dataset := api.ds.GetDataset(workspace, name, master)
+	if dataset == nil {
+		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		return
+	}
+
+	resp.WriteEntity(dataset)
 }
 
 func (api *API) datasetTarSize(req *restful.Request, resp *restful.Response) {
@@ -290,6 +304,21 @@ func (api *API) createDataset(req *restful.Request, resp *restful.Response) {
 	} else {
 		resp.WriteHeaderAndEntity(http.StatusCreated, ds)
 	}
+}
+
+func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
+	workspace := req.PathParameter("workspace")
+	name := req.PathParameter("name")
+	targetWS := req.PathParameter("targetWorkspace")
+	master := api.masterClient(req)
+
+	dataset, err := api.ds.ForkDataset(workspace, name, targetWS, master)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
+
+	resp.WriteHeaderAndEntity(http.StatusCreated, dataset)
 }
 
 func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {

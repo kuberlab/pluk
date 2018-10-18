@@ -348,7 +348,7 @@ func (d *Dataset) CommitVersion(version string) (*db.DatasetVersion, error) {
 	return d.mgr.CommitVersion(d.Workspace, d.Name, version)
 }
 
-func (d *Dataset) CloneVersion(version, targetVersion string) (*db.DatasetVersion, error) {
+func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion string) (*db.DatasetVersion, error) {
 	var err error
 	tx := d.mgr.Begin()
 	defer func() {
@@ -360,7 +360,7 @@ func (d *Dataset) CloneVersion(version, targetVersion string) (*db.DatasetVersio
 	}()
 
 	// Clean target version
-	DeleteFiles(tx, d.Workspace, d.Name, targetVersion, "", false)
+	DeleteFiles(tx, target.Workspace, target.Name, targetVersion, "", false)
 
 	files, err := tx.ListFiles(db.File{Workspace: d.Workspace, DatasetName: d.Name, Version: version})
 	if err != nil {
@@ -381,17 +381,17 @@ func (d *Dataset) CloneVersion(version, targetVersion string) (*db.DatasetVersio
 	}
 	var totalSize int64 = 0
 
-	// Create the same files with different versions
+	// Create the same files with different workspace/dataset/versions
 	for _, f := range files {
 		totalSize += f.Size
 		newF := &db.File{
-			Workspace:   f.Workspace,
+			Workspace:   target.Workspace,
 			Version:     targetVersion,
-			DatasetName: f.DatasetName,
+			DatasetName: target.Name,
 			Size:        f.Size,
 			Path:        f.Path,
 		}
-		if existing, errD := tx.GetFile(d.Workspace, d.Name, f.Path, targetVersion); errD != nil {
+		if existing, errD := tx.GetFile(target.Workspace, target.Name, f.Path, targetVersion); errD != nil {
 			// Create
 			err = tx.CreateFile(newF)
 			if err != nil {
@@ -424,10 +424,14 @@ func (d *Dataset) CloneVersion(version, targetVersion string) (*db.DatasetVersio
 	dsv := &db.DatasetVersion{
 		Version:   targetVersion,
 		Size:      totalSize,
-		Name:      d.Name,
-		Workspace: d.Workspace,
+		Name:      target.Name,
+		Workspace: target.Workspace,
 		Editing:   true,
 	}
 	err = SaveDatasetVersion(tx, dsv)
 	return dsv, err
+}
+
+func (d *Dataset) CloneVersion(version, targetVersion string) (*db.DatasetVersion, error) {
+	return d.CloneVersionTo(d, version, targetVersion)
 }

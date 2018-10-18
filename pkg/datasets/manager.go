@@ -27,7 +27,7 @@ func (m *Manager) ListDatasets(workspace string) []*Dataset {
 	}
 	sets := make([]*Dataset, 0)
 	for _, d := range datasets {
-		sets = append(sets, &Dataset{Dataset: &db.Dataset{Name: d.Name, Workspace: d.Workspace}, mgr: m.mgr})
+		sets = append(sets, &Dataset{Dataset: d, mgr: m.mgr})
 	}
 
 	return sets
@@ -85,6 +85,43 @@ func (m *Manager) NewDataset(workspace, name string, master io.PlukClient) (*Dat
 		}
 	}
 	ds := &Dataset{Dataset: dsDB, mgr: m.mgr, MasterClient: master}
+	return ds, nil
+}
+
+func (m *Manager) ForkDataset(workspace, name, targetWorkspace string, master io.PlukClient) (*Dataset, error) {
+	_, err := m.mgr.GetDataset(targetWorkspace, name)
+	if err == nil {
+		msg := fmt.Sprintf("Dataset %v/%v already exists. Please delete it first and try again.", targetWorkspace, name)
+		return nil, errors.NewStatus(409, msg)
+	}
+
+	source := m.GetDataset(workspace, name, master)
+	if source == nil {
+		msg := fmt.Sprintf("Probably dataset %v/%v doesn't exist", workspace, name)
+		return nil, errors.NewStatus(404, msg)
+	}
+
+	ds, err := m.NewDataset(targetWorkspace, name, master)
+	if err != nil {
+		return nil, err
+	}
+
+	sourceVersions, err := source.Versions()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, ver := range sourceVersions {
+		if !ver.Editing {
+			if _, err = source.CloneVersionTo(ds, ver.Version, ver.Version); err != nil {
+				return nil, err
+			}
+			if _, err = ds.CommitVersion(ver.Version); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return ds, nil
 }
 
