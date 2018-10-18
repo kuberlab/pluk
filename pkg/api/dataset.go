@@ -174,6 +174,8 @@ func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	// Invalidate cache
+	api.fsCache.Cache.Delete(api.fsCacheKey(dataset, version))
 	resp.WriteHeader(http.StatusNoContent)
 }
 
