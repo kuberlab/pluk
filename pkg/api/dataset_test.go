@@ -128,6 +128,18 @@ func TestUploadDeleteCheckDataset(t *testing.T) {
 
 	utils.Assert(http.StatusCreated, resp.StatusCode, t)
 
+	url = buildURL("datasets/workspace/dataset/versions/1.0.0/tree")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fs []io.ChunkedFileInfo
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(0, len(fs), t)
+
 	// Upload new file
 	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file3.txt")
 	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
@@ -142,7 +154,6 @@ func TestUploadDeleteCheckDataset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var fs []io.ChunkedFileInfo
 	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
 		t.Fatal(err)
 	}
