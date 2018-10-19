@@ -19,7 +19,7 @@ func TestListDatasets(t *testing.T) {
 	dbPrepare(t)
 	defer teardown(fname)
 
-	resp, err := client.Get(buildURL("datasets/workspace"))
+	resp, err := client.Get(buildURL("dataset/workspace"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func TestListDatasets(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := types.DataSetList{
-		Datasets: []types.Dataset{types.Dataset{Workspace: "workspace", Name: "dataset"}},
+		Datasets: []types.Dataset{types.Dataset{Type: "dataset", Workspace: "workspace", Name: "dataset"}},
 	}
 	utils.Assert(want, datasets, t)
 }
@@ -40,7 +40,7 @@ func TestCreateDataset(t *testing.T) {
 	dbPrepare(t)
 	defer teardown(fname)
 
-	url := buildURL("datasets/workspace/new-test")
+	url := buildURL("dataset/workspace/new-test")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(""))
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +52,7 @@ func TestCreateDataset(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&dataset); err != nil {
 		t.Fatal(err)
 	}
-	want := db.Dataset{Workspace: "workspace", Name: "new-test", ID: 2, Deleted: false}
+	want := db.Dataset{Type: "dataset", Workspace: "workspace", Name: "new-test", ID: 2, Deleted: false}
 	utils.Assert(want, dataset, t)
 }
 
@@ -62,7 +62,7 @@ func TestCreateVersionAuto(t *testing.T) {
 	dbPrepare(t)
 	defer teardown(fname)
 
-	url := buildURL("datasets/workspace/new-test/versions/1.0.0-new")
+	url := buildURL("dataset/workspace/new-test/versions/1.0.0-new")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(""))
 	if err != nil {
 		t.Fatal(err)
@@ -75,6 +75,7 @@ func TestCreateVersionAuto(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := db.DatasetVersion{
+		Type:      "dataset",
 		Workspace: "workspace",
 		Name:      "new-test",
 		Version:   "1.0.0-new",
@@ -91,7 +92,7 @@ func TestUploadDeleteCheckDataset(t *testing.T) {
 	dbPrepare(t)
 	defer teardown(fname)
 
-	url := buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file.txt")
+	url := buildURL("dataset/workspace/dataset/versions/1.0.0/upload/file.txt")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
 	if err != nil {
 		t.Fatal(err)
@@ -99,7 +100,7 @@ func TestUploadDeleteCheckDataset(t *testing.T) {
 
 	utils.Assert(http.StatusCreated, resp.StatusCode, t)
 
-	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file2.txt")
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/upload/file2.txt")
 	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
 	if err != nil {
 		t.Fatal(err)
@@ -108,7 +109,7 @@ func TestUploadDeleteCheckDataset(t *testing.T) {
 	utils.Assert(http.StatusCreated, resp.StatusCode, t)
 
 	// Delete dataset version
-	url = buildURL("datasets/workspace/dataset/versions/1.0.0")
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0")
 	req, _ := http.NewRequest(http.MethodDelete, url, nil)
 	resp, err = client.Do(req)
 	if err != nil {
@@ -120,7 +121,7 @@ func TestUploadDeleteCheckDataset(t *testing.T) {
 	//time.Sleep(time.Millisecond * 500)
 
 	// Create version again
-	url = buildURL("datasets/workspace/dataset/versions/1.0.0")
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0")
 	resp, err = client.Post(url, "application/json", bytes.NewBufferString(""))
 	if err != nil {
 		t.Fatal(err)
@@ -128,7 +129,7 @@ func TestUploadDeleteCheckDataset(t *testing.T) {
 
 	utils.Assert(http.StatusCreated, resp.StatusCode, t)
 
-	url = buildURL("datasets/workspace/dataset/versions/1.0.0/tree")
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/tree")
 	resp, err = client.Get(url)
 	if err != nil {
 		t.Fatal(err)
@@ -141,7 +142,7 @@ func TestUploadDeleteCheckDataset(t *testing.T) {
 	utils.Assert(0, len(fs), t)
 
 	// Upload new file
-	url = buildURL("datasets/workspace/dataset/versions/1.0.0/upload/file3.txt")
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/upload/file3.txt")
 	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
 	if err != nil {
 		t.Fatal(err)
@@ -149,7 +150,7 @@ func TestUploadDeleteCheckDataset(t *testing.T) {
 
 	utils.Assert(http.StatusCreated, resp.StatusCode, t)
 
-	url = buildURL("datasets/workspace/dataset/versions/1.0.0/tree")
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/tree")
 	resp, err = client.Get(url)
 	if err != nil {
 		t.Fatal(err)
@@ -167,7 +168,7 @@ func TestCreateVersionWrong(t *testing.T) {
 	dbPrepare(t)
 	defer teardown(fname)
 
-	url := buildURL("datasets/workspace/new-test/versions/new")
+	url := buildURL("dataset/workspace/new-test/versions/new")
 	resp, err := client.Post(url, "application/json", bytes.NewBufferString(""))
 	if err != nil {
 		t.Fatal(err)
@@ -187,7 +188,12 @@ func TestCreateVersionWrong(t *testing.T) {
 }
 
 func dbPrepare(t *testing.T) {
-	if err := db.DbMgr.CreateDataset(&db.Dataset{Workspace: "workspace", Name: "dataset"}); err != nil {
+	if err := db.DbMgr.CreateDataset(
+		&db.Dataset{
+			Workspace: "workspace",
+			Name:      "dataset",
+			Type:      "dataset",
+		}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -197,6 +203,7 @@ func dbPrepare(t *testing.T) {
 			Name:      "dataset",
 			Version:   "1.0.0",
 			Editing:   true,
+			Type:      "dataset",
 		}); err != nil {
 		t.Fatal(err)
 	}

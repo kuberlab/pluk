@@ -92,37 +92,37 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 
 	// to cloud-dealer API
 	ws.Route(ws.GET("/workspaces/{workspace}").To(api.checkWorkspace))
-	ws.Route(ws.GET("/workspaces/{workspace}/datasets/{dataset}").To(api.checkDataset))
+	ws.Route(ws.GET("/workspaces/{workspace}/dataset/{dataset}").To(api.checkDataset))
 
 	// Datasets
-	ws.Route(ws.GET("/datasets").To(api.datasets))
-	ws.Route(ws.GET("/datasets/{workspace}").To(api.datasets))
-	ws.Route(ws.GET("/datasets/{workspace}/{name}").To(api.getDataset))
-	ws.Route(ws.POST("/datasets/{workspace}/{name}").To(api.createDataset))
-	ws.Route(ws.POST("/datasets/{workspace}/{name}/fork/{targetWorkspace}").To(api.forkDataset))
-	ws.Route(ws.DELETE("/datasets/{workspace}/{name}").To(api.deleteDataset))
-	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions").To(api.versions))
-	ws.Route(ws.POST("/datasets/{workspace}/{name}/versions/{version}").To(api.createVersion))
-	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}").To(api.downloadDataset))
-	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/tarsize").To(api.datasetTarSize))
-	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/fs").To(api.getDatasetFS))
-	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/tree").To(api.fsReadDir))
-	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/tree/{path:*}").To(api.fsReadDir))
-	ws.Route(ws.GET("/datasets/{workspace}/{name}/versions/{version}/raw/{path:*}").To(api.fsReadFile))
-	ws.Route(ws.POST("/datasets/{workspace}/{name}/versions/{version}/upload/{path:*}").To(api.uploadDatasetFile))
-	ws.Route(ws.DELETE("/datasets/{workspace}/{name}/versions/{version}/upload/{path:*}").To(api.deleteDatasetFile))
-	ws.Route(ws.POST("/datasets/{workspace}/{name}/versions/{version}/commit").To(api.commitVersion))
-	ws.Route(ws.POST("/datasets/{workspace}/{name}/versions/{version}/clone/{targetVersion}").To(api.cloneVersion))
-	ws.Route(ws.DELETE("/datasets/{workspace}/{name}/versions/{version}").To(api.deleteVersion))
+	ws.Route(ws.GET("/dataset").To(api.datasets))
+	ws.Route(ws.GET("/dataset/{workspace}").To(api.datasets))
+	ws.Route(ws.GET("/dataset/{workspace}/{name}").To(api.getDataset))
+	ws.Route(ws.POST("/dataset/{workspace}/{name}").To(api.createDataset))
+	ws.Route(ws.POST("/dataset/{workspace}/{name}/fork/{targetWorkspace}").To(api.forkDataset))
+	ws.Route(ws.DELETE("/dataset/{workspace}/{name}").To(api.deleteDataset))
+	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions").To(api.versions))
+	ws.Route(ws.POST("/dataset/{workspace}/{name}/versions/{version}").To(api.createVersion))
+	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions/{version}").To(api.downloadDataset))
+	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions/{version}/tarsize").To(api.datasetTarSize))
+	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions/{version}/fs").To(api.getDatasetFS))
+	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions/{version}/tree").To(api.fsReadDir))
+	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions/{version}/tree/{path:*}").To(api.fsReadDir))
+	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions/{version}/raw/{path:*}").To(api.fsReadFile))
+	ws.Route(ws.POST("/dataset/{workspace}/{name}/versions/{version}/upload/{path:*}").To(api.uploadDatasetFile))
+	ws.Route(ws.DELETE("/dataset/{workspace}/{name}/versions/{version}/upload/{path:*}").To(api.deleteDatasetFile))
+	ws.Route(ws.POST("/dataset/{workspace}/{name}/versions/{version}/commit").To(api.commitVersion))
+	ws.Route(ws.POST("/dataset/{workspace}/{name}/versions/{version}/clone/{targetVersion}").To(api.cloneVersion))
+	ws.Route(ws.DELETE("/dataset/{workspace}/{name}/versions/{version}").To(api.deleteVersion))
+
+	// Save file structure for version.
+	ws.Route(ws.POST("/dataset/{workspace}/{name}/{version}").To(api.saveFS))
 
 	// Check if chunk exists
 	ws.Route(ws.GET("/chunks/{hash}").To(api.checkChunk))
 	ws.Route(ws.GET("/chunks/{hash}/download").To(api.downloadChunk))
 	// Save hashed file chunk
 	ws.Route(ws.POST("/chunks/{hash}").To(api.saveChunk))
-
-	// Save file structure for version.
-	ws.Route(ws.POST("/datasets/{workspace}/{name}/{version}").To(api.saveFS))
 
 	// Websocket
 	ws.Route(ws.GET("/websocket").To(api.websocket))

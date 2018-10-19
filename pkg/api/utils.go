@@ -230,7 +230,7 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 		if utils.HasMasters() {
 			// Talk to master.
 			logrus.Debugf("Auth request to master %v", utils.Masters()[0])
-			_, err := masterClient.ListDatasets("kuberlab")
+			_, err := masterClient.ListEntities(currentType(req), "kuberlab")
 			if err != nil {
 				WriteErrorString(resp, http.StatusUnauthorized, err.Error())
 				return
@@ -278,4 +278,13 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 	}
 
 	filter.ProcessFilter(req, resp)
+}
+
+func currentType(req *restful.Request) string {
+	sTypeRaw := req.Attribute("entityType")
+	sType, ok := sTypeRaw.(string)
+	if !ok {
+		sType = "dataset"
+	}
+	return sType
 }

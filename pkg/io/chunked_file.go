@@ -19,21 +19,21 @@ import (
 type PlukClient interface {
 	CheckChunk(hash string) (*types.ChunkCheck, error)
 	CheckChunkWebsocket(hash string) (res *types.ChunkCheck, err error)
-	CheckDataset(workspace, dataset string) (*types.Dataset, error)
+	CheckEntity(entityType, workspace, name string) (*types.Dataset, error)
 	CheckWorkspace(workspace string) (*types.Workspace, error)
 	Close() error
-	DeleteDataset(workspace, name string, force bool) error
-	DeleteVersion(workspace, name, version string) error
+	DeleteEntity(entityType, workspace, name string, force bool) error
+	DeleteVersion(entityType, workspace, name, version string) error
 	DownloadChunk(hash string) (io.ReadCloser, error)
-	DownloadDataset(workspace, name, version string, w io.Writer) error
-	DatasetTarsize(workspace, name, version string) (int64, error)
-	GetFSStructure(workspace, name, version string) (*ChunkedFileFS, error)
-	ListDatasets(workspace string) (*types.DataSetList, error)
-	ListVersions(workspace, datasetName string) (*types.VersionList, error)
+	DownloadEntity(entityType, workspace, name, version string, w io.Writer) error
+	EntityTarSize(entityType, workspace, name, version string) (int64, error)
+	GetFSStructure(entityType, workspace, name, version string) (*ChunkedFileFS, error)
+	ListEntities(entityType, workspace string) (*types.DataSetList, error)
+	ListVersions(entityType, workspace, datasetName string) (*types.VersionList, error)
 	PrepareWebsocket() error
 	SaveChunk(hash string, data []byte) error
 	SaveChunkWebsocket(hash string, data []byte) error
-	SaveFileStructure(structure types.FileStructure, workspace, name, version string, create bool, publish bool) error
+	SaveFileStructure(structure types.FileStructure, entityType, workspace, name, version string, create bool, publish bool) error
 	WebdavAuth(user, pass, path string) (bool, error)
 }
 

@@ -10,6 +10,7 @@ import (
 type datasetDeleteCmd struct {
 	workspace string
 	name      string
+	dsType    string
 	force     bool
 }
 
@@ -33,6 +34,13 @@ func NewDatasetDeleteCmd() *cobra.Command {
 		},
 	}
 	f := cmd.Flags()
+	f.StringVarP(
+		&datasets.dsType,
+		"type",
+		"",
+		"dataset",
+		"dataset type",
+	)
 	f.BoolVarP(
 		&datasets.force,
 		"force",
@@ -52,7 +60,7 @@ func (cmd *datasetDeleteCmd) run() (err error) {
 
 	logrus.Debug("Run dataset-delete...")
 
-	err = client.DeleteDataset(cmd.workspace, cmd.name, cmd.force)
+	err = client.DeleteEntity(cmd.dsType, cmd.workspace, cmd.name, cmd.force)
 	if err != nil {
 		logrus.Fatal(err)
 	}

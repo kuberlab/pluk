@@ -91,7 +91,7 @@ func (api *API) webdav() http.HandlerFunc {
 			return
 		}
 
-		dataset := api.ds.GetDataset(workspace, name, plukclient.NewInternalMasterClient())
+		dataset := api.ds.GetDataset("dataset", workspace, name, plukclient.NewInternalMasterClient())
 		if dataset == nil {
 			resp.WriteHeader(http.StatusNotFound)
 			resp.Write([]byte(fmt.Sprintf("Dataset %v not found", name)))

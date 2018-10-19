@@ -15,6 +15,7 @@ type versionsCmd struct {
 	name      string
 	version   string
 	output    string
+	dsType    string
 }
 
 func NewVersionsCmd() *cobra.Command {
@@ -36,6 +37,14 @@ func NewVersionsCmd() *cobra.Command {
 			return versions.run()
 		},
 	}
+	f := cmd.Flags()
+	f.StringVarP(
+		&versions.dsType,
+		"type",
+		"",
+		"dataset",
+		"dataset type",
+	)
 
 	return cmd
 }
@@ -48,7 +57,7 @@ func (cmd *versionsCmd) run() error {
 
 	logrus.Debug("Run version-list...")
 
-	versions, err := client.ListVersions(cmd.workspace, cmd.name)
+	versions, err := client.ListVersions(cmd.dsType, cmd.workspace, cmd.name)
 	if err != nil {
 		logrus.Fatal(err)
 	}

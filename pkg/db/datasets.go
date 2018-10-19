@@ -6,7 +6,7 @@ type DatasetMgr interface {
 	CreateDataset(dataset *Dataset) error
 	UpdateDataset(dataset *Dataset) (*Dataset, error)
 	RecoverDataset(dataset *Dataset) error
-	GetDataset(workspace, name string) (*Dataset, error)
+	GetDataset(dsType, workspace, name string) (*Dataset, error)
 	GetDatasetByID(datasetID uint) (*Dataset, error)
 	ListDatasets(filter Dataset) ([]*Dataset, error)
 	DeleteDataset(id uint) error
@@ -15,8 +15,9 @@ type DatasetMgr interface {
 type Dataset struct {
 	BaseModel
 	ID        uint   `json:"id" sql:"AUTO_INCREMENT" gorm:"primary_key"`
-	Workspace string `json:"workspace" gorm:"index:idx_workspace"`
+	Workspace string `json:"workspace" gorm:"index:idx_workspace_type"`
 	Name      string `json:"name" gorm:"index:idx_name"`
+	Type      string `json:"type" gorm:"index:idx_workspace_type"`
 	Deleted   bool   `json:"deleted"`
 }
 
@@ -34,9 +35,9 @@ func (mgr *DatabaseMgr) RecoverDataset(dataset *Dataset) error {
 	return mgr.db.Exec(sql).Error
 }
 
-func (mgr *DatabaseMgr) GetDataset(workspace, name string) (*Dataset, error) {
+func (mgr *DatabaseMgr) GetDataset(dsType, workspace, name string) (*Dataset, error) {
 	var dataset = Dataset{}
-	err := mgr.db.First(&dataset, Dataset{Workspace: workspace, Name: name}).Error
+	err := mgr.db.First(&dataset, Dataset{Type: dsType, Workspace: workspace, Name: name}).Error
 	return &dataset, err
 }
 

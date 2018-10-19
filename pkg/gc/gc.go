@@ -172,7 +172,7 @@ func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) e
 	logrus.Infof("[GC] Deleted %v chunks.", deleted)
 
 	if version != "" {
-		dsv, err := mgr.GetDatasetVersion(dataset.Workspace, dataset.Name, version)
+		dsv, err := mgr.GetDatasetVersion(dataset.Type, dataset.Workspace, dataset.Name, version)
 		if err != nil {
 			return err
 		}
@@ -220,22 +220,23 @@ func gcFromMasters(mgr db.DataMgr) {
 		return
 	}
 
-	// Get list of available slaveDatasets: map[workspace][]dataset_name
+	// Get list of available slaveDatasets: map[workspace + "__" + dataset_type][]dataset_name
 	localDatasets := make(map[string]map[string]bool, 0)
 	for _, ds := range vDatasets {
 		if ds.Deleted {
 			continue
 		}
 		if _, ok := localDatasets[ds.Workspace]; ok {
-			localDatasets[ds.Workspace][ds.Name] = true
+			localDatasets[ds.Workspace+"__"+ds.Type][ds.Name] = true
 		} else {
-			localDatasets[ds.Workspace] = map[string]bool{ds.Name: true}
+			localDatasets[ds.Workspace+"__"+ds.Type] = map[string]bool{ds.Name: true}
 		}
 	}
 
 	candidates := make([]types.Dataset, 0)
-	for ws, slaveDatasets := range localDatasets {
-		remoteDatasets, err := io.MasterClient.ListDatasets(ws)
+	for wsType, slaveDatasets := range localDatasets {
+		ws, eType := wsAndType(wsType)
+		remoteDatasets, err := io.MasterClient.ListEntities(eType, ws)
 		if err != nil {
 			logrus.Error(err)
 			return
@@ -249,18 +250,23 @@ func gcFromMasters(mgr db.DataMgr) {
 		// Then we delete it as well on the slave.
 		for slaveName := range slaveDatasets {
 			if _, ok := masterDatasetMap[slaveName]; !ok {
-				candidates = append(candidates, types.Dataset{Name: slaveName, Workspace: ws})
+				candidates = append(candidates, types.Dataset{Name: slaveName, Workspace: ws, Type: eType})
 			}
 		}
 	}
 
 	for _, candidate := range candidates {
 		logrus.Infof("[GC] Delete dataset %v/%v from slave", candidate.Workspace, candidate.Name)
-		if err = dsManager.DeleteDataset(candidate.Workspace, candidate.Name, plukclient.NewInternalMasterClient(), false); err != nil {
+		if err = dsManager.DeleteDataset(candidate.Type, candidate.Workspace, candidate.Name, plukclient.NewInternalMasterClient(), false); err != nil {
 			logrus.Error(err)
 			return
 		}
 	}
+}
+
+func wsAndType(wsType string) (string, string) {
+	arr := strings.Split(wsType, "__")
+	return arr[0], arr[1]
 }
 
 type Answer struct {

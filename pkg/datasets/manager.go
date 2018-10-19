@@ -19,8 +19,8 @@ func NewManager(mgr db.DataMgr) *Manager {
 	return &Manager{mgr: mgr}
 }
 
-func (m *Manager) ListDatasets(workspace string) []*Dataset {
-	datasets, err := m.mgr.ListDatasets(db.Dataset{Workspace: workspace})
+func (m *Manager) ListDatasets(eType, workspace string) []*Dataset {
+	datasets, err := m.mgr.ListDatasets(db.Dataset{Type: eType, Workspace: workspace})
 	if err != nil {
 		logrus.Error(err)
 		return []*Dataset{}
@@ -33,8 +33,8 @@ func (m *Manager) ListDatasets(workspace string) []*Dataset {
 	return sets
 }
 
-func (m *Manager) GetDataset(workspace, name string, master io.PlukClient) *Dataset {
-	datasets := m.ListDatasets(workspace)
+func (m *Manager) GetDataset(eType, workspace, name string, master io.PlukClient) *Dataset {
+	datasets := m.ListDatasets(eType, workspace)
 
 	for _, d := range datasets {
 		if d.Name == name {
@@ -49,7 +49,7 @@ func (m *Manager) GetDataset(workspace, name string, master io.PlukClient) *Data
 		return nil
 	}
 
-	ds, err := master.ListDatasets(workspace)
+	ds, err := master.ListEntities(eType, workspace)
 	if err != nil {
 		logrus.Errorf("From master: %v", err)
 		return nil
@@ -70,10 +70,10 @@ func (m *Manager) GetDataset(workspace, name string, master io.PlukClient) *Data
 	return nil
 }
 
-func (m *Manager) NewDataset(workspace, name string, master io.PlukClient) (*Dataset, error) {
-	dsDB, err := m.mgr.GetDataset(workspace, name)
+func (m *Manager) NewDataset(eType, workspace, name string, master io.PlukClient) (*Dataset, error) {
+	dsDB, err := m.mgr.GetDataset(eType, workspace, name)
 	if err != nil {
-		dsDB = &db.Dataset{Workspace: workspace, Name: name}
+		dsDB = &db.Dataset{Type: eType, Workspace: workspace, Name: name}
 		if err = m.mgr.CreateDataset(dsDB); err != nil {
 			return nil, err
 		}
@@ -88,20 +88,20 @@ func (m *Manager) NewDataset(workspace, name string, master io.PlukClient) (*Dat
 	return ds, nil
 }
 
-func (m *Manager) ForkDataset(workspace, name, targetWorkspace string, master io.PlukClient) (*Dataset, error) {
-	_, err := m.mgr.GetDataset(targetWorkspace, name)
+func (m *Manager) ForkDataset(eType, workspace, name, targetWorkspace string, master io.PlukClient) (*Dataset, error) {
+	_, err := m.mgr.GetDataset(eType, targetWorkspace, name)
 	if err == nil {
 		msg := fmt.Sprintf("Dataset %v/%v already exists. Please delete it first and try again.", targetWorkspace, name)
 		return nil, errors.NewStatus(409, msg)
 	}
 
-	source := m.GetDataset(workspace, name, master)
+	source := m.GetDataset(eType, workspace, name, master)
 	if source == nil {
 		msg := fmt.Sprintf("Probably dataset %v/%v doesn't exist", workspace, name)
 		return nil, errors.NewStatus(404, msg)
 	}
 
-	ds, err := m.NewDataset(targetWorkspace, name, master)
+	ds, err := m.NewDataset(eType, workspace, name, master)
 	if err != nil {
 		return nil, err
 	}
@@ -125,12 +125,14 @@ func (m *Manager) ForkDataset(workspace, name, targetWorkspace string, master io
 	return ds, nil
 }
 
-func (m *Manager) DeleteDataset(workspace, name string, master io.PlukClient, force bool) error {
-	ds, err := m.mgr.GetDataset(workspace, name)
+func (m *Manager) DeleteDataset(eType, workspace, name string, master io.PlukClient, force bool) error {
+	ds, err := m.mgr.GetDataset(eType, workspace, name)
 	if err != nil {
 		return errors.NewStatus(http.StatusNotFound, fmt.Sprintf("Dataset %v not found: %v", name, err))
 	}
-	dsvs, err := m.mgr.ListDatasetVersions(db.DatasetVersion{Name: name, Workspace: workspace})
+	dsvs, err := m.mgr.ListDatasetVersions(
+		db.DatasetVersion{Name: name, Workspace: workspace, Type: eType},
+	)
 	if err != nil {
 		return err
 	}
@@ -147,7 +149,7 @@ func (m *Manager) DeleteDataset(workspace, name string, master io.PlukClient, fo
 	}
 
 	if utils.HasMasters() && master != nil {
-		master.DeleteDataset(workspace, name, force)
+		master.DeleteEntity(ds.Type, workspace, name, force)
 	}
 
 	if force {

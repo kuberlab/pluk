@@ -31,7 +31,7 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 
 	if utils.HasMasters() && masterSave {
 		// TODO: decide whether it can go in async
-		d.MasterClient.SaveFileStructure(structure, d.Workspace, d.Name, version, create, publish)
+		d.MasterClient.SaveFileStructure(structure, d.Type, d.Workspace, d.Name, version, create, publish)
 	}
 	logrus.Infof("Done saving %v/%v:%v.", d.Workspace, d.Name, version)
 
@@ -84,7 +84,7 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 	// 6. Generate insert query for file_chunks connections
 	// 7. Batch insert file_chunks
 	for _, f := range structure.Files {
-		if err = SaveFile(tx, d.Workspace, d.Name, version, f); err != nil {
+		if err = SaveFile(tx, d.Type, d.Workspace, d.Name, version, f); err != nil {
 			return err
 		}
 	}
@@ -92,7 +92,7 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 }
 
 func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
-	dsvOld, err := tx.GetDatasetVersion(dsv.Workspace, dsv.Name, dsv.Version)
+	dsvOld, err := tx.GetDatasetVersion(dsv.Type, dsv.Workspace, dsv.Name, dsv.Version)
 	if err != nil {
 		err = nil
 		errD := tx.CreateDatasetVersion(dsv)
@@ -120,7 +120,7 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 	return nil
 }
 
-func SaveFile(tx db.DataMgr, ws, dataset, version string, f *types.HashedFile) error {
+func SaveFile(tx db.DataMgr, eType, ws, dataset, version string, f *types.HashedFile) error {
 	var fPath = f.Path
 	var err error
 	//if !strings.HasPrefix(fPath, "/") {
@@ -133,7 +133,7 @@ func SaveFile(tx db.DataMgr, ws, dataset, version string, f *types.HashedFile) e
 		Workspace:   ws,
 		DatasetName: dataset,
 	}
-	if existing, errD := tx.GetFile(ws, dataset, fPath, version); errD != nil {
+	if existing, errD := tx.GetFile(ws, dataset, eType, fPath, version); errD != nil {
 		// Create
 		err = tx.CreateFile(fileDB)
 		if err != nil {
@@ -210,7 +210,7 @@ func (d *Dataset) TarSize() (int64, error) {
 }
 
 func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err error) {
-	_, err = d.mgr.GetDatasetVersion(d.Workspace, d.Name, version)
+	_, err = d.mgr.GetDatasetVersion(d.Type, d.Workspace, d.Name, version)
 
 	if err == nil {
 		fs, err = d.GetFSFromDB(version)
@@ -231,7 +231,7 @@ func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err 
 }
 
 func (d *Dataset) getFSStructureFromMaster(version string) (*plukio.ChunkedFileFS, error) {
-	fs, err := d.MasterClient.GetFSStructure(d.Workspace, d.Name, version)
+	fs, err := d.MasterClient.GetFSStructure(d.Type, d.Workspace, d.Name, version)
 
 	if err != nil {
 		return nil, err
@@ -287,7 +287,9 @@ func (d *Dataset) CheckVersion(version string) (bool, error) {
 }
 
 func (d *Dataset) Versions() ([]types.Version, error) {
-	dsvs, err := d.mgr.ListDatasetVersions(db.DatasetVersion{Workspace: d.Workspace, Name: d.Name})
+	dsvs, err := d.mgr.ListDatasetVersions(
+		db.DatasetVersion{Workspace: d.Workspace, Name: d.Name, Type: d.Type},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -300,10 +302,11 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 			CreatedAt: dsv.CreatedAt,
 			Editing:   dsv.Editing,
 			Message:   dsv.Message,
+			Type:      dsv.Type,
 		}
 	}
 	if utils.HasMasters() {
-		vList, err := d.MasterClient.ListVersions(d.Workspace, d.Name)
+		vList, err := d.MasterClient.ListVersions(d.Type, d.Workspace, d.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -322,7 +325,7 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 }
 
 func (d *Dataset) DeleteVersion(version string, force bool) error {
-	dsv, err := d.mgr.GetDatasetVersion(d.Workspace, d.Name, version)
+	dsv, err := d.mgr.GetDatasetVersion(d.Type, d.Workspace, d.Name, version)
 	if err != nil {
 		return errors.NewStatus(http.StatusNotFound, fmt.Sprintf("Version %v not found", version))
 	}
@@ -346,7 +349,7 @@ func (d *Dataset) CommitVersion(version string, message string) (*db.DatasetVers
 		return nil, err
 	}
 
-	return d.mgr.CommitVersion(d.Workspace, d.Name, version, message)
+	return d.mgr.CommitVersion(d.Type, d.Workspace, d.Name, version, message)
 }
 
 func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion string) (*db.DatasetVersion, error) {
@@ -392,7 +395,7 @@ func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion string)
 			Size:        f.Size,
 			Path:        f.Path,
 		}
-		if existing, errD := tx.GetFile(target.Workspace, target.Name, f.Path, targetVersion); errD != nil {
+		if existing, errD := tx.GetFile(target.Workspace, target.Name, target.Type, f.Path, targetVersion); errD != nil {
 			// Create
 			err = tx.CreateFile(newF)
 			if err != nil {

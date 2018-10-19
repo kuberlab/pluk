@@ -52,6 +52,7 @@ type plukeFSCmd struct {
 	version    string
 	server     string
 	secret     string
+	dsType     string
 }
 
 func newPlukeFSCmd() *cobra.Command {
@@ -84,6 +85,8 @@ func newPlukeFSCmd() *cobra.Command {
 					plukeFS.secret = value
 				case "mountPoint":
 					plukeFS.mountPoint = value
+				case "type":
+					plukeFS.dsType = value
 				default:
 					logrus.Errorf("Unrecognized option: %v", name)
 					return
@@ -139,6 +142,7 @@ func (cmd *plukeFSCmd) run() {
 	utils.PrintEnvInfo()
 
 	plukfs, err := fuse.NewPlukFS(
+		cmd.dsType,
 		cmd.workspace,
 		cmd.dataset,
 		cmd.version,

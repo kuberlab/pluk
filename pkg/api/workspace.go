@@ -57,7 +57,7 @@ func (api *API) checkDataset(req *restful.Request, resp *restful.Response) {
 	if u == "" && utils.HasMasters() {
 		// Request master.
 		masters := plukclient.NewMasterClientFromHeaders(req.Request.Header)
-		ds, err := masters.CheckDataset(workspace, dataset)
+		ds, err := masters.CheckEntity(currentType(req), workspace, dataset)
 		if err != nil {
 			WriteError(resp, err)
 			return

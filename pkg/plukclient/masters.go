@@ -92,9 +92,9 @@ func (c *MultiMasterClient) CheckWorkspace(workspace string) (ws *types.Workspac
 	return nil, err
 }
 
-func (c *MultiMasterClient) CheckDataset(workspace, dataset string) (ds *types.Dataset, err error) {
+func (c *MultiMasterClient) CheckEntity(entityType, workspace, dataset string) (ds *types.Dataset, err error) {
 	for _, cl := range c.baseClients {
-		ds, err = cl.CheckDataset(workspace, dataset)
+		ds, err = cl.CheckEntity(entityType, workspace, dataset)
 		if err != nil {
 			continue
 		}
@@ -103,14 +103,14 @@ func (c *MultiMasterClient) CheckDataset(workspace, dataset string) (ds *types.D
 	return nil, err
 }
 
-func (c *MultiMasterClient) ListDatasets(workspace string) (res *types.DataSetList, err error) {
+func (c *MultiMasterClient) ListEntities(entityType, workspace string) (res *types.DataSetList, err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
 		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return nil, err
 		}
-		res, err = cl.ListDatasets(workspace)
+		res, err = cl.ListEntities(entityType, workspace)
 		if err != nil {
 			continue
 		}
@@ -119,14 +119,14 @@ func (c *MultiMasterClient) ListDatasets(workspace string) (res *types.DataSetLi
 	return nil, err
 }
 
-func (c *MultiMasterClient) ListVersions(workspace, datasetName string) (res *types.VersionList, err error) {
+func (c *MultiMasterClient) ListVersions(entityType, workspace, datasetName string) (res *types.VersionList, err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
 		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return nil, err
 		}
-		res, err = cl.ListVersions(workspace, datasetName)
+		res, err = cl.ListVersions(entityType, workspace, datasetName)
 		if err != nil {
 			continue
 		}
@@ -146,14 +146,14 @@ func (c *MultiMasterClient) DownloadChunk(hash string) (reader io.ReadCloser, er
 	return nil, err
 }
 
-func (c *MultiMasterClient) GetFSStructure(workspace, name, version string) (fs *plukio.ChunkedFileFS, err error) {
+func (c *MultiMasterClient) GetFSStructure(entityType, workspace, name, version string) (fs *plukio.ChunkedFileFS, err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
 		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return nil, err
 		}
-		fs, err = cl.GetFSStructure(workspace, name, version)
+		fs, err = cl.GetFSStructure(entityType, workspace, name, version)
 		if err != nil {
 			continue
 		}
@@ -162,14 +162,14 @@ func (c *MultiMasterClient) GetFSStructure(workspace, name, version string) (fs 
 	return nil, err
 }
 
-func (c *MultiMasterClient) DownloadDataset(workspace, name, version string, w io.Writer) (err error) {
+func (c *MultiMasterClient) DownloadEntity(entityType, workspace, name, version string, w io.Writer) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
 		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return err
 		}
-		err = cl.DownloadDataset(workspace, name, version, w)
+		err = cl.DownloadEntity(entityType, workspace, name, version, w)
 		if err != nil {
 			continue
 		}
@@ -178,14 +178,14 @@ func (c *MultiMasterClient) DownloadDataset(workspace, name, version string, w i
 	return err
 }
 
-func (c *MultiMasterClient) DatasetTarsize(workspace, name, version string) (res int64, err error) {
+func (c *MultiMasterClient) EntityTarSize(entityType, workspace, name, version string) (res int64, err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
 		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return 0, err
 		}
-		res, err = cl.DatasetTarsize(workspace, name, version)
+		res, err = cl.EntityTarSize(entityType, workspace, name, version)
 		if err != nil {
 			continue
 		}
@@ -210,14 +210,14 @@ func (c *MultiMasterClient) SaveChunk(hash string, data []byte) (err error) {
 	return err
 }
 
-func (c *MultiMasterClient) SaveFileStructure(structure types.FileStructure, workspace, name, version string, create bool, publish bool) (err error) {
+func (c *MultiMasterClient) SaveFileStructure(structure types.FileStructure, entityType, workspace, name, version string, create bool, publish bool) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
 		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return err
 		}
-		err = cl.SaveFileStructure(structure, workspace, name, version, create, publish)
+		err = cl.SaveFileStructure(structure, entityType, workspace, name, version, create, publish)
 		if err != nil {
 			logrus.Errorf("Failed save FS to %v", base)
 		}
@@ -242,14 +242,14 @@ func (c *MultiMasterClient) CheckChunk(hash string) (res *types.ChunkCheck, err 
 	return nil, err
 }
 
-func (c *MultiMasterClient) DeleteDataset(workspace, name string, force bool) (err error) {
+func (c *MultiMasterClient) DeleteEntity(entityType, workspace, name string, force bool) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
 		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return err
 		}
-		err = cl.DeleteDataset(workspace, name, force)
+		err = cl.DeleteEntity(entityType, workspace, name, force)
 		if err != nil {
 			continue
 		}
@@ -258,14 +258,14 @@ func (c *MultiMasterClient) DeleteDataset(workspace, name string, force bool) (e
 	return err
 }
 
-func (c *MultiMasterClient) DeleteVersion(workspace, name, version string) (err error) {
+func (c *MultiMasterClient) DeleteVersion(entityType, workspace, name, version string) (err error) {
 	var cl plukio.PlukClient
 	for _, base := range c.Masters {
 		cl, err = c.initBaseClient(base)
 		if err != nil {
 			return err
 		}
-		err = cl.DeleteVersion(workspace, name, version)
+		err = cl.DeleteVersion(entityType, workspace, name, version)
 		if err != nil {
 			continue
 		}

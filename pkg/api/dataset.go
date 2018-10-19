@@ -36,7 +36,7 @@ func (api *API) downloadDataset(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name, master)
+	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
@@ -69,9 +69,10 @@ func (api *API) downloadDataset(req *restful.Request, resp *restful.Response) {
 func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
+	eType := currentType(req)
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name, master)
+	dataset := api.ds.GetDataset(workspace, name, eType, master)
 	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
@@ -86,7 +87,7 @@ func (api *API) datasetTarSize(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name, master)
+	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
@@ -113,7 +114,7 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name, master)
+	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
@@ -134,7 +135,7 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	master := api.masterClient(req)
 
-	err := api.ds.DeleteDataset(workspace, name, master, true)
+	err := api.ds.DeleteDataset(currentType(req), workspace, name, master, true)
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -162,7 +163,7 @@ func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name, master)
+	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
@@ -240,7 +241,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	dataset, err := api.ds.NewDataset(workspace, name, master)
+	dataset, err := api.ds.NewDataset(currentType(req), workspace, name, master)
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -266,7 +267,7 @@ func (api *API) versions(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name, master)
+	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
@@ -291,7 +292,7 @@ func (api *API) createDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name, master)
+	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset != nil {
 		WriteStatusError(resp, http.StatusConflict, fmt.Errorf("Dataset '%v' already exists", name))
 		return
@@ -300,7 +301,7 @@ func (api *API) createDataset(req *restful.Request, resp *restful.Response) {
 	// Wait
 	gc.WaitGCCompleted()
 
-	if ds, err := api.ds.NewDataset(workspace, name, master); err != nil {
+	if ds, err := api.ds.NewDataset(currentType(req), workspace, name, master); err != nil {
 		WriteError(resp, err)
 		return
 	} else {
@@ -314,7 +315,7 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 	targetWS := req.PathParameter("targetWorkspace")
 	master := api.masterClient(req)
 
-	dataset, err := api.ds.ForkDataset(workspace, name, targetWS, master)
+	dataset, err := api.ds.ForkDataset(currentType(req), workspace, name, targetWS, master)
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -330,7 +331,7 @@ func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
 	targetVersion := req.PathParameter("targetVersion")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name, master)
+	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
@@ -360,11 +361,11 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 	// Wait
 	gc.WaitGCCompleted()
 
-	dataset := api.ds.GetDataset(workspace, name, master)
+	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
 		// Create
 		var err error
-		dataset, err = api.ds.NewDataset(workspace, name, master)
+		dataset, err = api.ds.NewDataset(currentType(req), workspace, name, master)
 		if err != nil {
 			WriteError(resp, err)
 			return
@@ -398,6 +399,7 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 		Workspace: workspace,
 		Editing:   true,
 		Message:   message,
+		Type:      currentType(req),
 	}
 
 	if err := datasets.SaveDatasetVersion(api.mgr, dsv); err != nil {
@@ -415,7 +417,7 @@ func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {
 	message := req.QueryParameter("message")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name, master)
+	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
 		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
 		return
@@ -431,7 +433,7 @@ func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {
 }
 
 func (api *API) allDatasets(req *restful.Request, resp *restful.Response) {
-	sets := api.ds.ListDatasets("")
+	sets := api.ds.ListDatasets(currentType(req), "")
 	ds := types.DataSetList{}
 	for _, d := range sets {
 		ds.Datasets = append(ds.Datasets, types.Dataset{Name: d.Name, Workspace: d.Workspace})
@@ -446,10 +448,13 @@ func (api *API) allDatasets(req *restful.Request, resp *restful.Response) {
 func (api *API) datasets(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 
-	sets := api.ds.ListDatasets(workspace)
+	sets := api.ds.ListDatasets(currentType(req), workspace)
 	ds := types.DataSetList{}
 	for _, d := range sets {
-		ds.Datasets = append(ds.Datasets, types.Dataset{Name: d.Name, Workspace: d.Workspace})
+		ds.Datasets = append(
+			ds.Datasets,
+			types.Dataset{Name: d.Name, Workspace: d.Workspace, Type: d.Type},
+		)
 	}
 	if len(ds.Datasets) == 0 {
 		ds.Datasets = make([]types.Dataset, 0)

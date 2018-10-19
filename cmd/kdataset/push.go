@@ -23,13 +23,14 @@ import (
 type pushCmd struct {
 	chunkSize   int
 	concurrency int64
+	dsType      string
+	name        string
+	version     string
+	workspace   string
 	create      bool
 	force       bool
-	name        string
 	publish     bool
-	version     string
 	websocket   bool
-	workspace   string
 }
 
 func NewPushCmd() *cobra.Command {
@@ -70,6 +71,13 @@ func NewPushCmd() *cobra.Command {
 		"c",
 		int64(runtime.NumCPU()),
 		"Number of concurrent request to server.",
+	)
+	f.StringVarP(
+		&push.dsType,
+		"type",
+		"",
+		"dataset",
+		"dataset type",
 	)
 	f.BoolVarP(
 		&push.create,
@@ -128,7 +136,7 @@ func (cmd *pushCmd) run() error {
 		return nil
 	}
 
-	if _, err := client.CheckDataset(cmd.workspace, cmd.name); err != nil && !cmd.create && !cmd.force {
+	if _, err := client.CheckEntity(cmd.dsType, cmd.workspace, cmd.name); err != nil && !cmd.create && !cmd.force {
 		if strings.Contains(err.Error(), "not found") {
 			logrus.Fatalf("Dataset '%v' doesn't exist. Consider using --create option to automatically create dataset or use --force.", cmd.name)
 		} else {
@@ -277,6 +285,7 @@ func (cmd *pushCmd) run() error {
 	logrus.Debugf("File structure: %v", structure)
 	if err = client.SaveFileStructure(
 		structure,
+		cmd.dsType,
 		cmd.workspace,
 		cmd.name,
 		cmd.version,

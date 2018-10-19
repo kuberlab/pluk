@@ -34,6 +34,7 @@ func (d DataSetList) Swap(i, j int) {
 type Dataset struct {
 	Workspace string `json:"workspace"`
 	Name      string `json:"name"`
+	Type      string `json:"type"`
 }
 
 type VersionList struct {
@@ -71,6 +72,7 @@ type Version struct {
 	UpdatedAt types.Time `json:"updated_at"`
 	SizeBytes int64      `json:"size_bytes"`
 	Message   string     `json:"message,omitempty"`
+	Type      string     `json:"type"`
 	Editing   bool       `json:"editing"`
 }
 

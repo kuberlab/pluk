@@ -160,8 +160,8 @@ func (c *Client) CheckWorkspace(workspace string) (*types.Workspace, error) {
 	return res, err
 }
 
-func (c *Client) CheckDataset(workspace, dataset string) (*types.Dataset, error) {
-	u := fmt.Sprintf("/workspaces/%v/datasets/%v", workspace, dataset)
+func (c *Client) CheckEntity(entityType, workspace, name string) (*types.Dataset, error) {
+	u := fmt.Sprintf("/workspaces/%v/%v/%v", workspace, entityType, name)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
@@ -177,8 +177,8 @@ func (c *Client) CheckDataset(workspace, dataset string) (*types.Dataset, error)
 	return res, err
 }
 
-func (c *Client) ListDatasets(workspace string) (*types.DataSetList, error) {
-	u := fmt.Sprintf("/datasets/%v", workspace)
+func (c *Client) ListEntities(entityType, workspace string) (*types.DataSetList, error) {
+	u := fmt.Sprintf("/%v/%v", entityType, workspace)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
@@ -194,8 +194,8 @@ func (c *Client) ListDatasets(workspace string) (*types.DataSetList, error) {
 	return res, err
 }
 
-func (c *Client) ListVersions(workspace, datasetName string) (*types.VersionList, error) {
-	u := fmt.Sprintf("/datasets/%v/%v/versions", workspace, datasetName)
+func (c *Client) ListVersions(entityType, workspace, datasetName string) (*types.VersionList, error) {
+	u := fmt.Sprintf("/%v/%v/%v/versions", entityType, workspace, datasetName)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
@@ -211,8 +211,8 @@ func (c *Client) ListVersions(workspace, datasetName string) (*types.VersionList
 	return res, err
 }
 
-func (c *Client) SaveFileStructure(structure types.FileStructure, workspace, name, version string, create bool, publish bool) error {
-	u := fmt.Sprintf("/datasets/%v/%v/%v", workspace, name, version)
+func (c *Client) SaveFileStructure(structure types.FileStructure, entityType, workspace, name, version string, create bool, publish bool) error {
+	u := fmt.Sprintf("/%v/%v/%v/%v", entityType, workspace, name, version)
 	q := url.Values{}
 
 	if create {
@@ -276,8 +276,8 @@ func (c *Client) DownloadChunk(hash string) (io.ReadCloser, error) {
 	return resp.Body, err
 }
 
-func (c *Client) GetFSStructure(workspace, name, version string) (*plukio.ChunkedFileFS, error) {
-	u := fmt.Sprintf("/datasets/%v/%v/versions/%v/fs", workspace, name, version)
+func (c *Client) GetFSStructure(entityType, workspace, name, version string) (*plukio.ChunkedFileFS, error) {
+	u := fmt.Sprintf("/%v/%v/%v/versions/%v/fs", entityType, workspace, name, version)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
@@ -342,8 +342,8 @@ func (c *Client) Close() error {
 	return nil
 }
 
-func (c *Client) DownloadDataset(workspace, name, version string, w io.Writer) error {
-	u := fmt.Sprintf("/datasets/%v/%v/versions/%v", workspace, name, version)
+func (c *Client) DownloadEntity(entityType, workspace, name, version string, w io.Writer) error {
+	u := fmt.Sprintf("/%v/%v/%v/versions/%v", entityType, workspace, name, version)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
@@ -357,8 +357,8 @@ func (c *Client) DownloadDataset(workspace, name, version string, w io.Writer) e
 	return nil
 }
 
-func (c *Client) DatasetTarsize(workspace, name, version string) (int64, error) {
-	u := fmt.Sprintf("/datasets/%v/%v/versions/%v/tarsize", workspace, name, version)
+func (c *Client) EntityTarSize(entityType, workspace, name, version string) (int64, error) {
+	u := fmt.Sprintf("/%v/%v/%v/versions/%v/tarsize", entityType, workspace, name, version)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
@@ -374,8 +374,8 @@ func (c *Client) DatasetTarsize(workspace, name, version string) (int64, error) 
 	return strconv.ParseInt(out, 10, 64)
 }
 
-func (c *Client) DeleteDataset(workspace, name string, force bool) error {
-	u := fmt.Sprintf("/datasets/%v/%v", workspace, name)
+func (c *Client) DeleteEntity(entityType, workspace, name string, force bool) error {
+	u := fmt.Sprintf("/%v/%v/%v", entityType, workspace, name)
 
 	if force {
 		u = u + "?force=true"
@@ -393,8 +393,8 @@ func (c *Client) DeleteDataset(workspace, name string, force bool) error {
 	return nil
 }
 
-func (c *Client) DeleteVersion(workspace, name, version string) error {
-	u := fmt.Sprintf("/datasets/%v/%v/versions/%v", workspace, name, version)
+func (c *Client) DeleteVersion(entityType, workspace, name, version string) error {
+	u := fmt.Sprintf("/%v/%v/%v/versions/%v", entityType, workspace, name, version)
 
 	req, err := c.NewRequest("DELETE", u, nil)
 	if err != nil {

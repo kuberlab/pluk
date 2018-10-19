@@ -24,12 +24,17 @@ type PlukeFS struct {
 	version   string
 	server    string
 	secret    string
+	dsType    string
 	client    io.PlukClient
 	lock      sync.RWMutex
 	innerFS   *io.ChunkedFileFS
 }
 
-func NewPlukFS(workspace, dataset, version, server, secret string) (pathfs.FileSystem, error) {
+func NewPlukFS(dsType, workspace, dataset, version, server, secret string) (pathfs.FileSystem, error) {
+	if dsType == "" {
+		dsType = "dataset"
+	}
+
 	fs := &PlukeFS{
 		FileSystem: pathfs.NewDefaultFileSystem(),
 		workspace:  workspace,
@@ -37,6 +42,7 @@ func NewPlukFS(workspace, dataset, version, server, secret string) (pathfs.FileS
 		version:    version,
 		server:     server,
 		secret:     secret,
+		dsType:     dsType,
 	}
 
 	client, err := plukclient.NewClient(server, &plukclient.AuthOpts{Workspace: workspace, Secret: secret})
@@ -44,7 +50,7 @@ func NewPlukFS(workspace, dataset, version, server, secret string) (pathfs.FileS
 		return nil, err
 	}
 	fs.client = client
-	innerFS, err := client.GetFSStructure(workspace, dataset, version)
+	innerFS, err := client.GetFSStructure(dsType, workspace, dataset, version)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +230,7 @@ func (fs *PlukeFS) tryChangeDataset(filename string) (file nodefs.File, code fus
 
 	// Change dataset only if current dataset/version differs from target.
 	if dataset != fs.dataset || version != fs.version {
-		newFS, err := fs.client.GetFSStructure(fs.workspace, dataset, version)
+		newFS, err := fs.client.GetFSStructure(fs.dsType, fs.workspace, dataset, version)
 		if err != nil {
 			msg := fmt.Sprintf("Failed to change FS to %v:%v: %v", dataset, version, err)
 			logrus.Error(msg)

@@ -19,6 +19,7 @@ type pullCmd struct {
 	name      string
 	version   string
 	output    string
+	dsType    string
 }
 
 func NewPullCmd() *cobra.Command {
@@ -57,6 +58,13 @@ func NewPullCmd() *cobra.Command {
 		"",
 		"Output filename",
 	)
+	f.StringVarP(
+		&pull.dsType,
+		"type",
+		"",
+		"dataset",
+		"dataset type",
+	)
 
 	return cmd
 }
@@ -74,7 +82,7 @@ func (cmd *pullCmd) run() (err error) {
 	}
 	defer f.Close()
 
-	size, err := client.DatasetTarsize(cmd.workspace, cmd.name, cmd.version)
+	size, err := client.EntityTarSize(cmd.dsType, cmd.workspace, cmd.name, cmd.version)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -87,7 +95,7 @@ func (cmd *pullCmd) run() (err error) {
 	bar.ShowSpeed = true
 	bar.Start()
 
-	err = client.DownloadDataset(cmd.workspace, cmd.name, cmd.version, w)
+	err = client.DownloadEntity(cmd.dsType, cmd.workspace, cmd.name, cmd.version, w)
 	if err != nil {
 		bar.Finish()
 		logrus.Fatal(err)
