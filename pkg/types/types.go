@@ -16,19 +16,19 @@ import (
 type Workspace dealerclient.Workspace
 
 type DataSetList struct {
-	Datasets []Dataset `json:"datasets"`
+	Items []Dataset `json:"items"`
 }
 
 func (d DataSetList) Len() int {
-	return len(d.Datasets)
+	return len(d.Items)
 }
 
 func (d DataSetList) Less(i, j int) bool {
-	return d.Datasets[i].Name < d.Datasets[j].Name
+	return d.Items[i].Name < d.Items[j].Name
 }
 
 func (d DataSetList) Swap(i, j int) {
-	d.Datasets[i], d.Datasets[j] = d.Datasets[j], d.Datasets[i]
+	d.Items[i], d.Items[j] = d.Items[j], d.Items[i]
 }
 
 type Dataset struct {

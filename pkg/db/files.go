@@ -10,15 +10,14 @@ type FileMgr interface {
 
 type File struct {
 	BaseModel
-	ID               uint    `sql:"AUTO_INCREMENT" gorm:"primary_key"`
-	DatasetVersionID uint    `json:"dataset_version_id" gorm:"index:idx_dataset_id"`
-	Path             string  `json:"path" gorm:"index:idx_ws_name_version_path_type"`
-	Size             int64   `json:"size"`
-	DatasetName      string  `json:"dataset_name" gorm:"index:idx_ws_name_version_path_type"`
-	DatasetType      string  `json:"dataset_type" gorm:"index:idx_ws_name_version_path_type"`
-	Workspace        string  `json:"workspace" gorm:"index:idx_ws_name_version_path_type"`
-	Version          string  `json:"version" gorm:"index:idx_ws_name_version_path_type"`
-	Chunks           []Chunk `gorm:"-"`
+	ID          uint    `sql:"AUTO_INCREMENT" gorm:"primary_key"`
+	Path        string  `json:"path" gorm:"index:idx_ws_name_version_path_type"`
+	Size        int64   `json:"size"`
+	DatasetName string  `json:"dataset_name" gorm:"index:idx_ws_name_version_path_type"`
+	DatasetType string  `json:"dataset_type" gorm:"index:idx_ws_name_version_path_type"`
+	Workspace   string  `json:"workspace" gorm:"index:idx_ws_name_version_path_type"`
+	Version     string  `json:"version" gorm:"index:idx_ws_name_version_path_type"`
+	Chunks      []Chunk `gorm:"-"`
 }
 
 func (mgr *DatabaseMgr) CreateFile(file *File) error {

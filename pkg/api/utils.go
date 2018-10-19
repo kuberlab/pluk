@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -62,6 +63,10 @@ func WrapLogger(f http.Handler) http.Handler {
 type ResponseError struct {
 	Status  int    `json:"status"`
 	Message string `json:"message"`
+}
+
+func EntityNotFoundError(req *restful.Request, name string) error {
+	return errors.NewStatus(http.StatusNotFound, fmt.Sprintf("%v '%v' not found", strings.Title(currentType(req)), name))
 }
 
 func WriteErrorString(resp *restful.Response, status int, message string) {
@@ -278,6 +283,24 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 	}
 
 	filter.ProcessFilter(req, resp)
+}
+
+func setCurrentType(req *restful.Request, resp *restful.Response, filter *restful.FilterChain) {
+	eType, ok := req.PathParameters()["entityType"]
+	if !ok {
+		// Skip
+		filter.ProcessFilter(req, resp)
+		return
+	}
+
+	_, ok = plukclient.AllowedTypes[eType]
+	if ok {
+		req.SetAttribute("entityType", eType)
+		filter.ProcessFilter(req, resp)
+		return
+	} else {
+		NotFoundHandler().ServeHTTP(resp.ResponseWriter, req.Request)
+	}
 }
 
 func currentType(req *restful.Request) string {

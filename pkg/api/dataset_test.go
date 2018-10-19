@@ -29,7 +29,7 @@ func TestListDatasets(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := types.DataSetList{
-		Datasets: []types.Dataset{types.Dataset{Type: "dataset", Workspace: "workspace", Name: "dataset"}},
+		Items: []types.Dataset{types.Dataset{Type: "dataset", Workspace: "workspace", Name: "dataset"}},
 	}
 	utils.Assert(want, datasets, t)
 }

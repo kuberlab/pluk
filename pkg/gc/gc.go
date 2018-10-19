@@ -126,7 +126,11 @@ func GoGC() {
 		return
 	}
 	for _, dsv := range deletedVersions {
-		if err = deleteDatasetVersion(tx, &db.Dataset{Workspace: dsv.Workspace, Name: dsv.Name}, dsv.Version); err != nil {
+		err = deleteDatasetVersion(
+			tx,
+			&db.Dataset{Workspace: dsv.Workspace, Name: dsv.Name, Type: dsv.Type}, dsv.Version,
+		)
+		if err != nil {
 			logrus.Error(err)
 			return
 		}
@@ -143,12 +147,12 @@ func GoGC() {
 
 func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) error {
 	// Delete all files within this repo
-	fileChunks, err := mgr.ListRelatedChunks(dataset.Workspace, dataset.Name, version)
+	fileChunks, err := mgr.ListRelatedChunks(dataset.Type, dataset.Workspace, dataset.Name, version)
 	if err != nil {
 		return err
 	}
 
-	rows, err := mgr.DeleteRelatedFiles(dataset.Workspace, dataset.Name, version)
+	rows, err := mgr.DeleteRelatedFiles(dataset.Type, dataset.Workspace, dataset.Name, version)
 	if err != nil {
 		return err
 	}
@@ -187,8 +191,8 @@ func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) e
 }
 
 func deleteDataset(mgr db.DataMgr, d *db.Dataset) {
-	sql := fmt.Sprintf("DELETE FROM dataset_versions WHERE workspace='%v' AND name='%v'", d.Workspace, d.Name)
-	err := mgr.DB().Exec(sql).Error
+	sql := fmt.Sprintf("DELETE FROM dataset_versions WHERE workspace=? AND name=? AND type=?")
+	err := mgr.DB().Exec(sql, d.Workspace, d.Name, d.Type).Error
 	if err != nil {
 		logrus.Error(err)
 		return
@@ -242,7 +246,7 @@ func gcFromMasters(mgr db.DataMgr) {
 			return
 		}
 		masterDatasetMap := make(map[string]bool)
-		for _, ds := range remoteDatasets.Datasets {
+		for _, ds := range remoteDatasets.Items {
 			masterDatasetMap[ds.Name] = true
 		}
 		// Check if master has specific dataset on slave.
@@ -256,7 +260,7 @@ func gcFromMasters(mgr db.DataMgr) {
 	}
 
 	for _, candidate := range candidates {
-		logrus.Infof("[GC] Delete dataset %v/%v from slave", candidate.Workspace, candidate.Name)
+		logrus.Infof("[GC] Delete %v %v/%v from slave", candidate.Type, candidate.Workspace, candidate.Name)
 		if err = dsManager.DeleteDataset(candidate.Type, candidate.Workspace, candidate.Name, plukclient.NewInternalMasterClient(), false); err != nil {
 			logrus.Error(err)
 			return

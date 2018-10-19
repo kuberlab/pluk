@@ -23,7 +23,7 @@ type Dataset struct {
 }
 
 func (d *Dataset) Save(structure types.FileStructure, version string, comment string, create, publish, masterSave bool) error {
-	logrus.Infof("Saving data for %v/%v:%v...", d.Workspace, d.Name, version)
+	logrus.Infof("Saving %v for %v/%v:%v...", d.Type, d.Workspace, d.Name, version)
 
 	if err := d.SaveFSToDB(structure, version); err != nil {
 		return err
@@ -55,7 +55,14 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 		fileSizeMap[f.Path] = f.Size
 	}
 
-	files, err := tx.ListFiles(db.File{Workspace: d.Workspace, Version: version, DatasetName: d.Name})
+	files, err := tx.ListFiles(
+		db.File{
+			DatasetType: d.Type,
+			Workspace:   d.Workspace,
+			Version:     version,
+			DatasetName: d.Name,
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -70,6 +77,7 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 		Version:   version,
 		Name:      d.Name,
 		Workspace: d.Workspace,
+		Type:      d.Type,
 	}
 	if err := SaveDatasetVersion(tx, dsv); err != nil {
 		return err
@@ -84,7 +92,7 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 	// 6. Generate insert query for file_chunks connections
 	// 7. Batch insert file_chunks
 	for _, f := range structure.Files {
-		if err = SaveFile(tx, d.Type, d.Workspace, d.Name, version, f); err != nil {
+		if err = SaveFile(tx, dsv, f); err != nil {
 			return err
 		}
 	}
@@ -120,7 +128,7 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 	return nil
 }
 
-func SaveFile(tx db.DataMgr, eType, ws, dataset, version string, f *types.HashedFile) error {
+func SaveFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFile) error {
 	var fPath = f.Path
 	var err error
 	//if !strings.HasPrefix(fPath, "/") {
@@ -129,11 +137,12 @@ func SaveFile(tx db.DataMgr, eType, ws, dataset, version string, f *types.Hashed
 	fileDB := &db.File{
 		Size:        int64(f.Size),
 		Path:        fPath,
-		Version:     version,
-		Workspace:   ws,
-		DatasetName: dataset,
+		Version:     dsv.Version,
+		Workspace:   dsv.Workspace,
+		DatasetName: dsv.Name,
+		DatasetType: dsv.Type,
 	}
-	if existing, errD := tx.GetFile(ws, dataset, eType, fPath, version); errD != nil {
+	if existing, errD := tx.GetFile(dsv.Workspace, dsv.Name, dsv.Type, fPath, dsv.Version); errD != nil {
 		// Create
 		err = tx.CreateFile(fileDB)
 		if err != nil {
@@ -270,7 +279,7 @@ func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error
 }
 
 func (d *Dataset) GetFSFromDB(version string) (*plukio.ChunkedFileFS, error) {
-	return d.mgr.GetFS(d.Workspace, d.Name, version)
+	return d.mgr.GetFS(d.Type, d.Workspace, d.Name, version)
 }
 
 func (d *Dataset) CheckVersion(version string) (bool, error) {
@@ -364,13 +373,20 @@ func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion string)
 	}()
 
 	// Clean target version
-	DeleteFiles(tx, target.Workspace, target.Name, targetVersion, "", false)
+	DeleteFiles(tx, target.Type, target.Workspace, target.Name, targetVersion, "", false)
 
-	files, err := tx.ListFiles(db.File{Workspace: d.Workspace, DatasetName: d.Name, Version: version})
+	files, err := tx.ListFiles(
+		db.File{
+			Workspace:   d.Workspace,
+			DatasetName: d.Name,
+			Version:     version,
+			DatasetType: d.Type,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
-	fileChunks, err := tx.ListRelatedChunks(d.Workspace, d.Name, version)
+	fileChunks, err := tx.ListRelatedChunks(d.Type, d.Workspace, d.Name, version)
 	if err != nil {
 		return nil, err
 	}
@@ -394,6 +410,7 @@ func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion string)
 			DatasetName: target.Name,
 			Size:        f.Size,
 			Path:        f.Path,
+			DatasetType: target.Type,
 		}
 		if existing, errD := tx.GetFile(target.Workspace, target.Name, target.Type, f.Path, targetVersion); errD != nil {
 			// Create
@@ -430,6 +447,7 @@ func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion string)
 		Size:      totalSize,
 		Name:      target.Name,
 		Workspace: target.Workspace,
+		Type:      target.Type,
 		Editing:   true,
 	}
 	err = SaveDatasetVersion(tx, dsv)

@@ -42,6 +42,19 @@ type AuthOpts struct {
 	InsecureSkipVerify bool
 }
 
+var AllowedTypes = map[string]bool{
+	"dataset": true,
+	"model":   true,
+}
+
+func AllowedTypesList() []string {
+	allowed := make([]string, 0)
+	for k := range AllowedTypes {
+		allowed = append(allowed, k)
+	}
+	return allowed
+}
+
 func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	base, err := url.Parse(baseURL)

@@ -30,7 +30,7 @@ func (api *API) fsReadDir(req *restful.Request, resp *restful.Response) {
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
 	fs, err := api.getFS(dataset, version)
@@ -57,7 +57,7 @@ func (api *API) fsReadFile(req *restful.Request, resp *restful.Response) {
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
 	fs, err := api.getFS(dataset, version)
@@ -104,11 +104,17 @@ func (api *API) findDatasetVersion(ds *datasets.Dataset, version string, allowEd
 	}
 
 	if !found {
-		return nil, errors.NewStatus(http.StatusNotFound, fmt.Sprintf("Dataset version not found: %v", version))
+		return nil, errors.NewStatus(
+			http.StatusNotFound,
+			fmt.Sprintf("%v version not found: %v", ds.Type, version),
+		)
 	}
 
 	if !vs.Editing && !allowEditing {
-		return nil, errors.NewStatus(http.StatusForbidden, "Dataset already committed")
+		return nil, errors.NewStatus(
+			http.StatusForbidden,
+			fmt.Sprintf("%v already committed", ds.Type),
+		)
 	}
 	return &vs, nil
 }
@@ -122,7 +128,7 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
 
@@ -155,7 +161,7 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 			tx.Commit()
 		}
 	}()
-	if err = datasets.DeleteFiles(tx, workspace, name, version, filepath, false); err != nil {
+	if err = datasets.DeleteFiles(tx, currentType(req), workspace, name, version, filepath, false); err != nil {
 		WriteError(resp, err)
 		return
 	}
@@ -187,7 +193,7 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
 
@@ -259,7 +265,10 @@ func (api *API) readAndSaveFile(req *restful.Request, resp *restful.Response) (f
 		// File exists, need overwrite
 		// TODO: overwrite
 		// Delete related chunks
-		if err = datasets.DeleteFiles(tx, workspace, name, version, filepath, true); err != nil {
+		err = datasets.DeleteFiles(
+			tx, currentType(req), workspace, name, version, filepath, true,
+		)
+		if err != nil {
 			return nil, err
 		}
 

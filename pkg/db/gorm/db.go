@@ -24,7 +24,7 @@ func InitFake(postCreate postCreateFunc, fname string) *gorm.DB {
 	if err != nil {
 		logrus.Panic("Error configure sqlite database: ", err)
 	}
-	db = db.LogMode(false)
+	db = db.LogMode(true)
 	db.SetLogger(gorm.Logger{mainDBLogger{}})
 	mainDB = db
 

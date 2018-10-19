@@ -92,31 +92,31 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 
 	// to cloud-dealer API
 	ws.Route(ws.GET("/workspaces/{workspace}").To(api.checkWorkspace))
-	ws.Route(ws.GET("/workspaces/{workspace}/dataset/{dataset}").To(api.checkDataset))
+	ws.Route(ws.GET("/workspaces/{workspace}/{entityType}/{dataset}").To(api.checkDataset))
 
-	// Datasets
-	ws.Route(ws.GET("/dataset").To(api.datasets))
-	ws.Route(ws.GET("/dataset/{workspace}").To(api.datasets))
-	ws.Route(ws.GET("/dataset/{workspace}/{name}").To(api.getDataset))
-	ws.Route(ws.POST("/dataset/{workspace}/{name}").To(api.createDataset))
-	ws.Route(ws.POST("/dataset/{workspace}/{name}/fork/{targetWorkspace}").To(api.forkDataset))
-	ws.Route(ws.DELETE("/dataset/{workspace}/{name}").To(api.deleteDataset))
-	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions").To(api.versions))
-	ws.Route(ws.POST("/dataset/{workspace}/{name}/versions/{version}").To(api.createVersion))
-	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions/{version}").To(api.downloadDataset))
-	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions/{version}/tarsize").To(api.datasetTarSize))
-	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions/{version}/fs").To(api.getDatasetFS))
-	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions/{version}/tree").To(api.fsReadDir))
-	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions/{version}/tree/{path:*}").To(api.fsReadDir))
-	ws.Route(ws.GET("/dataset/{workspace}/{name}/versions/{version}/raw/{path:*}").To(api.fsReadFile))
-	ws.Route(ws.POST("/dataset/{workspace}/{name}/versions/{version}/upload/{path:*}").To(api.uploadDatasetFile))
-	ws.Route(ws.DELETE("/dataset/{workspace}/{name}/versions/{version}/upload/{path:*}").To(api.deleteDatasetFile))
-	ws.Route(ws.POST("/dataset/{workspace}/{name}/versions/{version}/commit").To(api.commitVersion))
-	ws.Route(ws.POST("/dataset/{workspace}/{name}/versions/{version}/clone/{targetVersion}").To(api.cloneVersion))
-	ws.Route(ws.DELETE("/dataset/{workspace}/{name}/versions/{version}").To(api.deleteVersion))
+	// Items
+	ws.Route(ws.GET("/{entityType}").To(api.datasets))
+	ws.Route(ws.GET("/{entityType}/{workspace}").To(api.datasets))
+	ws.Route(ws.GET("/{entityType}/{workspace}/{name}").To(api.getDataset))
+	ws.Route(ws.GET("/{entityType}/{workspace}/{name}/versions/{version}").To(api.downloadDataset))
+	ws.Route(ws.POST("/{entityType}/{workspace}/{name}").To(api.createDataset))
+	ws.Route(ws.POST("/{entityType}/{workspace}/{name}/fork/{targetWorkspace}").To(api.forkDataset))
+	ws.Route(ws.DELETE("/{entityType}/{workspace}/{name}").To(api.deleteDataset))
+	ws.Route(ws.GET("/{entityType}/{workspace}/{name}/versions").To(api.versions))
+	ws.Route(ws.POST("/{entityType}/{workspace}/{name}/versions/{version}").To(api.createVersion))
+	ws.Route(ws.POST("/{entityType}/{workspace}/{name}/versions/{version}/clone/{targetVersion}").To(api.cloneVersion))
+	ws.Route(ws.POST("/{entityType}/{workspace}/{name}/versions/{version}/commit").To(api.commitVersion))
+	ws.Route(ws.GET("/{entityType}/{workspace}/{name}/versions/{version}/fs").To(api.getDatasetFS))
+	ws.Route(ws.DELETE("/{entityType}/{workspace}/{name}/versions/{version}").To(api.deleteVersion))
+	ws.Route(ws.GET("/{entityType}/{workspace}/{name}/versions/{version}/tarsize").To(api.datasetTarSize))
+	ws.Route(ws.GET("/{entityType}/{workspace}/{name}/versions/{version}/tree").To(api.fsReadDir))
+	ws.Route(ws.GET("/{entityType}/{workspace}/{name}/versions/{version}/tree/{path:*}").To(api.fsReadDir))
+	ws.Route(ws.GET("/{entityType}/{workspace}/{name}/versions/{version}/raw/{path:*}").To(api.fsReadFile))
+	ws.Route(ws.POST("/{entityType}/{workspace}/{name}/versions/{version}/upload/{path:*}").To(api.uploadDatasetFile))
+	ws.Route(ws.DELETE("/{entityType}/{workspace}/{name}/versions/{version}/upload/{path:*}").To(api.deleteDatasetFile))
 
 	// Save file structure for version.
-	ws.Route(ws.POST("/dataset/{workspace}/{name}/{version}").To(api.saveFS))
+	ws.Route(ws.POST("/{entityType}/{workspace}/{name}/{version}").To(api.saveFS))
 
 	// Check if chunk exists
 	ws.Route(ws.GET("/chunks/{hash}").To(api.checkChunk))
@@ -130,6 +130,8 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	// admin
 	ws.Route(ws.GET("/admin/gc").To(api.runGC))
 	ws.Route(ws.GET("/admin/clear-chunks").To(api.runClearChunks))
+
+	ws.Filter(setCurrentType)
 
 	container.Add(ws)
 	return container

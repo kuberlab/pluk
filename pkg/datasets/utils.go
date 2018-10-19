@@ -13,8 +13,8 @@ import (
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
-func DeleteFiles(mgr db.DataMgr, ws, dataset, version, prefix string, preciseName bool) error {
-	fileChunks, err := mgr.ListRelatedChunksForFiles(ws, dataset, version, prefix, preciseName)
+func DeleteFiles(mgr db.DataMgr, eType, ws, dataset, version, prefix string, preciseName bool) error {
+	fileChunks, err := mgr.ListRelatedChunksForFiles(eType, ws, dataset, version, prefix, preciseName)
 	if err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func DeleteFiles(mgr db.DataMgr, ws, dataset, version, prefix string, preciseNam
 		)
 	}
 
-	rows, err := mgr.DeleteFiles(ws, dataset, version, prefix, preciseName)
+	rows, err := mgr.DeleteFiles(eType, ws, dataset, version, prefix, preciseName)
 	if err != nil {
 		return err
 	}

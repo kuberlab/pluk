@@ -15,11 +15,11 @@ type FileChunkMgr interface {
 	GetFileChunk(fileID uint, chunkID uint, index int) (*FileChunk, error)
 	ListFileChunks(filter FileChunk) ([]*FileChunk, error)
 	DeleteFileChunk(fileID, chunkID uint) error
-	GetFS(workspace, dataset, version string) (*io.ChunkedFileFS, error)
-	DeleteRelatedFiles(workspace, dataset, version string) (int64, error)
-	DeleteFiles(workspace, dataset, version, prefix string, preciseName bool) (int64, error)
-	ListRelatedChunks(workspace, dataset, version string) ([]*FileChunk, error)
-	ListRelatedChunksForFiles(workspace, dataset, version, prefix string, preciseName bool) ([]*FileChunk, error)
+	GetFS(dsType, workspace, dataset, version string) (*io.ChunkedFileFS, error)
+	DeleteRelatedFiles(dsType, workspace, dataset, version string) (int64, error)
+	DeleteFiles(dsType, workspace, dataset, version, prefix string, preciseName bool) (int64, error)
+	ListRelatedChunks(dsType, workspace, dataset, version string) ([]*FileChunk, error)
+	ListRelatedChunksForFiles(dsType, workspace, dataset, version, prefix string, preciseName bool) ([]*FileChunk, error)
 }
 
 type FileChunk struct {
@@ -53,7 +53,7 @@ func (mgr *DatabaseMgr) DeleteFileChunk(fileID, chunkID uint) error {
 }
 
 func (mgr *DatabaseMgr) ListRelatedChunksForFiles(
-	workspace, dataset, version, prefix string, preciseName bool) ([]*FileChunk, error) {
+	dsType, workspace, dataset, version, prefix string, preciseName bool) ([]*FileChunk, error) {
 	/*
 		SELECT chunk_id FROM file_chunks
 		INNER JOIN files ON
@@ -65,6 +65,7 @@ func (mgr *DatabaseMgr) ListRelatedChunksForFiles(
 	conditions := []string{
 		fmt.Sprintf("files.workspace='%v'", workspace),
 		fmt.Sprintf("files.dataset_name='%v'", dataset),
+		fmt.Sprintf("files.dataset_type='%v'", dsType),
 		"file_chunks.file_id=files.id",
 	}
 	if version != "" {
@@ -91,14 +92,15 @@ func (mgr *DatabaseMgr) ListRelatedChunksForFiles(
 	return fileChunks, err
 }
 
-func (mgr *DatabaseMgr) ListRelatedChunks(workspace, dataset, version string) ([]*FileChunk, error) {
-	return mgr.ListRelatedChunksForFiles(workspace, dataset, version, "", false)
+func (mgr *DatabaseMgr) ListRelatedChunks(dsType, workspace, dataset, version string) ([]*FileChunk, error) {
+	return mgr.ListRelatedChunksForFiles(dsType, workspace, dataset, version, "", false)
 }
 
-func (mgr *DatabaseMgr) DeleteFiles(workspace, dataset, version, prefix string, preciseName bool) (int64, error) {
+func (mgr *DatabaseMgr) DeleteFiles(dsType, workspace, dataset, version, prefix string, preciseName bool) (int64, error) {
 	conditions := []string{
 		fmt.Sprintf("files.workspace='%v'", workspace),
 		fmt.Sprintf("files.dataset_name='%v'", dataset),
+		fmt.Sprintf("files.dataset_type='%v'", dsType),
 	}
 	if version != "" {
 		conditions = append(conditions, fmt.Sprintf("files.version='%v'", version))
@@ -129,8 +131,8 @@ func (mgr *DatabaseMgr) DeleteFiles(workspace, dataset, version, prefix string, 
 	return db.RowsAffected, db.Error
 }
 
-func (mgr *DatabaseMgr) DeleteRelatedFiles(workspace, dataset, version string) (int64, error) {
-	return mgr.DeleteFiles(workspace, dataset, version, "", false)
+func (mgr *DatabaseMgr) DeleteRelatedFiles(dsType, workspace, dataset, version string) (int64, error) {
+	return mgr.DeleteFiles(dsType, workspace, dataset, version, "", false)
 }
 
 type rawFile struct {
@@ -171,10 +173,14 @@ FROM file_chunks fc
     ON f.id = fc.file_id AND f.dataset_name = 'zappos' AND f.workspace = 'kuberlab-demo' AND version = '1.0.0'
   INNER JOIN chunks ON fc.chunk_id = chunks.id
 */
-func (mgr *DatabaseMgr) GetFS(workspace, dataset, version string) (*io.ChunkedFileFS, error) {
+func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.ChunkedFileFS, error) {
 	join1 := fmt.Sprintf(
-		"INNER JOIN files f ON f.id = file_chunks.file_id AND f.dataset_name = '%v' AND version = '%v' AND f.workspace = '%v'",
-		dataset, version, workspace,
+		"INNER JOIN files f ON f.id = file_chunks.file_id "+
+			"AND f.dataset_name = '%v' "+
+			"AND version = '%v' "+
+			"AND f.workspace = '%v' "+
+			"AND f.dataset_type = '%v'",
+		dataset, version, workspace, dsType,
 	)
 	rawFiles := make([]rawFile, 0)
 	err := mgr.db.

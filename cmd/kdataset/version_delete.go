@@ -12,7 +12,6 @@ type versionDeleteCmd struct {
 	workspace string
 	name      string
 	version   string
-	dsType    string
 }
 
 func NewVersionDeleteCmd() *cobra.Command {
@@ -38,14 +37,6 @@ func NewVersionDeleteCmd() *cobra.Command {
 			return deleteV.run()
 		},
 	}
-	f := cmd.Flags()
-	f.StringVarP(
-		&deleteV.dsType,
-		"type",
-		"",
-		"dataset",
-		"dataset type",
-	)
 
 	return cmd
 }
@@ -58,7 +49,7 @@ func (cmd *versionDeleteCmd) run() (err error) {
 
 	logrus.Debug("Run version-delete...")
 
-	err = client.DeleteVersion(cmd.dsType, cmd.workspace, cmd.name, cmd.version)
+	err = client.DeleteVersion(entityType.Value, cmd.workspace, cmd.name, cmd.version)
 	if err != nil {
 		logrus.Fatal(err)
 	}

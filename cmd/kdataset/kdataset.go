@@ -26,6 +26,7 @@ var (
 	insecure   bool
 	logLevel   string
 	debug      bool
+	entityType = &EntityType{Value: defaultEntityType}
 )
 
 func initConfig(cmd *cobra.Command, args []string) error {
@@ -133,6 +134,7 @@ func newRootCmd() *cobra.Command {
 	p.StringVarP(&configPath, "config", "", defaultConfigPath, "Path to config file")
 	p.StringVar(&baseURL, "url", "", "Base url to dataset storage.")
 	p.BoolVarP(&insecure, "insecure", "", false, "Enable insecure SSL/TLS connection (skip verify).")
+	p.Var(entityType, "type", fmt.Sprintf("Choose entityType type for request: %v", plukclient.AllowedTypesList()))
 
 	// Add all commands
 	rootCmd.AddCommand(

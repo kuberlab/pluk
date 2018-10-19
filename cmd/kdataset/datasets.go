@@ -10,7 +10,6 @@ import (
 
 type datasetsCmd struct {
 	workspace string
-	dsType    string
 }
 
 func NewDatasetsCmd() *cobra.Command {
@@ -30,14 +29,6 @@ func NewDatasetsCmd() *cobra.Command {
 			return datasets.run()
 		},
 	}
-	f := cmd.Flags()
-	f.StringVarP(
-		&datasets.dsType,
-		"type",
-		"",
-		"dataset",
-		"dataset type",
-	)
 
 	return cmd
 }
@@ -50,18 +41,18 @@ func (cmd *datasetsCmd) run() (err error) {
 
 	logrus.Debug("Run dataset-list...")
 
-	datasets, err := client.ListEntities(cmd.dsType, cmd.workspace)
+	datasets, err := client.ListEntities(entityType.Value, cmd.workspace)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	if len(datasets.Datasets) == 0 {
+	if len(datasets.Items) == 0 {
 		fmt.Println("No datasets.")
 		return nil
 	}
 
 	fmt.Println("DATASETS:")
-	for _, ds := range datasets.Datasets {
+	for _, ds := range datasets.Items {
 		fmt.Println(ds.Name)
 	}
 	return

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
@@ -38,7 +39,7 @@ func (api *API) downloadDataset(req *restful.Request, resp *restful.Response) {
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
 	fs, err := api.getFS(dataset, version)
@@ -74,7 +75,7 @@ func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 
 	dataset := api.ds.GetDataset(workspace, name, eType, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
 
@@ -89,7 +90,7 @@ func (api *API) datasetTarSize(req *restful.Request, resp *restful.Response) {
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
 	fs, err := api.getFS(dataset, version)
@@ -116,7 +117,7 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
 	fs, err := api.getFS(dataset, version)
@@ -144,7 +145,11 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	if utils.AuthValidationURL() != "" {
 		dealer, err := api.dealerClient(req)
 		if err != nil {
-			WriteErrorString(resp, http.StatusBadRequest, fmt.Sprintf("Can not delete dataset '%v' from API: %v", name, err))
+			WriteErrorString(
+				resp,
+				http.StatusBadRequest,
+				fmt.Sprintf("Can not delete %v '%v' from API: %v", currentType(req), name, err),
+			)
 			return
 		}
 		// Skip error
@@ -165,7 +170,7 @@ func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
 
@@ -269,7 +274,7 @@ func (api *API) versions(req *restful.Request, resp *restful.Response) {
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
 	versions, err := dataset.Versions()
@@ -294,7 +299,7 @@ func (api *API) createDataset(req *restful.Request, resp *restful.Response) {
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset != nil {
-		WriteStatusError(resp, http.StatusConflict, fmt.Errorf("Dataset '%v' already exists", name))
+		WriteStatusError(resp, http.StatusConflict, fmt.Errorf("%v '%v' already exists", strings.Title(currentType(req)), name))
 		return
 	}
 
@@ -333,7 +338,7 @@ func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
 
@@ -388,7 +393,7 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 			WriteStatusError(
 				resp,
 				http.StatusConflict,
-				fmt.Errorf("Version %v for dataset %v/%v already exists", version, workspace, name),
+				fmt.Errorf("Version %v for %v %v/%v already exists", currentType(req), version, workspace, name),
 			)
 		}
 	}
@@ -419,7 +424,7 @@ func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
-		WriteStatusError(resp, http.StatusNotFound, fmt.Errorf("Dataset '%v' not found", name))
+		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
 
@@ -436,10 +441,10 @@ func (api *API) allDatasets(req *restful.Request, resp *restful.Response) {
 	sets := api.ds.ListDatasets(currentType(req), "")
 	ds := types.DataSetList{}
 	for _, d := range sets {
-		ds.Datasets = append(ds.Datasets, types.Dataset{Name: d.Name, Workspace: d.Workspace})
+		ds.Items = append(ds.Items, types.Dataset{Name: d.Name, Workspace: d.Workspace})
 	}
-	if len(ds.Datasets) == 0 {
-		ds.Datasets = make([]types.Dataset, 0)
+	if len(ds.Items) == 0 {
+		ds.Items = make([]types.Dataset, 0)
 	}
 	sort.Sort(ds)
 	resp.WriteEntity(ds)
@@ -451,13 +456,13 @@ func (api *API) datasets(req *restful.Request, resp *restful.Response) {
 	sets := api.ds.ListDatasets(currentType(req), workspace)
 	ds := types.DataSetList{}
 	for _, d := range sets {
-		ds.Datasets = append(
-			ds.Datasets,
+		ds.Items = append(
+			ds.Items,
 			types.Dataset{Name: d.Name, Workspace: d.Workspace, Type: d.Type},
 		)
 	}
-	if len(ds.Datasets) == 0 {
-		ds.Datasets = make([]types.Dataset, 0)
+	if len(ds.Items) == 0 {
+		ds.Items = make([]types.Dataset, 0)
 	}
 	sort.Sort(ds)
 	resp.WriteEntity(ds)

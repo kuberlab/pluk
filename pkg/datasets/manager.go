@@ -54,7 +54,7 @@ func (m *Manager) GetDataset(eType, workspace, name string, master io.PlukClient
 		logrus.Errorf("From master: %v", err)
 		return nil
 	}
-	for _, d := range ds.Datasets {
+	for _, d := range ds.Items {
 		if d.Name == name {
 			// Create locally.
 			dsDB := &db.Dataset{Name: d.Name, Workspace: d.Workspace}
