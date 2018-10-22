@@ -9,6 +9,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"strings"
 )
 
 type Manager struct {
@@ -128,7 +129,10 @@ func (m *Manager) ForkDataset(eType, workspace, name, targetWorkspace string, ma
 func (m *Manager) DeleteDataset(eType, workspace, name string, master io.PlukClient, force bool) error {
 	ds, err := m.mgr.GetDataset(eType, workspace, name)
 	if err != nil {
-		return errors.NewStatus(http.StatusNotFound, fmt.Sprintf("Dataset %v not found: %v", name, err))
+		return errors.NewStatus(
+			http.StatusNotFound,
+			fmt.Sprintf("%v %v not found: %v", strings.Title(eType), name, err),
+		)
 	}
 	dsvs, err := m.mgr.ListDatasetVersions(
 		db.DatasetVersion{Name: name, Workspace: workspace, Type: eType},
