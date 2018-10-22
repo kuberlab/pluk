@@ -143,20 +143,7 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	}
 
 	if utils.AuthValidationURL() != "" {
-		dealer, err := api.dealerClient(req)
-		if err != nil {
-			WriteErrorString(
-				resp,
-				http.StatusBadRequest,
-				fmt.Sprintf("Can not delete %v '%v' from API: %v", currentType(req), name, err),
-			)
-			return
-		}
-		// Skip error
-		err = dealer.DeleteDataset(workspace, name)
-		if err != nil {
-			logrus.Error(err)
-		}
+
 	}
 
 	resp.WriteHeader(http.StatusNoContent)
@@ -512,7 +499,19 @@ func (api *API) createDatasetOnDealer(req *restful.Request, ws, name string, pub
 		return err
 	}
 
-	dealerDatasets, err := dealer.ListDatasets(ws)
+	var listMethod func(string) ([]dealerclient.Dataset, error)
+	var createMethod func(string, string, bool) error
+
+	switch currentType(req) {
+	case "dataset":
+		listMethod = dealer.ListDatasets
+		createMethod = dealer.CreateDataset
+	case "model":
+		listMethod = dealer.ListModels
+		createMethod = dealer.CreateModel
+	}
+
+	dealerDatasets, err := listMethod(ws)
 	if err != nil {
 		return err
 	}
@@ -523,5 +522,31 @@ func (api *API) createDatasetOnDealer(req *restful.Request, ws, name string, pub
 		}
 	}
 
-	return dealer.CreateDataset(ws, name, public)
+	return createMethod(ws, name, public)
+}
+
+func (api *API) deleteDatasetOnDealer(req *restful.Request, ws, name string) error {
+	dealer, err := api.dealerClient(req)
+	if err != nil {
+		return errors.NewStatus(
+			http.StatusBadRequest,
+			fmt.Sprintf("Can not delete %v '%v' from API: %v", currentType(req), name, err),
+		)
+	}
+
+	var deleteMethod func(string, string) error
+
+	switch currentType(req) {
+	case "dataset":
+		deleteMethod = dealer.DeleteDataset
+	case "model":
+		deleteMethod = dealer.DeleteModel
+	}
+
+	// Skip error
+	err = deleteMethod(ws, name)
+	if err != nil {
+		logrus.Error(err)
+	}
+	return nil
 }
