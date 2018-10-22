@@ -101,7 +101,7 @@ func (m *Manager) ForkDataset(eType, workspace, name, targetWorkspace string, ma
 		return nil, errors.NewStatus(404, msg)
 	}
 
-	ds, err := m.NewDataset(eType, workspace, name, master)
+	ds, err := m.NewDataset(eType, targetWorkspace, name, master)
 	if err != nil {
 		return nil, err
 	}

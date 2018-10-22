@@ -187,6 +187,58 @@ func TestCreateVersionWrong(t *testing.T) {
 	)
 }
 
+func TestForkDataset(t *testing.T) {
+	fname := getFname()
+	setup(fname)
+	dbPrepare(t)
+	defer teardown(fname)
+
+	url := buildURL("dataset/workspace/dataset/versions/1.0.0/upload/file1.txt")
+	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/upload/file2.txt")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	// Commit!
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/commit")
+	resp, err = client.Post(url, "application/json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusOK, resp.StatusCode, t)
+
+	url = buildURL("dataset/workspace/dataset/fork/another-ws")
+	resp, err = client.Post(url, "application/json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("dataset/another-ws/dataset/versions/1.0.0/tree")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fs []io.ChunkedFileInfo
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(2, len(fs), t)
+}
+
 func dbPrepare(t *testing.T) {
 	if err := db.DbMgr.CreateDataset(
 		&db.Dataset{
