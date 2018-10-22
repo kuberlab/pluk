@@ -130,7 +130,11 @@ func (cmd *pushCmd) run() error {
 
 	if _, err := client.CheckEntity(entityType.Value, cmd.workspace, cmd.name); err != nil && !cmd.create && !cmd.force {
 		if strings.Contains(err.Error(), "not found") {
-			logrus.Fatalf("Dataset '%v' doesn't exist. Consider using --create option to automatically create dataset or use --force.", cmd.name)
+			logrus.Fatalf(
+				"%v '%v' doesn't exist. Consider using --create option to " +
+					"automatically create dataset or use --force.",
+					strings.Title(entityType.Value), cmd.name,
+			)
 		} else {
 			logrus.Fatal(err)
 		}
