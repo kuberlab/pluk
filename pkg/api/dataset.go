@@ -70,10 +70,9 @@ func (api *API) downloadDataset(req *restful.Request, resp *restful.Response) {
 func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
-	eType := currentType(req)
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(workspace, name, eType, master)
+	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
 		WriteError(resp, EntityNotFoundError(req, name))
 		return
