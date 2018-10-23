@@ -19,7 +19,7 @@ import (
 type PlukClient interface {
 	CheckChunk(hash string) (*types.ChunkCheck, error)
 	CheckChunkWebsocket(hash string) (res *types.ChunkCheck, err error)
-	CheckEntity(entityType, workspace, name string) (*types.Dataset, error)
+	CheckEntity(entityType, workspace, name string, write bool) (*types.Dataset, error)
 	CheckWorkspace(workspace string) (*types.Workspace, error)
 	Close() error
 	DeleteEntity(entityType, workspace, name string, force bool) error

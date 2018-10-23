@@ -42,6 +42,13 @@ func (api *API) downloadDataset(req *restful.Request, resp *restful.Response) {
 		WriteError(resp, EntityNotFoundError(req, name))
 		return
 	}
+
+	_, err := api.checkEntityAccess(req, false)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
+
 	fs, err := api.getFS(dataset, version)
 	if err != nil {
 		WriteError(resp, err)

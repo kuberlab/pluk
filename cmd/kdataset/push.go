@@ -119,22 +119,30 @@ func (cmd *pushCmd) run() error {
 		logrus.Fatal(err)
 	}
 
-	if _, err := client.CheckWorkspace(cmd.workspace); err != nil && !cmd.force {
+	// Even with force, we must check the access to the given workspace.
+	if _, err := client.CheckWorkspace(cmd.workspace); err != nil {
 		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
 			logrus.Fatalf("Probably workspace '%v' doesn't exist. Check if workspace name is right.", cmd.workspace)
+		} else if strings.Contains(err.Error(), "Forbidden to manage item") {
+			logrus.Fatalf("You don't have write %v permission to the given workspace: %q.", entityType, cmd.workspace)
 		} else {
 			logrus.Fatal(err)
 		}
 		return nil
 	}
 
-	if _, err := client.CheckEntity(entityType.Value, cmd.workspace, cmd.name); err != nil && !cmd.create && !cmd.force {
+	if _, err := client.CheckEntity(entityType.Value, cmd.workspace, cmd.name, true); err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			logrus.Fatalf(
-				"%v '%v' doesn't exist. Consider using --create option to " +
-					"automatically create dataset or use --force.",
+			// Only skip if doesn't exist
+			if !cmd.force && !cmd.create {
+				logrus.Fatalf(
+					"%v '%v' doesn't exist. Consider using --create option to "+
+						"automatically create dataset or use --force.",
 					strings.Title(entityType.Value), cmd.name,
-			)
+				)
+			}
+		} else if strings.Contains(err.Error(), "Forbidden to manage item") {
+			logrus.Fatalf("You don't have write %v permission to the given workspace: %q.", entityType, cmd.workspace)
 		} else {
 			logrus.Fatal(err)
 		}

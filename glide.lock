@@ -45,7 +45,7 @@ imports:
 - name: github.com/jinzhu/inflection
   version: 1c35d901db3da928c72a72d8458480cc9ade058f
 - name: github.com/kuberlab/lib
-  version: d390d465448b494f3d02eff4b313e53b899e29d2
+  version: 07b961570782a15877ddabaedc07c4066ae1375f
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/dealerclient
