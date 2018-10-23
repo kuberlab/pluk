@@ -111,6 +111,7 @@ func (api *API) checkEntityAccess(req *restful.Request, write bool) (*types.Data
 			}, nil
 		}
 	}
+	// Didn't find dataset; check write permission
 	if write {
 		err = checkMethod(workspace, dataset)
 		if err != nil {

@@ -146,7 +146,6 @@ func (cmd *pushCmd) run() error {
 		} else {
 			logrus.Fatal(err)
 		}
-		return nil
 	}
 
 	if cmd.websocket {
