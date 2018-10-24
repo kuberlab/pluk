@@ -1,14 +1,16 @@
 package api
 
 import (
+	"archive/tar"
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"testing"
 
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/db"
-	"github.com/kuberlab/pluk/pkg/io"
+	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
@@ -134,7 +136,7 @@ func TestUploadDeleteCheckDataset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var fs []io.ChunkedFileInfo
+	var fs []plukio.ChunkedFileInfo
 	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
 		t.Fatal(err)
 	}
@@ -231,12 +233,73 @@ func TestForkDataset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var fs []io.ChunkedFileInfo
+	var fs []plukio.ChunkedFileInfo
 	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
 		t.Fatal(err)
 	}
 
 	utils.Assert(2, len(fs), t)
+}
+
+func TestDownloadDataset(t *testing.T) {
+	fname := getFname()
+	setup(fname)
+	dbPrepare(t)
+	defer teardown(fname)
+
+	url := buildURL("dataset/workspace/dataset/versions/1.0.0/upload/file1.txt")
+	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/upload/folder/file2.txt")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	// Commit!
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/commit")
+	resp, err = client.Post(url, "application/json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusOK, resp.StatusCode, t)
+
+	// Download
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusOK, resp.StatusCode, t)
+
+	reader := tar.NewReader(resp.Body)
+	var files int = 0
+	for {
+		hd, err := reader.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			t.Fatal(err)
+		}
+
+		switch hd.Typeflag {
+		case tar.TypeReg, tar.TypeRegA:
+			files++
+		}
+		reader.Read(make([]byte, hd.Size))
+	}
+
+	utils.Assert(2, files, t)
 }
 
 func dbPrepare(t *testing.T) {
