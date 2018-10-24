@@ -92,7 +92,8 @@ func newPlukeFSCmd() *cobra.Command {
 					return
 				}
 			}
-			plukeFS.run()
+			code := plukeFS.run()
+			os.Exit(code)
 		},
 	}
 
@@ -107,26 +108,26 @@ func newPlukeFSCmd() *cobra.Command {
 	return cmd
 }
 
-func (cmd *plukeFSCmd) run() {
+func (cmd *plukeFSCmd) run() int {
 	if cmd.workspace == "" {
 		logrus.Error("workspace is undefined.")
-		return
+		return 1
 	}
 	if cmd.dataset == "" {
 		logrus.Error("dataset is undefined.")
-		return
+		return 1
 	}
 	if cmd.version == "" {
 		logrus.Error("version is undefined.")
-		return
+		return 1
 	}
 	if cmd.server == "" {
 		logrus.Error("server is undefined.")
-		return
+		return 1
 	}
 	if cmd.mountPoint == "" {
 		logrus.Error("mountPoint is undefined.")
-		return
+		return 1
 	}
 
 	logrus.Debugf("Start with workspace=%v", cmd.workspace)
@@ -151,14 +152,14 @@ func (cmd *plukeFSCmd) run() {
 	)
 	if err != nil {
 		logrus.Error(err)
-		return
+		return 1
 	}
 
 	fs := pathfs.NewPathNodeFs(pathfs.NewReadonlyFileSystem(plukfs), &pathfs.PathNodeFsOptions{Debug: debugFS})
 	server, _, err := nodefs.MountRoot(cmd.mountPoint, fs.Root(), &nodefs.Options{Debug: debugFS})
 	if err != nil {
 		logrus.Error(err)
-		return
+		return 1
 	}
 	logrus.Info("FS is ready!")
 	server.Serve()
