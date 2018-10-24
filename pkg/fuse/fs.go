@@ -19,33 +19,35 @@ var ChangeDatasetRegex = regexp.MustCompile("\\.([-.a-z0-9_A-Z]+)__([-a-z0-9.]+)
 
 type PlukeFS struct {
 	pathfs.FileSystem
-	workspace string
-	dataset   string
-	version   string
-	server    string
-	secret    string
-	dsType    string
-	client    io.PlukClient
-	lock      sync.RWMutex
-	innerFS   *io.ChunkedFileFS
+	workspace       string
+	dataset         string
+	version         string
+	server          string
+	secret          string
+	secretWorkspace string
+	dsType          string
+	client          io.PlukClient
+	lock            sync.RWMutex
+	innerFS         *io.ChunkedFileFS
 }
 
-func NewPlukFS(dsType, workspace, dataset, version, server, secret string) (pathfs.FileSystem, error) {
+func NewPlukFS(dsType, workspace, dataset, version, server, secret, secretWorkspace string) (pathfs.FileSystem, error) {
 	if dsType == "" {
 		dsType = "dataset"
 	}
 
 	fs := &PlukeFS{
-		FileSystem: pathfs.NewDefaultFileSystem(),
-		workspace:  workspace,
-		dataset:    dataset,
-		version:    version,
-		server:     server,
-		secret:     secret,
-		dsType:     dsType,
+		FileSystem:      pathfs.NewDefaultFileSystem(),
+		workspace:       workspace,
+		dataset:         dataset,
+		version:         version,
+		server:          server,
+		secret:          secret,
+		secretWorkspace: secretWorkspace,
+		dsType:          dsType,
 	}
 
-	client, err := plukclient.NewClient(server, &plukclient.AuthOpts{Workspace: workspace, Secret: secret})
+	client, err := plukclient.NewClient(server, &plukclient.AuthOpts{Workspace: secretWorkspace, Secret: secret})
 	if err != nil {
 		return nil, err
 	}

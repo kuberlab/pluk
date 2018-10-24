@@ -46,13 +46,14 @@ func initRoot(cmd *cobra.Command, args []string) error {
 }
 
 type plukeFSCmd struct {
-	mountPoint string
-	workspace  string
-	dataset    string
-	version    string
-	server     string
-	secret     string
-	dsType     string
+	mountPoint      string
+	objectWorkspace string
+	secretWorkspace string
+	name            string
+	version         string
+	server          string
+	secret          string
+	dsType          string
 }
 
 func newPlukeFSCmd() *cobra.Command {
@@ -73,10 +74,12 @@ func newPlukeFSCmd() *cobra.Command {
 				name := splitted[0]
 				value := splitted[1]
 				switch name {
-				case "workspace":
-					plukeFS.workspace = value
-				case "dataset":
-					plukeFS.dataset = value
+				case "object_workspace":
+					plukeFS.objectWorkspace = value
+				case "secret_workspace":
+					plukeFS.secretWorkspace = value
+				case "name":
+					plukeFS.name = value
 				case "version":
 					plukeFS.version = value
 				case "server":
@@ -109,12 +112,16 @@ func newPlukeFSCmd() *cobra.Command {
 }
 
 func (cmd *plukeFSCmd) run() int {
-	if cmd.workspace == "" {
-		logrus.Error("workspace is undefined.")
+	if cmd.objectWorkspace == "" {
+		logrus.Error("object_workspace is undefined.")
 		return 1
 	}
-	if cmd.dataset == "" {
-		logrus.Error("dataset is undefined.")
+	if cmd.secretWorkspace == "" {
+		logrus.Error("secret_workspace is undefined.")
+		return 1
+	}
+	if cmd.name == "" {
+		logrus.Error("name is undefined.")
 		return 1
 	}
 	if cmd.version == "" {
@@ -130,25 +137,27 @@ func (cmd *plukeFSCmd) run() int {
 		return 1
 	}
 
-	logrus.Debugf("Start with workspace=%v", cmd.workspace)
-	logrus.Debugf("Start with dataset=%v", cmd.dataset)
+	logrus.Debugf("Start with object_workspace=%v", cmd.objectWorkspace)
+	logrus.Debugf("Start with name=%v", cmd.name)
 	logrus.Debugf("Start with version=%v", cmd.version)
 	logrus.Debugf("Start with server=%v", cmd.server)
+	logrus.Debugf("Start with secret_workspace=%v", cmd.secretWorkspace)
 	logrus.Debugf("Start with secret=%v", cmd.secret)
 
 	os.Setenv(utils.DoNotSaveChunks, "true")
 	os.Setenv(utils.MastersVar, cmd.server)
 
-	io.MasterClient = plukclient.NewMasterClientWithSecret(cmd.workspace, cmd.secret)
+	io.MasterClient = plukclient.NewMasterClientWithSecret(cmd.secretWorkspace, cmd.secret)
 	utils.PrintEnvInfo()
 
 	plukfs, err := fuse.NewPlukFS(
 		cmd.dsType,
-		cmd.workspace,
-		cmd.dataset,
+		cmd.objectWorkspace,
+		cmd.name,
 		cmd.version,
 		cmd.server,
 		cmd.secret,
+		cmd.secretWorkspace,
 	)
 	if err != nil {
 		logrus.Error(err)
