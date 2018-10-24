@@ -163,6 +163,7 @@ func (cmd *plukeFSCmd) run() int {
 	}
 	logrus.Info("FS is ready!")
 	server.Serve()
+	return 0
 }
 
 func main() {
