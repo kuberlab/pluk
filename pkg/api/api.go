@@ -92,7 +92,8 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 
 	// to cloud-dealer API
 	ws.Route(ws.GET("/workspaces/{workspace}").To(api.checkWorkspace))
-	ws.Route(ws.GET("/workspaces/{workspace}/{entityType}/{dataset}").To(api.checkDataset))
+	ws.Route(ws.GET("/workspaces/{workspace}/{entityType}/{dataset}").To(api.checkDatasetExists))
+	ws.Route(ws.GET("/workspaces/{workspace}/{entityType}/{dataset}/permission").To(api.checkDatasetPermission))
 
 	// Items
 	ws.Route(ws.GET("/{entityType}").To(api.datasets))

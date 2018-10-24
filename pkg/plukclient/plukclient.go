@@ -173,12 +173,29 @@ func (c *Client) CheckWorkspace(workspace string) (*types.Workspace, error) {
 	return res, err
 }
 
-func (c *Client) CheckEntity(entityType, workspace, name string, write bool) (*types.Dataset, error) {
-	u := fmt.Sprintf("/workspaces/%v/%v/%v", workspace, entityType, name)
+func (c *Client) CheckEntityPermission(entityType, workspace, name string, write bool) (*types.Dataset, error) {
+	u := fmt.Sprintf("/workspaces/%v/%v/%v/permission", workspace, entityType, name)
 
 	if write {
 		u += "?write=true"
 	}
+
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	res := new(types.Dataset)
+	_, err = c.Do(req, res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
+func (c *Client) CheckEntityExists(entityType, workspace, name string) (*types.Dataset, error) {
+	u := fmt.Sprintf("/workspaces/%v/%v/%v", workspace, entityType, name)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {

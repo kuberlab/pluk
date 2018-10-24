@@ -131,7 +131,15 @@ func (cmd *pushCmd) run() error {
 		return nil
 	}
 
-	if _, err := client.CheckEntity(entityType.Value, cmd.workspace, cmd.name, true); err != nil {
+	if _, err := client.CheckEntityPermission(entityType.Value, cmd.workspace, cmd.name, true); err != nil {
+		if strings.Contains(err.Error(), "Forbidden to manage item") {
+			logrus.Fatalf("You don't have write %v permission to the given workspace: %q.", entityType, cmd.workspace)
+		} else {
+			logrus.Fatal(err)
+		}
+	}
+
+	if _, err = client.CheckEntityExists(entityType.Value, cmd.workspace, cmd.name); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			// Only skip if doesn't exist
 			if !cmd.force && !cmd.create {
@@ -141,10 +149,6 @@ func (cmd *pushCmd) run() error {
 					strings.Title(entityType.Value), cmd.name,
 				)
 			}
-		} else if strings.Contains(err.Error(), "Forbidden to manage item") {
-			logrus.Fatalf("You don't have write %v permission to the given workspace: %q.", entityType, cmd.workspace)
-		} else {
-			logrus.Fatal(err)
 		}
 	}
 

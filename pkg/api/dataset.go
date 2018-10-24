@@ -43,7 +43,7 @@ func (api *API) downloadDataset(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	_, err := api.checkEntityAccess(req, false)
+	err := api.checkEntityExists(req, workspace, name)
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -120,6 +120,12 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
 	master := api.masterClient(req)
+
+	err := api.checkEntityExists(req, workspace, name)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
@@ -264,6 +270,12 @@ func (api *API) versions(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
 	master := api.masterClient(req)
+
+	err := api.checkEntityExists(req, workspace, name)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {

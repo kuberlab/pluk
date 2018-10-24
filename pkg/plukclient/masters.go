@@ -92,9 +92,20 @@ func (c *MultiMasterClient) CheckWorkspace(workspace string) (ws *types.Workspac
 	return nil, err
 }
 
-func (c *MultiMasterClient) CheckEntity(entityType, workspace, dataset string, write bool) (ds *types.Dataset, err error) {
+func (c *MultiMasterClient) CheckEntityPermission(entityType, workspace, dataset string, write bool) (ds *types.Dataset, err error) {
 	for _, cl := range c.baseClients {
-		ds, err = cl.CheckEntity(entityType, workspace, dataset, write)
+		ds, err = cl.CheckEntityPermission(entityType, workspace, dataset, write)
+		if err != nil {
+			continue
+		}
+		return ds, err
+	}
+	return nil, err
+}
+
+func (c *MultiMasterClient) CheckEntityExists(entityType, workspace, dataset string) (ds *types.Dataset, err error) {
+	for _, cl := range c.baseClients {
+		ds, err = cl.CheckEntityExists(entityType, workspace, dataset)
 		if err != nil {
 			continue
 		}
