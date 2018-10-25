@@ -115,7 +115,7 @@ func (m *Manager) ForkDataset(eType, workspace, name, targetWorkspace string, ma
 
 	for _, ver := range sourceVersions {
 		if !ver.Editing {
-			if _, err = source.CloneVersionTo(ds, ver.Version, ver.Version); err != nil {
+			if _, err = source.CloneVersionTo(ds, ver.Version, ver.Version, ver.Message); err != nil {
 				return nil, err
 			}
 			if _, err = ds.CommitVersion(ver.Version, ver.Message); err != nil {

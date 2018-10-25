@@ -349,6 +349,7 @@ func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	version := req.PathParameter("version")
 	targetVersion := req.PathParameter("targetVersion")
+	message := req.QueryParameter("message")
 	master := api.masterClient(req)
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
@@ -362,7 +363,7 @@ func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	dsv, err := dataset.CloneVersion(version, targetVersion)
+	dsv, err := dataset.CloneVersion(version, targetVersion, message)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return

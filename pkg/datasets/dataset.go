@@ -115,6 +115,9 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 		dsvOld.Deleted = false
 		dsvOld.Size = dsv.Size
 		dsv.Deleted = false
+		if dsv.Message != "" {
+			dsvOld.Message = dsv.Message
+		}
 		if err = tx.RecoverDatasetVersion(dsvOld); err != nil {
 			return err
 		}
@@ -123,6 +126,9 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 		dsvOld.Size = dsv.Size
 		dsvOld.Editing = dsv.Editing || dsvOld.Editing
 		dsv.Editing = dsvOld.Editing
+		if dsv.Message != "" {
+			dsvOld.Message = dsv.Message
+		}
 		if _, err = tx.UpdateDatasetVersion(dsvOld); err != nil {
 			return err
 		}
@@ -363,7 +369,7 @@ func (d *Dataset) CommitVersion(version string, message string) (*db.DatasetVers
 	return d.mgr.CommitVersion(d.Type, d.Workspace, d.Name, version, message)
 }
 
-func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion string) (*db.DatasetVersion, error) {
+func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion, message string) (*db.DatasetVersion, error) {
 	var err error
 	tx := d.mgr.Begin()
 	defer func() {
@@ -451,11 +457,12 @@ func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion string)
 		Workspace: target.Workspace,
 		Type:      target.Type,
 		Editing:   true,
+		Message:   message,
 	}
 	err = SaveDatasetVersion(tx, dsv)
 	return dsv, err
 }
 
-func (d *Dataset) CloneVersion(version, targetVersion string) (*db.DatasetVersion, error) {
-	return d.CloneVersionTo(d, version, targetVersion)
+func (d *Dataset) CloneVersion(version, targetVersion, message string) (*db.DatasetVersion, error) {
+	return d.CloneVersionTo(d, version, targetVersion, message)
 }
