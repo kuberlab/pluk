@@ -485,7 +485,7 @@ func (api *API) datasets(req *restful.Request, resp *restful.Response) {
 }
 
 func (api API) fsCacheKey(dataset *datasets.Dataset, version string) string {
-	return dataset.Workspace + dataset.Name + version + "-fs"
+	return dataset.Type + dataset.Workspace + dataset.Name + version + "-fs"
 }
 
 func (api *API) getFS(dataset *datasets.Dataset, version string) (fs *plukio.ChunkedFileFS, err error) {
