@@ -78,6 +78,23 @@ plukefs --debug -o workspace=<workspace> -o dataset=<dataset-name> \
 
 ## CLI reference
 
+### Installation:
+
+Download the version for your OS from the kdataset release page
+
+https://github.com/kuberlab/pluk/releases
+
+Uncompress the downloaded tarball.
+
+Copy the kdataset utility to the folder pointed to by “PATH” environment”
+variable, e.g. `/usr/bin/` or `/usr/local/bin/`
+
+```bash
+sudo cp kdataset /usr/local/bin
+```
+
+### Description
+
 CLI simplifies download, upload and authentication processes.
 
 Once you have installed CLI, you will have `kdataset` entry in you `PATH` so it can be easily called by typing `kdataset`.
@@ -94,8 +111,10 @@ To see the help, type `kdataset --help`.
 
 ### CLI Configuration
 
-In order to pass authentication on server and get the right pluk url, there must be a config file located at `~/.kuberlab/config`
-by default. If a config file doesn't exist, it needs to be created. It contains simple yaml with the following values:
+In order to pass authentication on server and get the right pluk url,
+there must be a config file located at `~/.kuberlab/config`
+by default. If a config file doesn't exist, it needs to be created.
+It contains simple yaml with the following values:
 
 ```yaml
 base_url: https://go.kuberlab.io/api/v0.2
@@ -103,7 +122,8 @@ token: <your-user-token>
 # pluk_url: https://go.kuberlab.io/pluk/v1 (optional, need in case you want to use another pluk instance)
 ```
 
-By default, Pluk URL is calculated automatically using `base_url` from yaml config. Also, pluk url can be passed to CLI via:
+By default, Pluk URL is calculated automatically using `base_url` from
+ yaml config. Also, pluk url can be passed to CLI via:
 * config value `pluk_url`
 * `--url` parameter of `kdataset` CLI, e.g. `kdataset --url http://host:port/pluk/v1 push workspace dataset:1.0.0`
 
