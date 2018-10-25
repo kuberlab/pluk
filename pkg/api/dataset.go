@@ -223,7 +223,7 @@ func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {
 }
 
 func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
-	comment := req.HeaderParameter("Comment")
+	comment := req.QueryParameter("comment")
 	createRaw := req.QueryParameter("create")
 	create, _ := strconv.ParseBool(createRaw)
 	publishRaw := req.QueryParameter("publish")
@@ -256,6 +256,16 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	dsv, err := api.mgr.CommitVersion(currentType(req), workspace, name, version, comment)
+	if err != nil {
+		WriteStatusError(
+			resp,
+			http.StatusInternalServerError,
+			fmt.Errorf("Failed to commit version %v: %v", version, err.Error()),
+		)
+		return
+	}
+
 	if create {
 		if err = api.createDatasetOnDealer(req, workspace, name, publish); err != nil {
 			WriteStatusError(resp, http.StatusInternalServerError, err)
@@ -263,7 +273,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		}
 	}
 
-	resp.Write([]byte("Ok!\n"))
+	resp.WriteHeaderAndEntity(http.StatusCreated, dsv)
 }
 
 func (api *API) versions(req *restful.Request, resp *restful.Response) {

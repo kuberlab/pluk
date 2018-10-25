@@ -31,7 +31,9 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 
 	if utils.HasMasters() && masterSave {
 		// TODO: decide whether it can go in async
-		d.MasterClient.SaveFileStructure(structure, d.Type, d.Workspace, d.Name, version, create, publish)
+		d.MasterClient.SaveFileStructure(
+			structure, d.Type, d.Workspace, d.Name, version, comment, create, publish,
+		)
 	}
 	logrus.Infof("Done saving %v/%v:%v.", d.Workspace, d.Name, version)
 

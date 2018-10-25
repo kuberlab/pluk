@@ -34,7 +34,8 @@ type PlukClient interface {
 	PrepareWebsocket() error
 	SaveChunk(hash string, data []byte) error
 	SaveChunkWebsocket(hash string, data []byte) error
-	SaveFileStructure(structure types.FileStructure, entityType, workspace, name, version string, create bool, publish bool) error
+	SaveFileStructure(structure types.FileStructure,
+		entityType, workspace, name, version, comment string, create bool, publish bool) error
 	WebdavAuth(user, pass, path string) (bool, error)
 }
 

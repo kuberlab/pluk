@@ -209,12 +209,13 @@ func (c *MultiMasterClient) SaveChunk(hash string, data []byte) (err error) {
 	return err
 }
 
-func (c *MultiMasterClient) SaveFileStructure(structure types.FileStructure, entityType, workspace, name, version string, create bool, publish bool) (err error) {
+func (c *MultiMasterClient) SaveFileStructure(structure types.FileStructure,
+	entityType, workspace, name, version, comment string, create bool, publish bool) (err error) {
 	for i, cl := range c.baseClients {
 		if err != nil {
 			return err
 		}
-		err = cl.SaveFileStructure(structure, entityType, workspace, name, version, create, publish)
+		err = cl.SaveFileStructure(structure, entityType, workspace, name, version, comment, create, publish)
 		if err != nil {
 			logrus.Errorf("Failed save FS to %v", c.Masters[i])
 		}

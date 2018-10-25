@@ -245,7 +245,8 @@ func (c *Client) ListVersions(entityType, workspace, datasetName string) (*types
 	return res, err
 }
 
-func (c *Client) SaveFileStructure(structure types.FileStructure, entityType, workspace, name, version string, create bool, publish bool) error {
+func (c *Client) SaveFileStructure(structure types.FileStructure,
+	entityType, workspace, name, version, comment string, create bool, publish bool) error {
 	u := fmt.Sprintf("/%v/%v/%v/%v", entityType, workspace, name, version)
 	q := url.Values{}
 
@@ -255,6 +256,10 @@ func (c *Client) SaveFileStructure(structure types.FileStructure, entityType, wo
 	if publish {
 		q.Set("publish", "true")
 	}
+	if comment != "" {
+		q.Set("comment", comment)
+	}
+
 	if len(q) > 0 {
 		u += "?" + q.Encode()
 	}

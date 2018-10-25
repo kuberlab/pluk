@@ -26,6 +26,7 @@ type pushCmd struct {
 	name        string
 	version     string
 	workspace   string
+	comment     string
 	create      bool
 	force       bool
 	publish     bool
@@ -63,6 +64,12 @@ func NewPushCmd() *cobra.Command {
 		"",
 		512000,
 		"Chunk-size for scanning",
+	)
+	f.StringVar(
+		&push.comment,
+		"comment",
+		"",
+		"Comment for the new version",
 	)
 	f.Int64VarP(
 		&push.concurrency,
@@ -296,6 +303,7 @@ func (cmd *pushCmd) run() error {
 		cmd.workspace,
 		cmd.name,
 		cmd.version,
+		cmd.comment,
 		cmd.create,
 		cmd.publish,
 	); err != nil {
