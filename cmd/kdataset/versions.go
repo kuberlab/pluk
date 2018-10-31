@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/Sirupsen/logrus"
@@ -20,8 +21,8 @@ type versionsCmd struct {
 func NewVersionsCmd() *cobra.Command {
 	versions := &versionsCmd{}
 	cmd := &cobra.Command{
-		Use:   "version-list <workspace> <dataset-name>",
-		Short: "List versions for the current dataset.",
+		Use:   "version-list <workspace> <entity-name>",
+		Short: "List versions for the given catalog entity.",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			// Validation
 			if len(args) < 2 {
@@ -56,7 +57,13 @@ func (cmd *versionsCmd) run() error {
 	w := tabwriter.NewWriter(os.Stdout, 5, 4, 3, ' ', 0)
 	fmt.Fprintln(w, "VERSION\tSIZE\tCREATED\tUPDATED")
 	for _, v := range versions.Versions {
-		fmt.Fprintln(w, v.Version+"\t"+sizeString(v.SizeBytes)+"\t"+v.CreatedAt.String()+"\t"+v.UpdatedAt.String())
+		columns := []string{
+			v.Version,
+			sizeString(v.SizeBytes),
+			v.CreatedAt.String(),
+			v.UpdatedAt.String(),
+		}
+		fmt.Fprintln(w, strings.Join(columns, "\t"))
 	}
 	w.Flush()
 

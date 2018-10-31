@@ -24,8 +24,8 @@ type pullCmd struct {
 func NewPullCmd() *cobra.Command {
 	pull := &pullCmd{}
 	cmd := &cobra.Command{
-		Use:   "pull <workspace> <dataset-name>:<version> [-O output-file.tar]",
-		Short: "Download the dataset archive.",
+		Use:   "pull <workspace> <entity-name>:<version> [-O output-file.tar]",
+		Short: "Download the data entity archive.",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			// Validation
 			if len(args) < 2 {
@@ -34,7 +34,10 @@ func NewPullCmd() *cobra.Command {
 			workspace := args[0]
 			nameVersion := strings.Split(args[1], ":")
 			if len(nameVersion) != 2 {
-				return errors.New("Dataset and version is invalid. Must be in form <dataset-name>:<version>")
+				return fmt.Errorf(
+					"%v and version is invalid. Must be in form <%v-name>:<version>",
+					entityType.Value, entityType.Value,
+				)
 			}
 
 			pull.workspace = workspace
@@ -94,6 +97,6 @@ func (cmd *pullCmd) run() (err error) {
 	}
 	bar.Finish()
 
-	logrus.Infof("Successfully downloaded dataset to %v.", cmd.output)
+	logrus.Infof("Successfully downloaded %v to %v.", entityType.Value, cmd.output)
 	return
 }

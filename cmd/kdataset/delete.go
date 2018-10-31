@@ -10,15 +10,14 @@ import (
 type datasetDeleteCmd struct {
 	workspace string
 	name      string
-	dsType    string
 	force     bool
 }
 
 func NewDatasetDeleteCmd() *cobra.Command {
 	datasets := &datasetDeleteCmd{}
 	cmd := &cobra.Command{
-		Use:   "dataset-delete <workspace> <dataset-name>",
-		Short: "Delete specific dataset.",
+		Use:   "delete <workspace> <dataset-name>",
+		Short: "Delete specific catalog entity.",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			// Validation
 			if len(args) < 2 {
@@ -34,19 +33,12 @@ func NewDatasetDeleteCmd() *cobra.Command {
 		},
 	}
 	f := cmd.Flags()
-	f.StringVarP(
-		&datasets.dsType,
-		"type",
-		"",
-		"dataset",
-		"dataset type",
-	)
 	f.BoolVarP(
 		&datasets.force,
 		"force",
 		"f",
 		false,
-		"Delete dataset immediately (run garbage collector).",
+		"Delete entity immediately (run garbage collector).",
 	)
 
 	return cmd
@@ -58,13 +50,13 @@ func (cmd *datasetDeleteCmd) run() (err error) {
 		return err
 	}
 
-	logrus.Debug("Run dataset-delete...")
+	logrus.Debug("Run delete...")
 
-	err = client.DeleteEntity(cmd.dsType, cmd.workspace, cmd.name, cmd.force)
+	err = client.DeleteEntity(entityType.Value, cmd.workspace, cmd.name, cmd.force)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	logrus.Infof("Dataset %v successfully deleted.", cmd.name)
+	logrus.Infof("%v %v successfully deleted.", entityType.Value, cmd.name)
 	return
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -10,14 +11,13 @@ import (
 	"strings"
 	"sync"
 
-	"gopkg.in/cheggaaa/pb.v1"
-
 	"github.com/Sirupsen/logrus"
 	chunk_io "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/semaphore"
+	"gopkg.in/cheggaaa/pb.v1"
 )
 
 type pushCmd struct {
@@ -36,8 +36,8 @@ type pushCmd struct {
 func NewPushCmd() *cobra.Command {
 	push := &pushCmd{}
 	cmd := &cobra.Command{
-		Use:   "push <workspace> <dataset-name>:<version>",
-		Short: "Push the dataset within current directory",
+		Use:   "push <workspace> <entity-name>:<version>",
+		Short: "Push the data within the current directory",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			// Validation
 			if len(args) < 2 {
@@ -46,7 +46,10 @@ func NewPushCmd() *cobra.Command {
 			workspace := args[0]
 			nameVersion := strings.Split(args[1], ":")
 			if len(nameVersion) != 2 {
-				return errors.New("Dataset and version is invalid. Must be in form <dataset-name>:<version>")
+				return fmt.Errorf(
+					"%v and version are invalid. Must be in form <%v-name>:<version>",
+					strings.Title(entityType.Value), entityType.Value,
+				)
 			}
 
 			push.workspace = workspace
@@ -62,7 +65,7 @@ func NewPushCmd() *cobra.Command {
 		&push.chunkSize,
 		"chunk-size",
 		"",
-		512000,
+		1024000,
 		"Chunk-size for scanning",
 	)
 	f.StringVar(
@@ -83,21 +86,21 @@ func NewPushCmd() *cobra.Command {
 		"create",
 		"",
 		false,
-		"Create dataset in cloud-dealer if not exists.",
+		"Create entity in catalog if not exists.",
 	)
 	f.BoolVarP(
 		&push.publish,
 		"publish",
 		"",
 		false,
-		"Newly created dataset will be public. Only used in conjunction with --create.",
+		"Newly created catalog entity will be public. Only used in conjunction with --create.",
 	)
 	f.BoolVarP(
 		&push.force,
 		"force",
 		"f",
 		false,
-		"Force dataset uploading regardless warnings.",
+		"Force uploading regardless warnings.",
 	)
 	f.BoolVarP(
 		&push.websocket,

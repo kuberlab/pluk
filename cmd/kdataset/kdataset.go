@@ -138,6 +138,7 @@ func newRootCmd() *cobra.Command {
 
 	// Add all commands
 	rootCmd.AddCommand(
+		completionCmd(rootCmd),
 		NewPushCmd(),
 		NewPullCmd(),
 		NewDatasetsCmd(),
