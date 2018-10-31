@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -57,6 +58,6 @@ func (cmd *datasetDeleteCmd) run() (err error) {
 		logrus.Fatal(err)
 	}
 
-	logrus.Infof("%v %v successfully deleted.", entityType.Value, cmd.name)
+	logrus.Infof("%v %v successfully deleted.", strings.Title(entityType.Value), cmd.name)
 	return
 }

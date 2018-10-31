@@ -52,7 +52,7 @@ func (cmd *datasetsCmd) run() (err error) {
 		return nil
 	}
 
-	fmt.Printf("%v:\n", strings.ToUpper(entityType.Value))
+	fmt.Printf("%vS:\n", strings.ToUpper(entityType.Value))
 	for _, ds := range datasets.Items {
 		fmt.Println(ds.Name)
 	}
