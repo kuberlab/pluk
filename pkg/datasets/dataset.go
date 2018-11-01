@@ -233,7 +233,10 @@ func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err 
 		fs, err = d.GetFSFromDB(version)
 	} else {
 		if !utils.HasMasters() {
-			return nil, fmt.Errorf("Either the current instance has no masters or version does not exist.")
+			return nil, fmt.Errorf(
+				"Version %v not found in %v %v/%v.",
+				version, d.Type, d.Workspace, d.Name,
+			)
 		}
 		fs, err = d.getFSStructureFromMaster(version)
 	}

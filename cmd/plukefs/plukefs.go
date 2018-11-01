@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	gofuse "github.com/hanwen/go-fuse/fuse"
 	"github.com/hanwen/go-fuse/fuse/nodefs"
 	"github.com/hanwen/go-fuse/fuse/pathfs"
 	"github.com/kuberlab/pluk/pkg/fuse"
@@ -148,7 +149,9 @@ func (cmd *plukeFSCmd) run() int {
 	os.Setenv(utils.MastersVar, cmd.server)
 
 	io.MasterClient = plukclient.NewMasterClientWithSecret(cmd.secretWorkspace, cmd.secret)
-	utils.PrintEnvInfo()
+	if logrus.GetLevel() == logrus.DebugLevel {
+		utils.PrintEnvInfo()
+	}
 
 	plukfs, err := fuse.NewPlukFS(
 		cmd.dsType,
@@ -165,7 +168,7 @@ func (cmd *plukeFSCmd) run() int {
 	}
 
 	fs := pathfs.NewPathNodeFs(pathfs.NewReadonlyFileSystem(plukfs), &pathfs.PathNodeFsOptions{Debug: debugFS})
-	server, _, err := nodefs.MountRoot(cmd.mountPoint, fs.Root(), &nodefs.Options{Debug: debugFS})
+	server, _, err := MountRoot(cmd.mountPoint, fs.Root(), &nodefs.Options{Debug: debugFS})
 	if err != nil {
 		logrus.Error(err)
 		return 1
@@ -173,6 +176,24 @@ func (cmd *plukeFSCmd) run() int {
 	logrus.Info("FS is ready!")
 	server.Serve()
 	return 0
+}
+
+// Mounts a filesystem with the given root node on the given directory.
+// Convenience wrapper around fuse.NewServer
+func MountRoot(mountpoint string, root nodefs.Node, opts *nodefs.Options) (*gofuse.Server, *nodefs.FileSystemConnector, error) {
+	conn := nodefs.NewFileSystemConnector(root, opts)
+
+	mountOpts := gofuse.MountOptions{}
+	if opts != nil && opts.Debug {
+		mountOpts.Debug = opts.Debug
+	}
+	mountOpts.Name = "plukefs"
+	mountOpts.FsName = "plukefs"
+	s, err := gofuse.NewServer(conn.RawFS(), mountpoint, &mountOpts)
+	if err != nil {
+		return nil, nil, err
+	}
+	return s, conn, nil
 }
 
 func main() {
