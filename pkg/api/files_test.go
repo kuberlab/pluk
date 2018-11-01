@@ -493,6 +493,77 @@ func TestDeleteFile(t *testing.T) {
 	utils.Assert(1, len(fs), t)
 }
 
+func TestCloneUploadTheSameFile(t *testing.T) {
+	fname := getFname()
+	setup(fname)
+	dbPrepare(t)
+	defer teardown(fname)
+
+	url := buildURL("dataset/workspace/dataset/versions/1.0.0/upload/file.txt")
+	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	// Try upload more
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/upload/file2.txt")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	// Commit!
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/commit")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(""))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusOK, resp.StatusCode, t)
+
+	// Clone
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/clone/1.0.1")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	// Upload the same name with different content
+	url = buildURL("dataset/workspace/dataset/versions/1.0.1/upload/file.txt")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check tree: must be 2 entries
+	url = buildURL("dataset/workspace/dataset/versions/1.0.1/tree")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fs []io.ChunkedFileInfo
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(2, len(fs), t)
+
+	// Check file content: must match fileData2
+	url = buildURL("dataset/workspace/dataset/versions/1.0.1/raw/file.txt")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := mustRead(resp.Body)
+
+	utils.Assert(fileData2, data, t)
+}
+
 func TestCommitNoMoreUpload(t *testing.T) {
 	fname := getFname()
 	setup(fname)

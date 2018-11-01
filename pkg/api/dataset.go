@@ -369,7 +369,7 @@ func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	resp.WriteEntity(dsv)
+	resp.WriteHeaderAndEntity(http.StatusCreated, dsv)
 }
 
 func (api *API) createVersion(req *restful.Request, resp *restful.Response) {

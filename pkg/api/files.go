@@ -260,7 +260,7 @@ func (api *API) readAndSaveFile(req *restful.Request, resp *restful.Response) (f
 			tx.Commit()
 		}
 	}()
-	_, err = tx.GetFile(currentType(req), workspace, name, filepath, version)
+	_, err = tx.GetFile(workspace, name, currentType(req), filepath, version)
 	if err == nil {
 		// File exists, need overwrite
 		// TODO: overwrite
