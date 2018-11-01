@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	gofuse "github.com/hanwen/go-fuse/fuse"
 	"github.com/hanwen/go-fuse/fuse/nodefs"
@@ -163,14 +164,14 @@ func (cmd *plukeFSCmd) run() int {
 		cmd.secretWorkspace,
 	)
 	if err != nil {
-		logrus.Error(err)
+		fmt.Println(err)
 		return 1
 	}
 
 	fs := pathfs.NewPathNodeFs(pathfs.NewReadonlyFileSystem(plukfs), &pathfs.PathNodeFsOptions{Debug: debugFS})
 	server, _, err := MountRoot(cmd.mountPoint, fs.Root(), &nodefs.Options{Debug: debugFS})
 	if err != nil {
-		logrus.Error(err)
+		fmt.Println(err)
 		return 1
 	}
 	logrus.Info("FS is ready!")
