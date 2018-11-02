@@ -347,11 +347,19 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 func (d *Dataset) DeleteVersion(version string, force bool) error {
 	dsv, err := d.mgr.GetDatasetVersion(d.Type, d.Workspace, d.Name, version)
 	if err != nil {
-		return errors.NewStatus(http.StatusNotFound, fmt.Sprintf("Version %v not found", version))
+		ok, _ := d.CheckVersion(version)
+		if !ok {
+			return errors.NewStatus(http.StatusNotFound, fmt.Sprintf("Version %v not found", version))
+		}
+	} else {
+		dsv.Deleted = true
+		if _, err = d.mgr.UpdateDatasetVersion(dsv); err != nil {
+			return err
+		}
 	}
-	dsv.Deleted = true
-	if _, err = d.mgr.UpdateDatasetVersion(dsv); err != nil {
-		return err
+
+	if utils.HasMasters() && d.MasterClient != nil {
+		d.MasterClient.DeleteVersion(d.Type, d.Workspace, d.Name, version)
 	}
 
 	if force {
