@@ -219,6 +219,7 @@ func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	resp.WriteHeader(http.StatusCreated)
 	resp.Write([]byte("Ok!\n"))
 }
 
@@ -245,11 +246,16 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	// Wait
+	gc.WaitGCCompleted()
+
 	dataset, err := api.ds.NewDataset(currentType(req), workspace, name, master)
 	if err != nil {
 		WriteError(resp, err)
 		return
 	}
+	logrus.Infof("Saving %v for %v/%v:%v...", dataset.Type, workspace, name, version)
+
 	err = dataset.Save(structure, version, comment, create, publish, true)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
@@ -265,6 +271,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		)
 		return
 	}
+	logrus.Infof("Done saving %v/%v:%v.", workspace, name, version)
 
 	if create {
 		if err = api.createDatasetOnDealer(req, workspace, name, publish); err != nil {
@@ -428,7 +435,38 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	resp.WriteHeaderAndEntity(http.StatusCreated, dsv)
+	res := types.Version{
+		Version:   version,
+		Type:      dsv.Type,
+		CreatedAt: dsv.CreatedAt,
+		UpdatedAt: dsv.UpdatedAt,
+		Message:   dsv.Message,
+		Editing:   dsv.Editing,
+		SizeBytes: dsv.Size,
+	}
+
+	resp.WriteHeaderAndEntity(http.StatusCreated, res)
+}
+
+func (api *API) getVersion(req *restful.Request, resp *restful.Response) {
+	workspace := req.PathParameter("workspace")
+	name := req.PathParameter("name")
+	version := req.PathParameter("version")
+	master := api.masterClient(req)
+
+	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if dataset == nil {
+		WriteError(resp, EntityNotFoundError(req, name))
+		return
+	}
+
+	ver, err := api.findDatasetVersion(dataset, version, true)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
+
+	resp.WriteEntity(ver)
 }
 
 func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {

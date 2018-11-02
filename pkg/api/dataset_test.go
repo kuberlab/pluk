@@ -72,20 +72,20 @@ func TestCreateVersionAuto(t *testing.T) {
 
 	utils.Assert(http.StatusCreated, resp.StatusCode, t)
 
-	var dsv db.DatasetVersion
-	if err := json.NewDecoder(resp.Body).Decode(&dsv); err != nil {
+	var version types.Version
+	if err := json.NewDecoder(resp.Body).Decode(&version); err != nil {
 		t.Fatal(err)
 	}
-	want := db.DatasetVersion{
+	want := types.Version{
 		Type:      "dataset",
-		Workspace: "workspace",
-		Name:      "new-test",
+		SizeBytes: 0,
 		Version:   "1.0.0-new",
-		ID:        2,
-		Deleted:   false,
 		Editing:   true,
 	}
-	utils.Assert(want, dsv, t)
+	utils.Assert(want.Type, version.Type, t)
+	utils.Assert(want.SizeBytes, version.SizeBytes, t)
+	utils.Assert(want.Version, version.Version, t)
+	utils.Assert(want.Editing, version.Editing, t)
 }
 
 func TestUploadDeleteCheckDataset(t *testing.T) {
@@ -300,6 +300,64 @@ func TestDownloadDataset(t *testing.T) {
 	}
 
 	utils.Assert(2, files, t)
+}
+
+func TestUploadCorrectChunk(t *testing.T) {
+	fname := getFname()
+	setup(fname)
+	dbPrepare(t)
+	defer teardown(fname)
+
+	//hash1 := utils.CalcHash([]byte(fileData1))
+	hash2 := utils.CalcHash([]byte(fileData2))
+
+	// Post chunk1 by hash2 (simulate corrupted data)
+	url := buildURL("chunks/" + hash2)
+	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	// Check chunk2 by hash2 (to upload correct data)
+	url = buildURL("chunks/" + hash2)
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var chunk types.ChunkCheck
+	if err := json.NewDecoder(resp.Body).Decode(&chunk); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(true, chunk.Exists, t)
+	utils.Assert(int64(len(fileData1)), chunk.Size, t)
+	utils.Assert(hash2, chunk.Hash, t)
+	utils.Assert(true, chunk.Size != int64(len(fileData2)), t)
+
+	// Upload correct data
+	// Post chunk1 by hash2 (simulate corrupted data)
+	url = buildURL("chunks/" + hash2)
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check chunk2 by hash2
+	url = buildURL("chunks/" + hash2)
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&chunk); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(int64(len(fileData2)), chunk.Size, t)
+	utils.Assert(true, chunk.Exists, t)
 }
 
 func dbPrepare(t *testing.T) {

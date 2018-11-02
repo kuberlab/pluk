@@ -16,6 +16,7 @@ type FileChunkMgr interface {
 	ListFileChunks(filter FileChunk) ([]*FileChunk, error)
 	DeleteFileChunk(fileID, chunkID uint) error
 	GetFS(dsType, workspace, dataset, version string) (*io.ChunkedFileFS, error)
+	GetRawFiles(dsType, workspace, dataset, version, path string) ([]RawFile, error)
 	DeleteRelatedFiles(dsType, workspace, dataset, version string) (int64, error)
 	DeleteFiles(dsType, workspace, dataset, version, prefix string, preciseName bool) (int64, error)
 	ListRelatedChunks(dsType, workspace, dataset, version string) ([]*FileChunk, error)
@@ -26,6 +27,11 @@ type FileChunk struct {
 	FileID     uint `gorm:"index:file_id" json:"file_id"`
 	ChunkID    uint `gorm:"index:chunk_id" json:"chunk_id"`
 	ChunkIndex uint `json:"chunk_index"`
+}
+
+type FileChunkHash struct {
+	FileChunk
+	Chunk
 }
 
 func (mgr *DatabaseMgr) CreateFileChunk(file *FileChunk) error {
@@ -135,7 +141,7 @@ func (mgr *DatabaseMgr) DeleteRelatedFiles(dsType, workspace, dataset, version s
 	return mgr.DeleteFiles(dsType, workspace, dataset, version, "", false)
 }
 
-type rawFile struct {
+type RawFile struct {
 	FileID     uint
 	ChunkID    uint
 	Path       string
@@ -173,7 +179,7 @@ FROM file_chunks fc
     ON f.id = fc.file_id AND f.dataset_name = 'zappos' AND f.workspace = 'kuberlab-demo' AND version = '1.0.0'
   INNER JOIN chunks ON fc.chunk_id = chunks.id
 */
-func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.ChunkedFileFS, error) {
+func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, path string) ([]RawFile, error) {
 	join1 := fmt.Sprintf(
 		"INNER JOIN files f ON f.id = file_chunks.file_id "+
 			"AND f.dataset_name = '%v' "+
@@ -182,7 +188,10 @@ func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.C
 			"AND f.dataset_type = '%v'",
 		dataset, version, workspace, dsType,
 	)
-	rawFiles := make([]rawFile, 0)
+	if path != "" {
+		join1 = join1 + fmt.Sprintf(" AND f.path = '%v'", path)
+	}
+	rawFiles := make([]RawFile, 0)
 	err := mgr.db.
 		Table("file_chunks").
 		Select(strings.Join(columns, ",")).
@@ -190,6 +199,11 @@ func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.C
 		Joins("INNER JOIN chunks ON file_chunks.chunk_id = chunks.id").
 		Order(`path, chunk_index`).
 		Scan(&rawFiles).Error
+	return rawFiles, err
+}
+
+func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.ChunkedFileFS, error) {
+	rawFiles, err := mgr.GetRawFiles(dsType, workspace, dataset, version, "")
 
 	if err != nil {
 		return nil, err

@@ -23,8 +23,6 @@ type Dataset struct {
 }
 
 func (d *Dataset) Save(structure types.FileStructure, version string, comment string, create, publish, masterSave bool) error {
-	logrus.Infof("Saving %v for %v/%v:%v...", d.Type, d.Workspace, d.Name, version)
-
 	if err := d.SaveFSToDB(structure, version); err != nil {
 		return err
 	}
@@ -35,7 +33,6 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 			structure, d.Type, d.Workspace, d.Name, version, comment, create, publish,
 		)
 	}
-	logrus.Infof("Done saving %v/%v:%v.", d.Workspace, d.Name, version)
 
 	return nil
 }
@@ -143,7 +140,7 @@ func SaveFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFile) error 
 	//	fPath = "/" + fPath
 	//}
 	fileDB := &db.File{
-		Size:        int64(f.Size),
+		Size:        f.Size,
 		Path:        fPath,
 		Version:     dsv.Version,
 		Workspace:   dsv.Workspace,
@@ -157,6 +154,12 @@ func SaveFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFile) error 
 			return err
 		}
 	} else {
+		// Need to clear unneeded chunks
+		//
+		if err = ClearExtraChunks(tx, dsv, existing, f); err != nil {
+			return err
+		}
+
 		// Update
 		fileDB.ID = existing.ID
 		if existing.Size != fileDB.Size {
@@ -191,6 +194,42 @@ func SaveFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFile) error 
 			}
 		}
 	}
+	return nil
+}
+
+func ClearExtraChunks(tx db.DataMgr, dsv *db.DatasetVersion, existing *db.File, replacement *types.HashedFile) error {
+	exChunks, err := tx.GetRawFiles(dsv.Type, dsv.Workspace, dsv.Name, dsv.Version, existing.Path)
+	if err != nil {
+		return err
+	}
+	candidates := make(map[string]db.RawFile)
+	for _, exChunk := range exChunks {
+		candidates[exChunk.Hash] = exChunk
+	}
+	// Delete all chunks from map which are in replacement file
+	for _, newChunk := range replacement.Hashes {
+		if _, ok := candidates[newChunk.Hash]; ok {
+			delete(candidates, newChunk.Hash)
+		}
+	}
+
+	// Delete candidates
+	deleted := 0
+	for _, candidate := range candidates {
+		err := tx.DeleteFileChunk(candidate.FileID, candidate.ChunkID)
+		if err != nil {
+			return err
+		}
+		chunk := &db.Chunk{
+			Hash: candidate.Hash,
+			Size: candidate.ChunkSize,
+			ID:   candidate.ChunkID,
+		}
+		if CheckAndDeleteChunk(tx, chunk) {
+			deleted++
+		}
+	}
+	logrus.Infof("Deleted %v chunks.", deleted)
 	return nil
 }
 
@@ -332,6 +371,21 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 		}
 
 		for _, v := range vList.Versions {
+			_, ok := versionMap[v.Version]
+			if !ok {
+				// Sync locally
+				d.mgr.CreateDatasetVersion(
+					&db.DatasetVersion{
+						Version:   v.Version,
+						Editing:   v.Editing,
+						Type:      v.Type,
+						Size:      v.SizeBytes,
+						Message:   v.Message,
+						Name:      d.Name,
+						Workspace: d.Workspace,
+					},
+				)
+			}
 			versionMap[v.Version] = v
 		}
 	}

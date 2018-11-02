@@ -105,6 +105,7 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	ws.Route(ws.DELETE("/{entityType}/{workspace}/{name}").To(api.deleteDataset))
 	ws.Route(ws.GET("/{entityType}/{workspace}/{name}/versions").To(api.versions))
 	ws.Route(ws.POST("/{entityType}/{workspace}/{name}/versions/{version}").To(api.createVersion))
+	ws.Route(ws.GET("/{entityType}/{workspace}/{name}/versions/{version}/get").To(api.getVersion))
 	ws.Route(ws.POST("/{entityType}/{workspace}/{name}/versions/{version}/clone/{targetVersion}").To(api.cloneVersion))
 	ws.Route(ws.POST("/{entityType}/{workspace}/{name}/versions/{version}/commit").To(api.commitVersion))
 	ws.Route(ws.GET("/{entityType}/{workspace}/{name}/versions/{version}/fs").To(api.getDatasetFS))

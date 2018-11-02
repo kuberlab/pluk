@@ -116,10 +116,51 @@ func (c *MultiMasterClient) CheckEntityExists(entityType, workspace, dataset str
 
 func (c *MultiMasterClient) ListEntities(entityType, workspace string) (res *types.DataSetList, err error) {
 	for _, cl := range c.baseClients {
-		if err != nil {
-			return nil, err
-		}
 		res, err = cl.ListEntities(entityType, workspace)
+		if err != nil {
+			continue
+		}
+		return res, err
+	}
+	return nil, err
+}
+
+func (c *MultiMasterClient) GetEntity(entityType, workspace, name string) (res *types.Dataset, err error) {
+	for _, cl := range c.baseClients {
+		res, err = cl.GetEntity(entityType, workspace, name)
+		if err != nil {
+			continue
+		}
+		return res, err
+	}
+	return nil, err
+}
+
+func (c *MultiMasterClient) GetVersion(entityType, workspace, name, version string) (res *types.Version, err error) {
+	for _, cl := range c.baseClients {
+		res, err = cl.GetVersion(entityType, workspace, name, version)
+		if err != nil {
+			continue
+		}
+		return res, err
+	}
+	return nil, err
+}
+
+func (c *MultiMasterClient) CreateEntity(entityType, workspace, name string) (res *types.Dataset, err error) {
+	for _, cl := range c.baseClients {
+		res, err = cl.CreateEntity(entityType, workspace, name)
+		if err != nil {
+			continue
+		}
+		return res, err
+	}
+	return nil, err
+}
+
+func (c *MultiMasterClient) CreateVersion(entityType, workspace, name, version string) (res *types.Version, err error) {
+	for _, cl := range c.baseClients {
+		res, err = cl.CreateVersion(entityType, workspace, name, version)
 		if err != nil {
 			continue
 		}
@@ -130,9 +171,6 @@ func (c *MultiMasterClient) ListEntities(entityType, workspace string) (res *typ
 
 func (c *MultiMasterClient) ListVersions(entityType, workspace, datasetName string) (res *types.VersionList, err error) {
 	for _, cl := range c.baseClients {
-		if err != nil {
-			return nil, err
-		}
 		res, err = cl.ListVersions(entityType, workspace, datasetName)
 		if err != nil {
 			continue
@@ -203,6 +241,48 @@ func (c *MultiMasterClient) SaveChunk(hash string, data []byte) (err error) {
 		err = cl.SaveChunk(hash, data)
 		if err != nil {
 			logrus.Errorf("Failed save chunk to %v", c.Masters[i])
+			return
+		}
+	}
+	return err
+}
+
+func (c *MultiMasterClient) UploadFile(entityType, workspace, entityName, version, fileName string, body io.ReadCloser) (f *types.HashedFile, err error) {
+	for i, cl := range c.baseClients {
+		if err != nil {
+			return nil, err
+		}
+		f, err = cl.UploadFile(entityType, workspace, entityName, version, fileName, body)
+		if err != nil {
+			logrus.Errorf("Failed save chunk to %v", c.Masters[i])
+			return
+		}
+	}
+	return nil, err
+}
+
+func (c *MultiMasterClient) DownloadFile(entityType, workspace, entityName, version, fileName string) (res io.ReadCloser, err error) {
+	for i, cl := range c.baseClients {
+		if err != nil {
+			return nil, err
+		}
+		res, err = cl.DownloadFile(entityType, workspace, entityName, version, fileName)
+		if err != nil {
+			logrus.Errorf("Failed download file from %v", c.Masters[i])
+			return
+		}
+	}
+	return nil, err
+}
+
+func (c *MultiMasterClient) DeleteFile(entityType, workspace, entityName, version, fileName string) (err error) {
+	for i, cl := range c.baseClients {
+		if err != nil {
+			return err
+		}
+		err = cl.DeleteFile(entityType, workspace, entityName, version, fileName)
+		if err != nil {
+			logrus.Errorf("Failed delete file at %v", c.Masters[i])
 			return
 		}
 	}

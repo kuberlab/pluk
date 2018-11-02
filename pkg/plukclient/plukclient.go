@@ -121,19 +121,24 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	if err != nil {
 		return nil, err
 	}
+	c.setNeededHeaders(req)
+
+	return req, nil
+}
+
+func (c *Client) setNeededHeaders(req *http.Request) {
 	if c.auth != nil {
 		for k, v := range c.authHeaders() {
 			req.Header.Set(k, v[0])
 		}
 	}
 
-	if body != nil {
+	if req.Body != nil && req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if c.UserAgent != "" {
 		req.Header.Set("User-Agent", c.UserAgent)
 	}
-	return req, nil
 }
 
 func (c *Client) authHeaders() http.Header {
@@ -228,6 +233,74 @@ func (c *Client) ListEntities(entityType, workspace string) (*types.DataSetList,
 	return res, err
 }
 
+func (c *Client) GetEntity(entityType, workspace, name string) (*types.Dataset, error) {
+	u := fmt.Sprintf("/%v/%v/%v", entityType, workspace, name)
+
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	res := new(types.Dataset)
+	_, err = c.Do(req, res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
+func (c *Client) GetVersion(entityType, workspace, name, version string) (*types.Version, error) {
+	u := fmt.Sprintf("/%v/%v/%v/versions/%v/get", entityType, workspace, name, version)
+
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	res := new(types.Version)
+	_, err = c.Do(req, res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
+func (c *Client) CreateEntity(entityType, workspace, name string) (*types.Dataset, error) {
+	u := fmt.Sprintf("/%v/%v/%v", entityType, workspace, name)
+
+	req, err := c.NewRequest("POST", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	res := new(types.Dataset)
+	_, err = c.Do(req, res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
+func (c *Client) CreateVersion(entityType, workspace, name, version string) (*types.Version, error) {
+	u := fmt.Sprintf("/%v/%v/%v/versions/%v", entityType, workspace, name, version)
+
+	req, err := c.NewRequest("POST", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	res := new(types.Version)
+	_, err = c.Do(req, res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
 func (c *Client) ListVersions(entityType, workspace, datasetName string) (*types.VersionList, error) {
 	u := fmt.Sprintf("/%v/%v/%v/versions", entityType, workspace, datasetName)
 
@@ -274,6 +347,62 @@ func (c *Client) SaveFileStructure(structure types.FileStructure,
 		return err
 	}
 	return nil
+}
+
+func (c *Client) UploadFile(entityType, workspace, entityName, version, fileName string, body io.ReadCloser) (*types.HashedFile, error) {
+	u := fmt.Sprintf(
+		"/%v/%v/%v/versions/%v/upload/%v",
+		entityType, workspace, entityName, version, fileName,
+	)
+	u = strings.TrimSuffix(c.BaseURL.String(), "/") + u
+
+	req, err := http.NewRequest("POST", u, body)
+	if err != nil {
+		return nil, err
+	}
+	c.setNeededHeaders(req)
+
+	f := types.HashedFile{}
+	_, err = c.Do(req, &f)
+
+	return &f, err
+}
+
+func (c *Client) DownloadFile(entityType, workspace, entityName, version, fileName string) (io.ReadCloser, error) {
+	u := fmt.Sprintf(
+		"/%v/%v/%v/versions/%v/raw/%v",
+		entityType, workspace, entityName, version, fileName,
+	)
+	req, err := c.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Debugf("[go-plukclient] %v %v", req.Method, req.URL)
+	resp, err := c.Client.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err = checkResponse(resp, err)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Body, err
+}
+
+func (c *Client) DeleteFile(entityType, workspace, entityName, version, fileName string) error {
+	u := fmt.Sprintf(
+		"/%v/%v/%v/versions/%v/upload/%v",
+		entityType, workspace, entityName, version, fileName,
+	)
+	req, err := c.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return err
+	}
+	_, err = c.Do(req, nil)
+	return err
 }
 
 func (c *Client) CheckChunk(hash string) (*types.ChunkCheck, error) {
@@ -426,10 +555,7 @@ func (c *Client) DeleteEntity(entityType, workspace, name string, force bool) er
 	}
 
 	_, err = c.Do(req, nil)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (c *Client) DeleteVersion(entityType, workspace, name, version string) error {
@@ -441,10 +567,7 @@ func (c *Client) DeleteVersion(entityType, workspace, name, version string) erro
 	}
 
 	_, err = c.Do(req, nil)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (c *Client) WebdavAuth(user, pass, path string) (bool, error) {

@@ -30,8 +30,17 @@ type PlukClient interface {
 	EntityTarSize(entityType, workspace, name, version string) (int64, error)
 	GetFSStructure(entityType, workspace, name, version string) (*ChunkedFileFS, error)
 	ListEntities(entityType, workspace string) (*types.DataSetList, error)
+	GetEntity(entityType, workspace, name string) (*types.Dataset, error)
+	GetVersion(entityType, workspace, name, version string) (*types.Version, error)
+	CreateEntity(entityType, workspace, name string) (*types.Dataset, error)
+	CreateVersion(entityType, workspace, name, version string) (*types.Version, error)
 	ListVersions(entityType, workspace, datasetName string) (*types.VersionList, error)
 	PrepareWebsocket() error
+
+	UploadFile(entityType, workspace, entityName, version, fileName string, body io.ReadCloser) (*types.HashedFile, error)
+	DownloadFile(entityType, workspace, entityName, version, fileName string) (io.ReadCloser, error)
+	DeleteFile(entityType, workspace, entityName, version, fileName string) error
+
 	SaveChunk(hash string, data []byte) error
 	SaveChunkWebsocket(hash string, data []byte) error
 	SaveFileStructure(structure types.FileStructure,
