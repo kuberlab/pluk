@@ -29,12 +29,16 @@ const (
 	readConcurrencyVar   = "READ_CONCURRENCY"
 	uploadConcurrencyVar = "UPLOAD_CONCURRENCY"
 	dataVar              = "DATA_DIR"
-	dbPathVar            = "DB_PATH"
+	dbNameVar            = "DB_NAME"
+	dbHostVar            = "DB_HOST"
+	dbUserVar            = "DB_USER"
+	dbPassVar            = "DB_PASSWORD"
+	dbPortVar            = "DB_PORT"
 	MastersVar           = "MASTERS"
 	portVar              = "PLUK_HTTP_PORT"
 	defaultPort          = "8082"
 	defaultDataDir       = "/data"
-	defaultDBPath        = "/pluk/pluke.db"
+	defaultDBName        = "/pluk/pluke.db"
 	ChunkDirLength       = 8
 )
 
@@ -78,12 +82,32 @@ func HttpPort() string {
 	return port
 }
 
-func DBPath() string {
-	dbPath := os.Getenv(dbPathVar)
-	if dbPath == "" {
-		return defaultDBPath
+func DBName() string {
+	return FromEnv(dbNameVar, defaultDBName)
+}
+
+func DBHost() string {
+	return FromEnv(dbHostVar, "")
+}
+
+func DBUser() string {
+	return FromEnv(dbUserVar, "")
+}
+
+func DBPassword() string {
+	return FromEnv(dbPassVar, "")
+}
+
+func DBPort() string {
+	return FromEnv(dbPortVar, "")
+}
+
+func FromEnv(varName, defaultVal string) string {
+	val := os.Getenv(varName)
+	if val == "" {
+		val = defaultVal
 	}
-	return dbPath
+	return val
 }
 
 func AuthValidationURL() string {

@@ -4,6 +4,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"github.com/kuberlab/pluk/pkg/config"
 )
 
 var mainDB *gorm.DB
@@ -35,22 +36,28 @@ func InitFake(postCreate postCreateFunc, fname string) *gorm.DB {
 }
 
 func InitMain(postCreate postCreateFunc) *gorm.DB {
-	dbPath := utils.DBPath()
+	dbType, connString := config.GetConnString()
 
-	logrus.Infof("Opening sqlite DB at %v...", dbPath)
+	if dbType == "sqlite3" {
+		logrus.Infof("Opening sqlite DB at %v...", connString)
+	}
 
-	db, err := gorm.Open("sqlite3", dbPath)
+	db, err := gorm.Open(dbType, connString)
 	if err != nil {
 		logrus.Panic("Can't create sqlite database: ", err)
 	}
-	_, err = db.DB().Exec("PRAGMA journal_mode=WAL")
-	if err != nil {
-		logrus.Panic(err)
+
+	if dbType == "sqlite3" {
+		// Enable WAL mode for sqlite3
+		_, err = db.DB().Exec("PRAGMA journal_mode=WAL")
+		if err != nil {
+			logrus.Panic(err)
+		}
 	}
 	db.DB().SetMaxIdleConns(10)
 	db.DB().SetMaxOpenConns(100)
 	if err != nil {
-		logrus.Panic("Error configure sqlite database: ", err)
+		logrus.Panic("Error configure database: ", err)
 	}
 	db = db.LogMode(utils.DebugEnabled())
 	db.SetLogger(gorm.Logger{mainDBLogger{}})

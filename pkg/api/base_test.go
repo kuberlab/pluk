@@ -49,6 +49,18 @@ func setup(fname string) {
 // teardown closes the test HTTP server.
 func teardown(fname string) {
 	server.Close()
+
+	allTables := []string{
+		"files",
+		"chunks",
+		"dataset_versions",
+		"datasets",
+	}
+
+	for _, t := range allTables {
+		db.DbMgr.DB().Exec(fmt.Sprintf("DELETE FROM %v", t))
+	}
+
 	db.DbMgr.Close()
 	os.RemoveAll("/tmp/tmp_pluk")
 	os.RemoveAll(fname)

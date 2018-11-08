@@ -4,6 +4,7 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/kuberlab/pluk/pkg/db/gorm"
+	"os"
 )
 
 var DbMgr DataMgr
@@ -38,7 +39,11 @@ func NewMainDatabaseMgr() *DatabaseMgr {
 	return NewDatabaseMgr(db.InitMain(CreateAll))
 }
 func NewFakeDatabaseMgr(fname string) *DatabaseMgr {
-	return NewDatabaseMgr(db.InitFake(CreateTables, fname))
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		os.Setenv("DB_NAME", fname)
+	}
+	return NewDatabaseMgr(db.InitMain(CreateTables))
 }
 
 func (mgr *DatabaseMgr) DB() *gorm.DB {
