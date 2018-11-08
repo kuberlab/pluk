@@ -21,6 +21,7 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"net"
 )
 
 type Client struct {
@@ -64,12 +65,24 @@ func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
 	if len(base.Path) < 2 {
 		base.Path = "/pluk/v1"
 	}
-	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 100
-	var transport = *(http.DefaultTransport.(*http.Transport))
+	// Clone default transport
+	var transport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          100,
+		MaxIdleConnsPerHost:   100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
 	if base.Scheme == "https" {
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: auth.InsecureSkipVerify}
 	}
-	baseClient := &http.Client{Timeout: time.Hour * 8, Transport: &transport}
+	baseClient := &http.Client{Timeout: time.Hour * 8, Transport: transport}
 
 	return &Client{
 		BaseURL:   base,
