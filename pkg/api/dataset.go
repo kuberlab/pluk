@@ -18,6 +18,7 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"time"
 )
 
 func (api *API) masterClient(req *restful.Request) plukio.PlukClient {
@@ -340,7 +341,21 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
 	targetWS := req.PathParameter("targetWorkspace")
+	forceRaw := req.QueryParameter("force")
+	force, _ := strconv.ParseBool(forceRaw)
 	master := api.masterClient(req)
+
+	checkTarget := api.ds.GetDataset(currentType(req), targetWS, name, master)
+	if checkTarget != nil && force {
+		// Clean old dataset
+		err := api.ds.DeleteDataset(currentType(req), targetWS, name, master, true)
+		if err != nil {
+			WriteError(resp, err)
+			return
+		}
+		time.Sleep(time.Millisecond * 100)
+		gc.WaitGCCompleted()
+	}
 
 	dataset, err := api.ds.ForkDataset(currentType(req), workspace, name, targetWS, master)
 	if err != nil {

@@ -16,6 +16,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"sync"
 )
 
 const (
@@ -25,6 +26,7 @@ const (
 
 var (
 	active *bool
+	lock   = sync.RWMutex{}
 )
 
 func setActive() {
@@ -84,6 +86,8 @@ func Start() {
 }
 
 func GoGC() {
+	lock.Lock()
+	defer lock.Unlock()
 	setActive()
 	defer setInactive()
 	logrus.Info("[GC] Starting garbage collector...")
