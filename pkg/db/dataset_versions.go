@@ -39,8 +39,8 @@ func (mgr *DatabaseMgr) UpdateDatasetVersion(datasetVersion *DatasetVersion) (*D
 }
 
 func (mgr *DatabaseMgr) RecoverDatasetVersion(dsv *DatasetVersion) error {
-	sql := fmt.Sprintf("UPDATE dataset_versions SET deleted=0 where name='%v' AND workspace='%v' AND version='%v'", dsv.Name, dsv.Workspace, dsv.Version)
-	return mgr.db.Exec(sql).Error
+	sql := fmt.Sprintf("UPDATE dataset_versions SET deleted=? where name='%v' AND workspace='%v' AND version='%v'", dsv.Name, dsv.Workspace, dsv.Version)
+	return mgr.db.Exec(sql, false).Error
 }
 
 func (mgr *DatabaseMgr) GetDatasetVersion(dsType, workspace, name, version string) (*DatasetVersion, error) {
@@ -66,7 +66,7 @@ func (mgr *DatabaseMgr) ListDatasetVersions(filter DatasetVersion) ([]*DatasetVe
 	var datasetVersions = make([]*DatasetVersion, 0)
 	db := mgr.db
 	if !filter.Deleted {
-		db = db.Where("deleted=0")
+		db = db.Where("deleted=?", false)
 	}
 	err := db.Find(&datasetVersions, filter).Error
 	return datasetVersions, err
@@ -77,11 +77,13 @@ func (mgr *DatabaseMgr) DeleteDatasetVersion(id uint) error {
 }
 
 func (mgr *DatabaseMgr) CommitVersion(dsType, workspace, name, version, message string) (*DatasetVersion, error) {
-	set := "editing='false'"
+	set := "editing=?"
 	values := []interface{}{workspace, name, version, dsType}
 	if message != "" {
 		set = set + ", message=?"
-		values = append([]interface{}{message}, values...)
+		values = append([]interface{}{false, message}, values...)
+	} else {
+		values = append([]interface{}{false}, values...)
 	}
 	sql := fmt.Sprintf("UPDATE dataset_versions SET %v "+
 		"WHERE workspace=? AND name=? AND version=? AND type=?", set)

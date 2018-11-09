@@ -1,5 +1,5 @@
 hash: 5143c30b27a4ff3a569e2c418397453c213ab4474b2537bcc2f68de7f8f6b4bd
-updated: 2018-09-25T10:42:39.077662127+04:00
+updated: 2018-11-09T13:26:12.186269214+04:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -13,6 +13,8 @@ imports:
   version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
+- name: github.com/go-sql-driver/mysql
+  version: 9181e3a86a19bacd63e68d43ae8b7b36320d8092
 - name: github.com/gogits/git-module
   version: 5cc36acd9bc119acc0376a4db452e8ce55451c9f
 - name: github.com/gogo/protobuf
@@ -41,6 +43,8 @@ imports:
 - name: github.com/jinzhu/gorm
   version: 5174cc5c242a728b435ea2be8a2f7f998e15429b
   subpackages:
+  - dialects/mysql
+  - dialects/postgres
   - dialects/sqlite
 - name: github.com/jinzhu/inflection
   version: 1c35d901db3da928c72a72d8458480cc9ade058f
@@ -52,6 +56,11 @@ imports:
   - pkg/errors
   - pkg/types
   - pkg/utils
+- name: github.com/lib/pq
+  version: 5bf161122cd640c2a5a2c1d7fa49ea9befff31dd
+  subpackages:
+  - hstore
+  - oid
 - name: github.com/mailru/easyjson
   version: d5b7844b561a7bc640052f1b935f7b800330d7e0
   subpackages:
@@ -107,6 +116,10 @@ imports:
   - unicode/bidi
   - unicode/norm
   - width
+- name: google.golang.org/appengine
+  version: 12d5545dc1cfa6047a286d5e853841b6471f4c19
+  subpackages:
+  - cloudsql
 - name: gopkg.in/cheggaaa/pb.v1
   version: 2af8bbdea9e99e83b3ac400d8f6b6d1b8cbbf338
 - name: gopkg.in/cheggaaa/pb.v2

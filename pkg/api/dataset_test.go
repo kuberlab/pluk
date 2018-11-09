@@ -54,8 +54,17 @@ func TestCreateDataset(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&dataset); err != nil {
 		t.Fatal(err)
 	}
-	want := db.Dataset{Type: "dataset", Workspace: "workspace", Name: "new-test", ID: 2, Deleted: false}
-	utils.Assert(want, dataset, t)
+	want := db.Dataset{
+		Type:      "dataset",
+		Workspace: "workspace",
+		Name:      "new-test",
+		ID:        2,
+		Deleted:   false,
+	}
+	utils.Assert(want.Type, dataset.Type, t)
+	utils.Assert(want.Workspace, dataset.Workspace, t)
+	utils.Assert(want.Name, dataset.Name, t)
+	utils.Assert(want.Deleted, dataset.Deleted, t)
 }
 
 func TestCreateVersionAuto(t *testing.T) {

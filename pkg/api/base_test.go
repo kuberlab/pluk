@@ -55,6 +55,7 @@ func teardown(fname string) {
 		"chunks",
 		"dataset_versions",
 		"datasets",
+		"file_chunks",
 	}
 
 	for _, t := range allTables {

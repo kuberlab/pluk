@@ -1,10 +1,13 @@
 package db
 
 import (
+	"os"
+
 	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/kuberlab/pluk/pkg/db/gorm"
-	"os"
 )
 
 var DbMgr DataMgr

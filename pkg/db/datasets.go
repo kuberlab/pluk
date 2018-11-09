@@ -31,8 +31,8 @@ func (mgr *DatabaseMgr) UpdateDataset(dataset *Dataset) (*Dataset, error) {
 }
 
 func (mgr *DatabaseMgr) RecoverDataset(dataset *Dataset) error {
-	sql := fmt.Sprintf("UPDATE datasets SET deleted=0 where name='%v' AND workspace='%v'", dataset.Name, dataset.Workspace)
-	return mgr.db.Exec(sql).Error
+	sql := fmt.Sprintf("UPDATE datasets SET deleted=? where name='%v' AND workspace='%v'", dataset.Name, dataset.Workspace)
+	return mgr.db.Exec(sql, false).Error
 }
 
 func (mgr *DatabaseMgr) GetDataset(dsType, workspace, name string) (*Dataset, error) {
@@ -51,7 +51,7 @@ func (mgr *DatabaseMgr) ListDatasets(filter Dataset) ([]*Dataset, error) {
 	var datasets = make([]*Dataset, 0)
 	db := mgr.db
 	if !filter.Deleted {
-		db = db.Where("deleted=0")
+		db = db.Where("deleted=?", false)
 	}
 	err := db.Find(&datasets, filter).Error
 	return datasets, err

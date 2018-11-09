@@ -3,8 +3,8 @@ package db
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
-	"github.com/kuberlab/pluk/pkg/utils"
 	"github.com/kuberlab/pluk/pkg/config"
+	"github.com/kuberlab/pluk/pkg/utils"
 )
 
 var mainDB *gorm.DB
@@ -40,11 +40,16 @@ func InitMain(postCreate postCreateFunc) *gorm.DB {
 
 	if dbType == "sqlite3" {
 		logrus.Infof("Opening sqlite DB at %v...", connString)
+	} else {
+		logrus.Infof(
+			"Opening %v DB [dbname=%v, host=%v]...",
+			dbType, utils.DBName(), utils.DBHost(),
+		)
 	}
 
 	db, err := gorm.Open(dbType, connString)
 	if err != nil {
-		logrus.Panic("Can't create sqlite database: ", err)
+		logrus.Panic("Can't open database: ", err)
 	}
 
 	if dbType == "sqlite3" {

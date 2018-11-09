@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
@@ -18,7 +19,6 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
-	"time"
 )
 
 func (api *API) masterClient(req *restful.Request) plukio.PlukClient {
@@ -353,7 +353,7 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 			WriteError(resp, err)
 			return
 		}
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 30)
 		gc.WaitGCCompleted()
 	}
 
