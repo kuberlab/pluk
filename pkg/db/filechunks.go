@@ -8,6 +8,7 @@ import (
 	libtypes "github.com/kuberlab/lib/pkg/types"
 	"github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"time"
 )
 
 type FileChunkMgr interface {
@@ -169,15 +170,20 @@ SELECT
   file_id,
   chunk_id,
   path,
-  f.size as file_size,
+  f.size      as file_size,
   chunks.size as chunk_size,
-  "chunk_index",
+  chunk_index,
   hash,
   f.updated_at
-FROM file_chunks fc
+FROM "file_chunks"
   INNER JOIN files f
-    ON f.id = fc.file_id AND f.dataset_name = 'zappos' AND f.workspace = 'kuberlab-demo' AND version = '1.0.0'
-  INNER JOIN chunks ON fc.chunk_id = chunks.id
+    ON f.id = file_chunks.file_id
+       AND f.dataset_name = 'zappos'
+       AND version = '1.0.0'
+       AND f.workspace = 'kuberlab-demo'
+       AND f.dataset_type = 'dataset'
+  INNER JOIN chunks ON file_chunks.chunk_id = chunks.id
+ORDER BY path, chunk_index;
 */
 func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, path string) ([]RawFile, error) {
 	join1 := fmt.Sprintf(
@@ -209,10 +215,15 @@ func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.C
 		return nil, err
 	}
 	newFS := func(root string) *io.ChunkedFileFS {
+		t := time.Now().Add(-time.Hour)
+		if len(rawFiles) > 0 {
+			t = rawFiles[0].UpdatedAt.Time
+		}
 		return &io.ChunkedFileFS{
-			Files: make(map[string]*io.ChunkedFile),
-			Root:  "/",
-			Dirs:  make(map[string]*io.ChunkedFileFS),
+			Files:   make(map[string]*io.ChunkedFile),
+			Root:    "/",
+			Dirs:    make(map[string]*io.ChunkedFileFS),
+			ModTime: t,
 		}
 	}
 
@@ -244,7 +255,7 @@ func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.C
 			} else {
 				dirname := "/" + strings.Join(splitted[:i+1], "/")
 				if dirname != "/" {
-					curDir.AddDir(dirname)
+					curDir.AddDir(dirname, raw.UpdatedAt.Time)
 					curDir = curDir.Dirs[filepath.Base(dirname)]
 				}
 			}

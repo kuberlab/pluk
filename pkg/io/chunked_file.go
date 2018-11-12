@@ -51,10 +51,11 @@ type PlukClient interface {
 var MasterClient PlukClient
 
 type ChunkedFileFS struct {
-	lock  sync.RWMutex
-	Root  string                    `json:"root"`
-	Dirs  map[string]*ChunkedFileFS `json:"dirs"`  // Only dirs for current root
-	Files map[string]*ChunkedFile   `json:"files"` // Only files for current root
+	lock    sync.RWMutex
+	Root    string                    `json:"root"`
+	Dirs    map[string]*ChunkedFileFS `json:"dirs"`  // Only dirs for current root
+	Files   map[string]*ChunkedFile   `json:"files"` // Only files for current root
+	ModTime time.Time                 `json:"mod_time"`
 }
 
 func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
@@ -63,7 +64,7 @@ func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
 	filename := filepath.Base(absname)
 
 	if absname == "" {
-		return fs.dirObj("/" + absname)
+		return fs.dirObj("/"+absname, fs.ModTime)
 	}
 	curDir := fs.GetDir(dirname)
 	if curDir == nil {
@@ -72,9 +73,9 @@ func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
 	if f, ok := curDir.Files[filename]; ok {
 		return f
 	} else {
-		if _, ok := curDir.Dirs[filename]; ok {
+		if d, ok := curDir.Dirs[filename]; ok {
 			// Return file-dir object
-			return fs.dirObj(absname)
+			return fs.dirObj(absname, d.ModTime)
 		} else {
 			return nil
 		}
@@ -83,14 +84,14 @@ func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
 	return nil
 }
 
-func (fs *ChunkedFileFS) dirObj(absname string) *ChunkedFile {
+func (fs *ChunkedFileFS) dirObj(absname string, modtime time.Time) *ChunkedFile {
 	return &ChunkedFile{
 		Fstat: &ChunkedFileInfo{
 			Fsize:    4096,
 			Dir:      true,
 			Fname:    filepath.Base(absname),
 			Fmode:    0775,
-			FmodTime: time.Now().Add(-time.Hour),
+			FmodTime: modtime,
 		},
 		Size: 4096,
 		Name: absname,
@@ -120,7 +121,7 @@ func (fs *ChunkedFileFS) GetDir(dirname string) *ChunkedFileFS {
 
 func (fs *ChunkedFileFS) Walk(root string, walkFunc func(path string, f *ChunkedFile, err error) error) error {
 	rootDir := fs.GetDir(root)
-	if err := walkFunc(root, fs.dirObj(root), nil); err != nil {
+	if err := walkFunc(root, fs.dirObj(root, rootDir.ModTime), nil); err != nil {
 		return err
 	}
 	if rootDir == nil {
@@ -146,23 +147,25 @@ func (fs *ChunkedFileFS) Prepare() {
 	//}
 }
 
-func (fs *ChunkedFileFS) AddDir(path string) {
+func (fs *ChunkedFileFS) AddDir(path string, modtime time.Time) {
 	base := filepath.Base(path)
 	_, ok := fs.Dirs[base]
 	if !ok {
 		fs.Dirs[base] = &ChunkedFileFS{
-			Root:  path,
-			Dirs:  make(map[string]*ChunkedFileFS),
-			Files: make(map[string]*ChunkedFile),
+			Root:    path,
+			Dirs:    make(map[string]*ChunkedFileFS),
+			Files:   make(map[string]*ChunkedFile),
+			ModTime: modtime,
 		}
 	}
 }
 
 func (fs *ChunkedFileFS) Clone() *ChunkedFileFS {
 	cloned := &ChunkedFileFS{
-		Files: make(map[string]*ChunkedFile),
-		Dirs:  make(map[string]*ChunkedFileFS),
-		Root:  fs.Root,
+		Files:   make(map[string]*ChunkedFile),
+		Dirs:    make(map[string]*ChunkedFileFS),
+		Root:    fs.Root,
+		ModTime: fs.ModTime,
 	}
 	for k, f := range fs.Files {
 		cloned.Files[k] = &ChunkedFile{
@@ -194,7 +197,7 @@ func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error
 
 	// Add all files and dirs within current directory
 	for _, d := range dir.Dirs {
-		res = append(res, dir.dirObj(d.Root).Fstat)
+		res = append(res, dir.dirObj(d.Root, d.ModTime).Fstat)
 	}
 	for _, f := range dir.Files {
 		res = append(res, f.Fstat)
