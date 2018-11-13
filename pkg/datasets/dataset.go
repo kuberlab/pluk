@@ -73,6 +73,7 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 
 	dsv := &db.DatasetVersion{
 		Size:      totalSize,
+		FileCount: int64(len(fileSizeMap)),
 		Version:   version,
 		Name:      d.Name,
 		Workspace: d.Workspace,
@@ -362,6 +363,7 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 			Editing:   dsv.Editing,
 			Message:   dsv.Message,
 			Type:      dsv.Type,
+			FileCount: dsv.FileCount,
 		}
 	}
 	if utils.HasMasters() {
@@ -383,6 +385,7 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 						Message:   v.Message,
 						Name:      d.Name,
 						Workspace: d.Workspace,
+						FileCount: v.FileCount,
 					},
 				)
 			}

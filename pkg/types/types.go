@@ -71,6 +71,7 @@ type Version struct {
 	CreatedAt types.Time `json:"created_at"`
 	UpdatedAt types.Time `json:"updated_at"`
 	SizeBytes int64      `json:"size_bytes"`
+	FileCount int64      `json:"file_count"`
 	Message   string     `json:"message,omitempty"`
 	Type      string     `json:"type"`
 	Editing   bool       `json:"editing"`

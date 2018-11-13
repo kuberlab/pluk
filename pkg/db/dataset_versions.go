@@ -25,6 +25,7 @@ type DatasetVersion struct {
 	Message   string `json:"message"`
 	Type      string `json:"type" gorm:"index:idx_workspace_name_type"`
 	Size      int64  `json:"size"`
+	FileCount int64  `json:"file_count"`
 	Deleted   bool   `json:"deleted"`
 	Editing   bool   `json:"editing"`
 }
@@ -100,7 +101,13 @@ func (mgr *DatabaseMgr) UpdateDatasetVersionSize(dsType, workspace, name, versio
 	sql := `UPDATE dataset_versions
 	SET
 	size = (
-		SELECT sum(size) as size from files where files.workspace = dataset_versions.workspace
+		SELECT sum(size) as size FROM files WHERE files.workspace = dataset_versions.workspace
+		AND files.dataset_name = dataset_versions.name
+		AND files.version = dataset_versions.version
+		AND files.dataset_type = dataset_versions.type
+	),
+	file_count = (
+		SELECT count(*) as count FROM files WHERE files.workspace = dataset_versions.workspace
 		AND files.dataset_name = dataset_versions.name
 		AND files.version = dataset_versions.version
 		AND files.dataset_type = dataset_versions.type
