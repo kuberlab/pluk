@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	DefaultExpriration = time.Hour * 12
+	DefaultExpiration = time.Hour * 3
 )
 
 type RequestCache struct {
@@ -16,7 +16,7 @@ type RequestCache struct {
 
 func NewRequestCache() *RequestCache {
 	return &RequestCache{
-		Cache: cache.New(DefaultExpriration, DefaultExpriration*2),
+		Cache: cache.New(DefaultExpiration, DefaultExpiration),
 	}
 }
 
