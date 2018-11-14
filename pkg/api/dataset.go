@@ -17,6 +17,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/gc"
 	plukio "github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
@@ -351,6 +352,13 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 	if targetType == "" {
 		targetType = currentType(req)
 	}
+
+	if _, ok := plukclient.AllowedTypes[targetType]; !ok {
+		msg := fmt.Sprintf("Wrong entity type: Must be one of %v", plukclient.AllowedTypesList())
+		WriteErrorString(resp, http.StatusBadRequest, msg)
+		return
+	}
+
 	master := api.masterClient(req)
 
 	checkTarget := api.ds.GetDataset(targetType, targetWS, targetName, master)

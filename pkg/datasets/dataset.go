@@ -518,6 +518,11 @@ func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion, messag
 		}
 	}
 
+	sourceVersion, err := tx.GetDatasetVersion(d.Type, d.Workspace, d.Name, version)
+	if err != nil {
+		return nil, err
+	}
+
 	dsv := &db.DatasetVersion{
 		Version:   targetVersion,
 		Size:      totalSize,
@@ -526,6 +531,7 @@ func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion, messag
 		Type:      target.Type,
 		Editing:   true,
 		Message:   message,
+		FileCount: sourceVersion.FileCount,
 	}
 	err = SaveDatasetVersion(tx, dsv)
 	return dsv, err
