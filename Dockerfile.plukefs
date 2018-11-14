@@ -5,7 +5,7 @@ COPY ./pkg "$GOPATH/src/github.com/kuberlab/pluk/pkg"
 COPY ./cmd "$GOPATH/src/github.com/kuberlab/pluk/cmd"
 COPY ./vendor "$GOPATH/src/github.com/kuberlab/pluk/vendor"
 
-RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && go build ./cmd/plukefs/
+RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && go build -ldflags="-s -w" ./cmd/plukefs/
 
 FROM ubuntu:16.04
 

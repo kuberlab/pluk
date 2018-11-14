@@ -5,7 +5,7 @@ COPY ./pkg "$GOPATH/src/github.com/kuberlab/pluk/pkg"
 COPY ./cmd "$GOPATH/src/github.com/kuberlab/pluk/cmd"
 COPY ./vendor "$GOPATH/src/github.com/kuberlab/pluk/vendor"
 
-RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && go build pluksrv.go && go build ./cmd/kdataset/
+RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && go build -ldflags="-s -w" pluksrv.go && go build -ldflags="-s -w" ./cmd/kdataset/
 
 FROM golang:1.9.2
 
