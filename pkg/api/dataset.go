@@ -343,12 +343,20 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 	targetWS := req.PathParameter("targetWorkspace")
 	forceRaw := req.QueryParameter("force")
 	force, _ := strconv.ParseBool(forceRaw)
+	targetName := req.QueryParameter("name")
+	if targetName == "" {
+		targetName = name
+	}
+	targetType := req.QueryParameter("type")
+	if targetType == "" {
+		targetType = currentType(req)
+	}
 	master := api.masterClient(req)
 
-	checkTarget := api.ds.GetDataset(currentType(req), targetWS, name, master)
+	checkTarget := api.ds.GetDataset(targetType, targetWS, targetName, master)
 	if checkTarget != nil && force {
 		// Clean old dataset
-		err := api.ds.DeleteDataset(currentType(req), targetWS, name, master, true)
+		err := api.ds.DeleteDataset(targetType, targetWS, targetName, master, true)
 		if err != nil {
 			WriteError(resp, err)
 			return
@@ -357,7 +365,10 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 		gc.WaitGCCompleted()
 	}
 
-	dataset, err := api.ds.ForkDataset(currentType(req), workspace, name, targetWS, master)
+	src := types.Dataset{Workspace: workspace, Name: name, Type: currentType(req)}
+	target := types.Dataset{Workspace: targetWS, Name: targetName, Type: targetType}
+
+	dataset, err := api.ds.ForkDataset(src, target, master)
 	if err != nil {
 		WriteError(resp, err)
 		return

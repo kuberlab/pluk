@@ -10,6 +10,7 @@ import (
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
@@ -90,20 +91,23 @@ func (m *Manager) NewDataset(eType, workspace, name string, master io.PlukClient
 	return ds, nil
 }
 
-func (m *Manager) ForkDataset(eType, workspace, name, targetWorkspace string, master io.PlukClient) (*Dataset, error) {
-	_, err := m.mgr.GetDataset(eType, targetWorkspace, name)
+func (m *Manager) ForkDataset(src types.Dataset, target types.Dataset, master io.PlukClient) (*Dataset, error) {
+	_, err := m.mgr.GetDataset(target.Type, target.Workspace, target.Name)
 	if err == nil {
-		msg := fmt.Sprintf("Dataset %v/%v already exists. Please delete it first and try again.", targetWorkspace, name)
+		msg := fmt.Sprintf(
+			"%v %v/%v already exists. Please delete it first and try again.",
+			strings.Title(target.Type), target.Workspace, target.Name,
+		)
 		return nil, errors.NewStatus(409, msg)
 	}
 
-	source := m.GetDataset(eType, workspace, name, master)
+	source := m.GetDataset(src.Type, src.Workspace, src.Name, master)
 	if source == nil {
-		msg := fmt.Sprintf("Probably dataset %v/%v doesn't exist", workspace, name)
+		msg := fmt.Sprintf("Probably %v %v/%v doesn't exist", src.Type, src.Workspace, src.Name)
 		return nil, errors.NewStatus(404, msg)
 	}
 
-	ds, err := m.NewDataset(eType, targetWorkspace, name, master)
+	ds, err := m.NewDataset(target.Type, target.Workspace, target.Name, master)
 	if err != nil {
 		return nil, err
 	}
