@@ -94,6 +94,8 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	ws.Route(ws.GET("/workspaces/{workspace}").To(api.checkWorkspace))
 	ws.Route(ws.GET("/workspaces/{workspace}/{entityType}/{dataset}").To(api.checkDatasetExists))
 	ws.Route(ws.GET("/workspaces/{workspace}/{entityType}/{dataset}/permission").To(api.checkDatasetPermission))
+	ws.Route(ws.POST("/workspaces/{workspace}/{entityType}/{dataset}/spec").To(api.postSpec))
+	ws.Route(ws.POST("/workspaces/{workspace}/{entityType}/{dataset}/versions/{version}/spec").To(api.postVersionSpec))
 
 	// Items
 	ws.Route(ws.GET("/{entityType}").To(api.datasets))

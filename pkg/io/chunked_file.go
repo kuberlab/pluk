@@ -22,6 +22,8 @@ type PlukClient interface {
 	CheckEntityPermission(entityType, workspace, name string, write bool) (*types.Dataset, error)
 	CheckEntityExists(entityType, workspace, name string) (*types.Dataset, error)
 	CheckWorkspace(workspace string) (*types.Workspace, error)
+	PostEntitySpec(entityType, workspace, name string, spec interface{}) error
+	PostEntitySpecForVersion(entityType, workspace, name, version string, spec interface{}) error
 	Close() error
 	DeleteEntity(entityType, workspace, name string, force bool) error
 	DeleteVersion(entityType, workspace, name, version string) error

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"bytes"
 	"github.com/Sirupsen/logrus"
 	chunk_io "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
@@ -18,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/semaphore"
 	"gopkg.in/cheggaaa/pb.v1"
+	"io/ioutil"
 )
 
 type pushCmd struct {
@@ -27,6 +29,7 @@ type pushCmd struct {
 	version     string
 	workspace   string
 	comment     string
+	specFile    string
 	create      bool
 	force       bool
 	publish     bool
@@ -74,6 +77,12 @@ func NewPushCmd() *cobra.Command {
 		"",
 		"Comment for the new version",
 	)
+	f.StringVar(
+		&push.specFile,
+		"spec",
+		"",
+		"Spec file for the model",
+	)
 	f.Int64VarP(
 		&push.concurrency,
 		"concurrency",
@@ -118,6 +127,19 @@ func (cmd *pushCmd) run() error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		logrus.Fatal(err)
+	}
+
+	var specData *bytes.Buffer
+	if cmd.specFile != "" {
+		// Only model allow spec
+		if entityType.Value != "model" {
+			logrus.Fatal("Only model is allowed to have --spec")
+		}
+		specRaw, err := ioutil.ReadFile(cmd.specFile)
+		if err != nil {
+			logrus.Fatalf("Failed to read %v: %v", cmd.specFile, err)
+		}
+		specData = bytes.NewBuffer(specRaw)
 	}
 
 	client, err := initClient()
@@ -313,6 +335,15 @@ func (cmd *pushCmd) run() error {
 		bar.Finish()
 		logrus.Fatal(err)
 	}
+
+	if cmd.specFile != "" {
+		err = client.PostEntitySpec(entityType.Value, cmd.workspace, cmd.name, specData)
+		if err != nil {
+			bar.Finish()
+			logrus.Fatal(err)
+		}
+	}
+
 	if !bar.IsFinished() {
 		bar.Finish()
 	}

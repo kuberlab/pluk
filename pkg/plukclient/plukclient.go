@@ -121,16 +121,22 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	u := c.BaseURL.String()
 	u = strings.TrimSuffix(u, "/") + urlStr
 
-	var buf io.ReadWriter
+	var reqBody io.Reader
 	if body != nil {
-		buf = new(bytes.Buffer)
-		err := json.NewEncoder(buf).Encode(body)
-		if err != nil {
-			return nil, err
+		rd, ok := body.(io.Reader)
+		if ok {
+			reqBody = rd
+		} else {
+			buf := new(bytes.Buffer)
+			err := json.NewEncoder(buf).Encode(body)
+			if err != nil {
+				return nil, err
+			}
+			reqBody = buf
 		}
 	}
 
-	req, err := http.NewRequest(method, u, buf)
+	req, err := http.NewRequest(method, u, reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +195,28 @@ func (c *Client) CheckWorkspace(workspace string) (*types.Workspace, error) {
 	}
 
 	return res, err
+}
+
+func (c *Client) PostEntitySpec(entityType, workspace, name string, spec interface{}) error {
+	u := fmt.Sprintf("/workspaces/%v/%v/%v/spec", workspace, entityType, name)
+
+	req, err := c.NewRequest("POST", u, spec)
+	if err != nil {
+		return err
+	}
+	_, err = c.Do(req, nil)
+	return err
+}
+
+func (c *Client) PostEntitySpecForVersion(entityType, workspace, name, version string, spec interface{}) error {
+	u := fmt.Sprintf("/workspaces/%v/%v/%v/versions/%v/spec", workspace, entityType, name, version)
+
+	req, err := c.NewRequest("POST", u, spec)
+	if err != nil {
+		return err
+	}
+	_, err = c.Do(req, nil)
+	return err
 }
 
 func (c *Client) CheckEntityPermission(entityType, workspace, name string, write bool) (*types.Dataset, error) {

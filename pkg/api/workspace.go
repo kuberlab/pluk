@@ -6,12 +6,15 @@ import (
 	"strconv"
 	"strings"
 
+	"bytes"
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/dealerclient"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"io"
+	"io/ioutil"
 )
 
 func (api *API) checkWorkspace(req *restful.Request, resp *restful.Response) {
@@ -182,4 +185,89 @@ func (api *API) checkEntityExists(req *restful.Request, ws, name string) error {
 
 	_, err = getMethod(ws, name)
 	return err
+}
+
+func (api *API) postSpecToDealer(req *restful.Request, ws, name, version string, spec interface{}) error {
+	u := utils.AuthValidationURL()
+	if u == "" && !utils.HasMasters() {
+		return nil
+	}
+
+	if u == "" && utils.HasMasters() {
+		// Request master.
+		masters := plukclient.NewMasterClientFromHeaders(req.Request.Header)
+		var err error
+		if version != "" {
+			err = masters.PostEntitySpecForVersion(currentType(req), ws, name, version, spec)
+		} else {
+			err = masters.PostEntitySpec(currentType(req), ws, name, spec)
+		}
+		return err
+	}
+
+	dealer, err := api.dealerClient(req)
+	if err != nil {
+		return err
+	}
+
+	switch currentType(req) {
+	case "dataset":
+		return nil
+	case "model":
+		if version != "" {
+			err = dealer.CreateSpecForVersion(ws, name, version, spec)
+		} else {
+			err = dealer.CreateSpec(ws, name, spec)
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (api *API) postSpec(req *restful.Request, resp *restful.Response) {
+	workspace := req.PathParameter("workspace")
+	name := req.PathParameter("dataset")
+
+	var spec io.Reader
+	specRaw, err := ioutil.ReadAll(req.Request.Body)
+	req.Request.Body.Close()
+	if err != nil {
+		spec = nil
+	} else if len(specRaw) > 1 {
+		spec = bytes.NewBuffer(specRaw)
+	}
+
+	err = api.postSpecToDealer(req, workspace, name, "", spec)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
+
+	resp.WriteHeader(http.StatusCreated)
+	resp.Write([]byte("Ok!\n"))
+}
+
+func (api *API) postVersionSpec(req *restful.Request, resp *restful.Response) {
+	workspace := req.PathParameter("workspace")
+	name := req.PathParameter("dataset")
+	version := req.PathParameter("version")
+
+	var spec io.Reader
+	specRaw, err := ioutil.ReadAll(req.Request.Body)
+	req.Request.Body.Close()
+	if err != nil {
+		spec = nil
+	} else if len(specRaw) > 1 {
+		spec = bytes.NewBuffer(specRaw)
+	}
+
+	err = api.postSpecToDealer(req, workspace, name, version, spec)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
+
+	resp.WriteHeader(http.StatusCreated)
+	resp.Write([]byte("Ok!\n"))
 }

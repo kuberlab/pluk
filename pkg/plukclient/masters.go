@@ -103,6 +103,28 @@ func (c *MultiMasterClient) CheckEntityPermission(entityType, workspace, dataset
 	return nil, err
 }
 
+func (c *MultiMasterClient) PostEntitySpec(entityType, workspace, name string, spec interface{}) (err error) {
+	for _, cl := range c.baseClients {
+		err = cl.PostEntitySpec(entityType, workspace, name, spec)
+		if err != nil {
+			continue
+		}
+		return err
+	}
+	return err
+}
+
+func (c *MultiMasterClient) PostEntitySpecForVersion(entityType, workspace, name, version string, spec interface{}) (err error) {
+	for _, cl := range c.baseClients {
+		err = cl.PostEntitySpecForVersion(entityType, workspace, name, version, spec)
+		if err != nil {
+			continue
+		}
+		return err
+	}
+	return err
+}
+
 func (c *MultiMasterClient) CheckEntityExists(entityType, workspace, dataset string) (ds *types.Dataset, err error) {
 	for _, cl := range c.baseClients {
 		ds, err = cl.CheckEntityExists(entityType, workspace, dataset)
