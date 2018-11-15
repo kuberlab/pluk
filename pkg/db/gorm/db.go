@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"github.com/kuberlab/pluk/pkg/config"
@@ -49,7 +50,28 @@ func InitMain(postCreate postCreateFunc) *gorm.DB {
 
 	db, err := gorm.Open(dbType, connString)
 	if err != nil {
-		logrus.Panic("Can't open database: ", err)
+		if dbType == "postgres" {
+			_, conn := config.GetConnStringForName("postgres")
+			db, errC := gorm.Open(dbType, conn)
+			if errC != nil {
+				logrus.Error(errC)
+			}
+			db = db.LogMode(true)
+			db.SetLogger(gorm.Logger{mainDBLogger{}})
+			logrus.Infof("Trying to create database %v...", utils.DBName())
+			// Try create database
+			_, errC = db.DB().Exec(fmt.Sprintf("CREATE DATABASE %q", utils.DBName()))
+			if errC == nil {
+				err = nil
+				db.Close()
+				db, err = gorm.Open(dbType, connString)
+			} else {
+				logrus.Error(errC)
+			}
+		}
+		if err != nil {
+			logrus.Panic("Can't open database: ", err)
+		}
 	}
 
 	if dbType == "sqlite3" {

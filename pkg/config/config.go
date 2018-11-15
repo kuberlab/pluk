@@ -8,6 +8,10 @@ import (
 )
 
 func GetConnString() (dbType string, ConnString string) {
+	return GetConnStringForName(utils.DBName())
+}
+
+func GetConnStringForName(dbname string) (dbType string, ConnString string) {
 	dbType = DBType()
 	dbPort := utils.DBPort()
 	if dbType == "mysql" {
@@ -19,7 +23,7 @@ func GetConnString() (dbType string, ConnString string) {
 			utils.DBUser(),
 			utils.DBPassword(),
 			utils.DBHost(),
-			utils.DBName(),
+			dbname,
 		)
 		return dbType, connString
 	} else if dbType == "postgres" {
@@ -30,7 +34,7 @@ func GetConnString() (dbType string, ConnString string) {
 			"host=%v user=%v dbname=%v sslmode=disable password=%v",
 			utils.DBHost(),
 			utils.DBUser(),
-			utils.DBName(),
+			dbname,
 			utils.DBPassword(),
 		)
 		return dbType, connString
