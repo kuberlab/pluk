@@ -122,6 +122,7 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	// Save file structure for version.
 	ws.Route(ws.POST("/{entityType}/{workspace}/{name}/{version}").To(api.saveFS))
 
+	// Chunks
 	// Check if chunk exists
 	ws.Route(ws.GET("/chunks/{hash}").To(api.checkChunk))
 	ws.Route(ws.GET("/chunks/{hash}/download").To(api.downloadChunk))

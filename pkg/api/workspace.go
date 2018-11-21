@@ -1,20 +1,20 @@
 package api
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"bytes"
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/dealerclient"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
-	"io"
-	"io/ioutil"
 )
 
 func (api *API) checkWorkspace(req *restful.Request, resp *restful.Response) {

@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -14,7 +13,6 @@ import (
 	"github.com/kuberlab/lib/pkg/dealerclient"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/datasets"
-	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/gc"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/plukclient"
@@ -31,6 +29,37 @@ func (api *API) masterClient(req *restful.Request) plukio.PlukClient {
 		return master
 	}
 	return nil
+}
+
+func (api *API) allDatasets(req *restful.Request, resp *restful.Response) {
+	sets := api.ds.ListDatasets(currentType(req), "")
+	ds := types.DataSetList{}
+	for _, d := range sets {
+		ds.Items = append(ds.Items, types.Dataset{Name: d.Name, Workspace: d.Workspace})
+	}
+	if len(ds.Items) == 0 {
+		ds.Items = make([]types.Dataset, 0)
+	}
+	sort.Sort(ds)
+	resp.WriteEntity(ds)
+}
+
+func (api *API) datasets(req *restful.Request, resp *restful.Response) {
+	workspace := req.PathParameter("workspace")
+
+	sets := api.ds.ListDatasets(currentType(req), workspace)
+	ds := types.DataSetList{}
+	for _, d := range sets {
+		ds.Items = append(
+			ds.Items,
+			types.Dataset{Name: d.Name, Workspace: d.Workspace, Type: d.Type},
+		)
+	}
+	if len(ds.Items) == 0 {
+		ds.Items = make([]types.Dataset, 0)
+	}
+	sort.Sort(ds)
+	resp.WriteEntity(ds)
 }
 
 func (api *API) downloadDataset(req *restful.Request, resp *restful.Response) {
@@ -117,34 +146,6 @@ func (api *API) datasetTarSize(req *restful.Request, resp *restful.Response) {
 	resp.Write([]byte(fmt.Sprintf("%v\n", sz)))
 }
 
-func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
-	version := req.PathParameter("version")
-	name := req.PathParameter("name")
-	workspace := req.PathParameter("workspace")
-	master := api.masterClient(req)
-
-	err := api.checkEntityExists(req, workspace, name)
-	if err != nil {
-		WriteError(resp, err)
-		return
-	}
-
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
-		return
-	}
-	fs, err := api.getFS(dataset, version)
-	if err != nil {
-		WriteError(resp, err)
-		return
-	}
-
-	resp.WriteEntity(fs)
-	//resp.Header().Add("Content-Type", "application/tar+gzip")
-	//resp.Header().Add("Content-Disposition", fmt.Sprintf("attachment;filename=%s-%s.%s.tgz;", workspace, name, version))
-}
-
 func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
@@ -161,159 +162,6 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	}
 
 	resp.WriteHeader(http.StatusNoContent)
-}
-
-func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
-	name := req.PathParameter("name")
-	version := req.PathParameter("version")
-	workspace := req.PathParameter("workspace")
-	master := api.masterClient(req)
-
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
-		return
-	}
-
-	err := dataset.DeleteVersion(version, true)
-	if err != nil {
-		WriteStatusError(resp, http.StatusInternalServerError, err)
-		return
-	}
-
-	// Invalidate cache
-	api.fsCache.Cache.Delete(api.fsCacheKey(dataset, version))
-	resp.WriteHeader(http.StatusNoContent)
-}
-
-func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
-	hash := req.PathParameter("hash")
-
-	chunkCheck, err := plukio.CheckChunk(hash)
-	if err != nil {
-		WriteError(resp, err)
-		return
-	}
-	resp.WriteEntity(chunkCheck)
-}
-
-func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
-	hash := req.PathParameter("hash")
-	file, err := plukio.GetChunk(hash)
-	if err != nil {
-		WriteStatusError(resp, http.StatusNotFound, err)
-		return
-	}
-
-	resp.WriteHeader(http.StatusOK)
-	io.Copy(resp, file)
-	err = file.Close()
-	if err != nil {
-		logrus.Error(err)
-	}
-}
-
-func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {
-	hash := req.PathParameter("hash")
-
-	if err := plukio.SaveChunk(hash, req.Request.Body, true); err != nil {
-		WriteStatusError(resp, http.StatusInternalServerError, err)
-		return
-	}
-
-	resp.WriteHeader(http.StatusCreated)
-	resp.Write([]byte("Ok!\n"))
-}
-
-func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
-	comment := req.QueryParameter("comment")
-	createRaw := req.QueryParameter("create")
-	create, _ := strconv.ParseBool(createRaw)
-	publishRaw := req.QueryParameter("publish")
-	publish, _ := strconv.ParseBool(publishRaw)
-	version := req.PathParameter("version")
-	name := req.PathParameter("name")
-	workspace := req.PathParameter("workspace")
-	master := api.masterClient(req)
-
-	structure := types.FileStructure{}
-	err := req.ReadEntity(&structure)
-	if err != nil {
-		WriteStatusError(resp, http.StatusBadRequest, err)
-		return
-	}
-
-	if err = utils.CheckVersion(version); err != nil {
-		WriteStatusError(resp, http.StatusBadRequest, err)
-		return
-	}
-
-	// Wait
-	gc.WaitGCCompleted()
-
-	dataset, err := api.ds.NewDataset(currentType(req), workspace, name, master)
-	if err != nil {
-		WriteError(resp, err)
-		return
-	}
-	logrus.Infof("Saving %v for %v/%v:%v...", dataset.Type, workspace, name, version)
-
-	err = dataset.Save(structure, version, comment, create, publish, true)
-	if err != nil {
-		WriteStatusError(resp, http.StatusInternalServerError, err)
-		return
-	}
-
-	dsv, err := api.mgr.CommitVersion(currentType(req), workspace, name, version, comment)
-	if err != nil {
-		WriteStatusError(
-			resp,
-			http.StatusInternalServerError,
-			fmt.Errorf("Failed to commit version %v: %v", version, err.Error()),
-		)
-		return
-	}
-	logrus.Infof("Done saving %v/%v:%v.", workspace, name, version)
-
-	if create {
-		if err = api.createDatasetOnDealer(req, workspace, name, publish); err != nil {
-			WriteStatusError(resp, http.StatusInternalServerError, err)
-			return
-		}
-	}
-
-	resp.WriteHeaderAndEntity(http.StatusCreated, dsv)
-}
-
-func (api *API) versions(req *restful.Request, resp *restful.Response) {
-	workspace := req.PathParameter("workspace")
-	name := req.PathParameter("name")
-	master := api.masterClient(req)
-
-	err := api.checkEntityExists(req, workspace, name)
-	if err != nil {
-		WriteError(resp, err)
-		return
-	}
-
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
-		return
-	}
-	versions, err := dataset.Versions()
-	if err != nil {
-		WriteStatusError(resp, http.StatusInternalServerError, err)
-		return
-	}
-
-	// Cache last 3 versions.
-	onlyVersions := make([]string, 0)
-	for _, v := range versions {
-		onlyVersions = append(onlyVersions, v.Version)
-	}
-	go api.cacheFS(dataset, utils.GetFirstN(onlyVersions, 3))
-	resp.WriteEntity(types.VersionList{Versions: versions})
 }
 
 func (api *API) createDataset(req *restful.Request, resp *restful.Response) {
@@ -385,178 +233,7 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 	resp.WriteHeaderAndEntity(http.StatusCreated, dataset)
 }
 
-func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
-	workspace := req.PathParameter("workspace")
-	name := req.PathParameter("name")
-	version := req.PathParameter("version")
-	targetVersion := req.PathParameter("targetVersion")
-	message := req.QueryParameter("message")
-	master := api.masterClient(req)
-
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
-		return
-	}
-
-	if err := utils.CheckVersion(targetVersion); err != nil {
-		WriteStatusError(resp, http.StatusBadRequest, err)
-		return
-	}
-
-	dsv, err := dataset.CloneVersion(version, targetVersion, message)
-	if err != nil {
-		WriteStatusError(resp, http.StatusInternalServerError, err)
-		return
-	}
-
-	resp.WriteHeaderAndEntity(http.StatusCreated, dsv)
-}
-
-func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
-	workspace := req.PathParameter("workspace")
-	name := req.PathParameter("name")
-	version := req.PathParameter("version")
-	message := req.QueryParameter("message")
-	master := api.masterClient(req)
-
-	// Wait
-	gc.WaitGCCompleted()
-
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		// Create
-		var err error
-		dataset, err = api.ds.NewDataset(currentType(req), workspace, name, master)
-		if err != nil {
-			WriteError(resp, err)
-			return
-		}
-	}
-
-	if err := utils.CheckVersion(version); err != nil {
-		WriteStatusError(resp, http.StatusBadRequest, err)
-		return
-	}
-
-	versions, err := dataset.Versions()
-	if err != nil {
-		WriteStatusError(resp, http.StatusInternalServerError, err)
-		return
-	}
-
-	for _, v := range versions {
-		if v.Version == version {
-			WriteStatusError(
-				resp,
-				http.StatusConflict,
-				fmt.Errorf("Version %v for %v %v/%v already exists", currentType(req), version, workspace, name),
-			)
-		}
-	}
-
-	dsv := &db.DatasetVersion{
-		Version:   version,
-		Name:      name,
-		Workspace: workspace,
-		Editing:   true,
-		Message:   message,
-		Type:      currentType(req),
-	}
-
-	if err := datasets.SaveDatasetVersion(api.mgr, dsv); err != nil {
-		WriteError(resp, err)
-		return
-	}
-
-	res := types.Version{
-		Version:   version,
-		Type:      dsv.Type,
-		CreatedAt: dsv.CreatedAt,
-		UpdatedAt: dsv.UpdatedAt,
-		Message:   dsv.Message,
-		Editing:   dsv.Editing,
-		SizeBytes: dsv.Size,
-	}
-
-	resp.WriteHeaderAndEntity(http.StatusCreated, res)
-}
-
-func (api *API) getVersion(req *restful.Request, resp *restful.Response) {
-	workspace := req.PathParameter("workspace")
-	name := req.PathParameter("name")
-	version := req.PathParameter("version")
-	master := api.masterClient(req)
-
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
-		return
-	}
-
-	ver, err := api.findDatasetVersion(dataset, version, true)
-	if err != nil {
-		WriteError(resp, err)
-		return
-	}
-
-	resp.WriteEntity(ver)
-}
-
-func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {
-	workspace := req.PathParameter("workspace")
-	name := req.PathParameter("name")
-	version := req.PathParameter("version")
-	message := req.QueryParameter("message")
-	master := api.masterClient(req)
-
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
-		return
-	}
-
-	dsv, err := dataset.CommitVersion(version, message)
-	if err != nil {
-		WriteError(resp, err)
-		return
-	}
-
-	resp.WriteEntity(dsv)
-}
-
-func (api *API) allDatasets(req *restful.Request, resp *restful.Response) {
-	sets := api.ds.ListDatasets(currentType(req), "")
-	ds := types.DataSetList{}
-	for _, d := range sets {
-		ds.Items = append(ds.Items, types.Dataset{Name: d.Name, Workspace: d.Workspace})
-	}
-	if len(ds.Items) == 0 {
-		ds.Items = make([]types.Dataset, 0)
-	}
-	sort.Sort(ds)
-	resp.WriteEntity(ds)
-}
-
-func (api *API) datasets(req *restful.Request, resp *restful.Response) {
-	workspace := req.PathParameter("workspace")
-
-	sets := api.ds.ListDatasets(currentType(req), workspace)
-	ds := types.DataSetList{}
-	for _, d := range sets {
-		ds.Items = append(
-			ds.Items,
-			types.Dataset{Name: d.Name, Workspace: d.Workspace, Type: d.Type},
-		)
-	}
-	if len(ds.Items) == 0 {
-		ds.Items = make([]types.Dataset, 0)
-	}
-	sort.Sort(ds)
-	resp.WriteEntity(ds)
-}
-
-func (api API) fsCacheKey(dataset *datasets.Dataset, version string) string {
+func (api *API) fsCacheKey(dataset *datasets.Dataset, version string) string {
 	return dataset.Type + dataset.Workspace + dataset.Name + version + "-fs"
 }
 

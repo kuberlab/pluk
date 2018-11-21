@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"github.com/kuberlab/pluk/pkg/config"

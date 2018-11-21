@@ -1,10 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
-	"fmt"
 	"github.com/Sirupsen/logrus"
 	gofuse "github.com/hanwen/go-fuse/fuse"
 	"github.com/hanwen/go-fuse/fuse/nodefs"
