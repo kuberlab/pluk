@@ -90,6 +90,9 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	}
 	logrus.Infof("Done saving %v/%v:%v.", workspace, name, version)
 
+	// Invalidate cache
+	api.fsCache.Cache.Delete(api.fsCacheKey(dataset, version))
+
 	if create {
 		if err = api.createDatasetOnDealer(req, workspace, name, publish); err != nil {
 			WriteStatusError(resp, http.StatusInternalServerError, err)
