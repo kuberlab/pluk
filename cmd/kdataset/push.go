@@ -325,8 +325,12 @@ func (cmd *pushCmd) run() error {
 		logrus.Fatal(err)
 	}
 
+	if !bar.IsFinished() {
+		bar.Finish()
+	}
 	// finally, commit file structure.
 	logrus.Debugf("File structure: %v", structure)
+	logrus.Info("Committing FS structure...")
 	if err = client.SaveFileStructure(
 		structure,
 		entityType.Value,
@@ -337,22 +341,17 @@ func (cmd *pushCmd) run() error {
 		cmd.create,
 		cmd.publish,
 	); err != nil {
-		bar.Finish()
 		logrus.Fatal(err)
 	}
 
 	if cmd.specFile != "" {
 		err = client.PostEntitySpec(entityType.Value, cmd.workspace, cmd.name, specData)
 		if err != nil {
-			bar.Finish()
 			logrus.Fatal(err)
 		}
 	}
 
-	if !bar.IsFinished() {
-		bar.Finish()
-	}
-	logrus.Info("Successfully uploaded.")
+	logrus.Info("Successfully uploaded and committed.")
 
 	return nil
 }
