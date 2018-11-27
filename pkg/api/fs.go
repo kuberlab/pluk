@@ -66,6 +66,9 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	// Wait
 	gc.WaitGCCompleted()
 
+	sem.Acquire(ctx, 1)
+	defer sem.Release(1)
+
 	dataset, err := api.ds.NewDataset(currentType(req), workspace, name, master)
 	if err != nil {
 		WriteError(resp, err)

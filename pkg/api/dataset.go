@@ -151,6 +151,8 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	master := api.masterClient(req)
 
+	ds := api.ds.GetDataset(currentType(req), workspace, name, master)
+
 	err := api.ds.DeleteDataset(currentType(req), workspace, name, master, true)
 	if err != nil {
 		WriteError(resp, err)
@@ -160,6 +162,8 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	if utils.AuthValidationURL() != "" {
 
 	}
+
+	api.invalidateCache(ds)
 
 	resp.WriteHeader(http.StatusNoContent)
 }
@@ -217,9 +221,13 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 			WriteError(resp, err)
 			return
 		}
+		api.invalidateCache(checkTarget)
 		time.Sleep(time.Millisecond * 30)
 		gc.WaitGCCompleted()
 	}
+
+	sem.Acquire(ctx, 1)
+	defer sem.Release(1)
 
 	src := types.Dataset{Workspace: workspace, Name: name, Type: currentType(req)}
 	target := types.Dataset{Workspace: targetWS, Name: targetName, Type: targetType}
@@ -261,6 +269,25 @@ func (api *API) cacheFS(dataset *datasets.Dataset, versions []string) {
 		}
 		logrus.Infof("Successfully cached FS %v:%v.", dataset.Name, v)
 	}
+}
+
+func (api *API) invalidateCache(ds *datasets.Dataset) {
+	if ds == nil {
+		return
+	}
+	vs, err := ds.Versions()
+	if err != nil {
+		return
+	}
+	for _, v := range vs {
+		// Invalidate cache
+		api.fsCache.Cache.Delete(api.fsCacheKey(ds, v.Version))
+	}
+}
+
+func (api *API) invalidateVersionCache(ds *datasets.Dataset, version string) {
+	// Invalidate cache
+	api.fsCache.Cache.Delete(api.fsCacheKey(ds, version))
 }
 
 func (api *API) dealerClient(req *restful.Request) (*dealerclient.Client, error) {

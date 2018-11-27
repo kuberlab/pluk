@@ -230,7 +230,9 @@ func ClearExtraChunks(tx db.DataMgr, dsv *db.DatasetVersion, existing *db.File, 
 			deleted++
 		}
 	}
-	logrus.Infof("Deleted %v chunks.", deleted)
+	if deleted != 0 {
+		logrus.Infof("Deleted %v chunks.", deleted)
+	}
 	return nil
 }
 

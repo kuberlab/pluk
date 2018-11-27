@@ -86,6 +86,8 @@ func Start() {
 }
 
 func GoGC() {
+	go datasets.RunDeleteLoop()
+
 	lock.Lock()
 	defer lock.Unlock()
 	setActive()

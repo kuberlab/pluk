@@ -174,6 +174,7 @@ func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
 		WriteStatusError(resp, http.StatusBadRequest, err)
 		return
 	}
+	api.invalidateVersionCache(dataset, targetVersion)
 
 	dsv, err := dataset.CloneVersion(version, targetVersion, message)
 	if err != nil {

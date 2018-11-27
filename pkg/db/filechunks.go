@@ -187,21 +187,22 @@ ORDER BY path, chunk_index;
 */
 func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, path string) ([]RawFile, error) {
 	join1 := fmt.Sprintf(
-		"INNER JOIN files f ON f.id = file_chunks.file_id "+
-			"AND f.dataset_name = '%v' "+
-			"AND version = '%v' "+
-			"AND f.workspace = '%v' "+
-			"AND f.dataset_type = '%v'",
-		dataset, version, workspace, dsType,
+		"INNER JOIN files f ON f.id = file_chunks.file_id " +
+			"AND f.dataset_name = ? " +
+			"AND version = ? " +
+			"AND f.workspace = ? " +
+			"AND f.dataset_type = ?",
 	)
+	values := []interface{}{dataset, version, workspace, dsType}
 	if path != "" {
-		join1 = join1 + fmt.Sprintf(" AND f.path = '%v'", path)
+		join1 = join1 + fmt.Sprintf(" AND f.path = ?")
+		values = append(values, path)
 	}
 	rawFiles := make([]RawFile, 0)
 	err := mgr.db.
 		Table("file_chunks").
 		Select(strings.Join(columns, ",")).
-		Joins(join1).
+		Joins(join1, values...).
 		Joins("INNER JOIN chunks ON file_chunks.chunk_id = chunks.id").
 		Order(`path, chunk_index`).
 		Scan(&rawFiles).Error

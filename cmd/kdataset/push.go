@@ -33,6 +33,7 @@ type pushCmd struct {
 	create      bool
 	force       bool
 	publish     bool
+	skipUpload  bool
 	websocket   bool
 }
 
@@ -96,6 +97,13 @@ func NewPushCmd() *cobra.Command {
 		"",
 		false,
 		"Create entity in catalog if not exists.",
+	)
+	f.BoolVarP(
+		&push.skipUpload,
+		"skip-upload",
+		"",
+		false,
+		"Skip upload chunks and move right to committing FS",
 	)
 	f.BoolVarP(
 		&push.publish,
@@ -191,8 +199,6 @@ func (cmd *pushCmd) run() error {
 	}
 	defer client.Close()
 
-	structure := types.FileStructure{Files: make([]*types.HashedFile, 0)}
-
 	logrus.Debug("Run push...")
 	var totalSize int64 = 0
 
@@ -216,6 +222,47 @@ func (cmd *pushCmd) run() error {
 		return nil
 	})
 
+	bar := pb.New64(totalSize).SetUnits(pb.U_BYTES)
+	bar.SetMaxWidth(100)
+	bar.ShowSpeed = true
+	bar.Start()
+
+	structure, err := cmd.uploadChunks(bar, client, !cmd.skipUpload)
+	// finally, commit file structure.
+	logrus.Debugf("File structure: %v", structure)
+	logrus.Info("Committing FS structure...")
+	if err = client.SaveFileStructure(
+		structure,
+		entityType.Value,
+		cmd.workspace,
+		cmd.name,
+		cmd.version,
+		cmd.comment,
+		cmd.create,
+		cmd.publish,
+	); err != nil {
+		logrus.Fatal(err)
+	}
+
+	if cmd.specFile != "" {
+		err = client.PostEntitySpec(entityType.Value, cmd.workspace, cmd.name, specData)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	}
+
+	logrus.Info("Successfully uploaded and committed.")
+
+	return nil
+}
+
+func (cmd *pushCmd) uploadChunks(bar *pb.ProgressBar, client chunk_io.PlukClient, upload bool) (structure types.FileStructure, err error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	structure = types.FileStructure{Files: make([]*types.HashedFile, 0)}
 	var sem *semaphore.Weighted
 	if cmd.websocket {
 		sem = semaphore.NewWeighted(1)
@@ -224,10 +271,6 @@ func (cmd *pushCmd) run() error {
 	}
 	lock := &sync.RWMutex{}
 	ctx := context.TODO()
-	bar := pb.New64(totalSize).SetUnits(pb.U_BYTES)
-	bar.SetMaxWidth(100)
-	bar.ShowSpeed = true
-	bar.Start()
 
 	var resp *types.ChunkCheck
 	checkAndUpload := func(chunkData []byte, hash string) error {
@@ -237,6 +280,10 @@ func (cmd *pushCmd) run() error {
 			lock.Unlock()
 			sem.Release(1)
 		}()
+
+		if !upload {
+			return nil
+		}
 
 		if cmd.websocket {
 			resp, err = client.CheckChunkWebsocket(hash)
@@ -328,30 +375,5 @@ func (cmd *pushCmd) run() error {
 	if !bar.IsFinished() {
 		bar.Finish()
 	}
-	// finally, commit file structure.
-	logrus.Debugf("File structure: %v", structure)
-	logrus.Info("Committing FS structure...")
-	if err = client.SaveFileStructure(
-		structure,
-		entityType.Value,
-		cmd.workspace,
-		cmd.name,
-		cmd.version,
-		cmd.comment,
-		cmd.create,
-		cmd.publish,
-	); err != nil {
-		logrus.Fatal(err)
-	}
-
-	if cmd.specFile != "" {
-		err = client.PostEntitySpec(entityType.Value, cmd.workspace, cmd.name, specData)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-	}
-
-	logrus.Info("Successfully uploaded and committed.")
-
-	return nil
+	return structure, nil
 }

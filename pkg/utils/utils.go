@@ -127,10 +127,21 @@ func ReadConcurrency() int64 {
 	return c
 }
 
+func DBType() string {
+	dbType := os.Getenv("DB_TYPE")
+	if dbType == "" {
+		dbType = "sqlite3"
+	}
+	return dbType
+}
+
 func UploadConcurrency() int64 {
 	raw := os.Getenv(uploadConcurrencyVar)
 	c, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
+		if DBType() == "sqlite3" {
+			return 1
+		}
 		return 4
 	}
 	return c
