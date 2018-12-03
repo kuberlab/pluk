@@ -57,7 +57,7 @@ imports:
   - pkg/types
   - pkg/utils
 - name: github.com/lib/pq
-  version: 5bf161122cd640c2a5a2c1d7fa49ea9befff31dd
+  version: 9eb73efc1fcc404148b56765b0d3f61d9a5ef8ee
   subpackages:
   - hstore
   - oid

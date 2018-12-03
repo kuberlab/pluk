@@ -53,18 +53,18 @@ func InitMain(postCreate postCreateFunc) *gorm.DB {
 	if err != nil {
 		if dbType == "postgres" {
 			_, conn := config.GetConnStringForName("postgres")
-			db, errC := gorm.Open(dbType, conn)
+			dbTemp, errC := gorm.Open(dbType, conn)
 			if errC != nil {
 				logrus.Error(errC)
 			}
-			db = db.LogMode(true)
-			db.SetLogger(gorm.Logger{mainDBLogger{}})
+			dbTemp = dbTemp.LogMode(true)
+			dbTemp.SetLogger(gorm.Logger{mainDBLogger{}})
 			logrus.Infof("Trying to create database %v...", utils.DBName())
 			// Try create database
-			_, errC = db.DB().Exec(fmt.Sprintf("CREATE DATABASE %q", utils.DBName()))
+			_, errC = dbTemp.DB().Exec(fmt.Sprintf("CREATE DATABASE %q", utils.DBName()))
 			if errC == nil {
 				err = nil
-				db.Close()
+				dbTemp.Close()
 				db, err = gorm.Open(dbType, connString)
 			} else {
 				logrus.Error(errC)
