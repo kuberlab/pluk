@@ -26,8 +26,8 @@ type FileChunkMgr interface {
 }
 
 type FileChunk struct {
-	FileID     uint `gorm:"index:file_id" json:"file_id"`
-	ChunkID    uint `gorm:"index:chunk_id" json:"chunk_id"`
+	FileID     uint `gorm:"index:file_chunk_id" json:"file_id"`
+	ChunkID    uint `gorm:"index:file_chunk_id" json:"chunk_id"`
 	ChunkIndex uint `json:"chunk_index"`
 }
 

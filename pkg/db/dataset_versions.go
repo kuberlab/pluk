@@ -21,7 +21,7 @@ type DatasetVersion struct {
 	ID        uint   `sql:"AUTO_INCREMENT" gorm:"primary_key"`
 	Workspace string `json:"workspace" gorm:"index:idx_workspace_name_type"`
 	Name      string `json:"name" gorm:"index:idx_workspace_name_type"`
-	Version   string `json:"version" gorm:"index:idx_version"`
+	Version   string `json:"version"`
 	Message   string `json:"message"`
 	Type      string `json:"type" gorm:"index:idx_workspace_name_type"`
 	Size      int64  `json:"size"`
