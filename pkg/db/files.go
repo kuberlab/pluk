@@ -13,6 +13,7 @@ type File struct {
 	ID          uint    `sql:"AUTO_INCREMENT" gorm:"primary_key"`
 	Path        string  `json:"path" gorm:"index:idx_ws_name_version_path_type"`
 	Size        int64   `json:"size"`
+	Mode        uint32  `json:"mode"`
 	DatasetName string  `json:"dataset_name" gorm:"index:idx_ws_name_version_path_type"`
 	DatasetType string  `json:"dataset_type" gorm:"index:idx_ws_name_version_path_type"`
 	Workspace   string  `json:"workspace" gorm:"index:idx_ws_name_version_path_type"`
