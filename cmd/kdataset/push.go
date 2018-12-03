@@ -332,7 +332,10 @@ func (cmd *pushCmd) uploadChunks(bar *pb.ProgressBar, client chunk_io.PlukClient
 		}
 		r := chunk_io.NewChunkedReader(cmd.chunkSize, file)
 		// Populate file structure.
-		hashed := &types.HashedFile{Path: strings.TrimPrefix(path, cwd+"/")}
+		hashed := &types.HashedFile{
+			Path: strings.TrimPrefix(path, cwd+"/"),
+			Mode: f.Mode(),
+		}
 		var chunkData []byte
 		var hash string
 		for {

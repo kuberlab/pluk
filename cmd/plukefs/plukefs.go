@@ -14,6 +14,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
 	"github.com/spf13/cobra"
+	"os/signal"
 )
 
 const (
@@ -175,7 +176,19 @@ func (cmd *plukeFSCmd) run() int {
 		return 1
 	}
 	logrus.Info("FS is ready!")
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for range c {
+			logrus.Info("Shutdown fs...")
+			server.Unmount()
+			os.Exit(0)
+		}
+	}()
+
 	server.Serve()
+
 	return 0
 }
 

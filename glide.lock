@@ -1,5 +1,5 @@
-hash: 5143c30b27a4ff3a569e2c418397453c213ab4474b2537bcc2f68de7f8f6b4bd
-updated: 2018-11-09T13:26:12.186269214+04:00
+hash: a86d2741c976e6f6c1c88018e4cb7823b02fea08d21f4a1bd20dfc0c3d13b0ff
+updated: 2018-12-03T12:38:55.805472189+04:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -14,9 +14,9 @@ imports:
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/go-sql-driver/mysql
-  version: 9181e3a86a19bacd63e68d43ae8b7b36320d8092
+  version: 6be42e0ff99645d7d9626d779001a46e39c5f280
 - name: github.com/gogits/git-module
-  version: 5cc36acd9bc119acc0376a4db452e8ce55451c9f
+  version: dfc2c1e6d37744c84bf72e4649c87dec93eefffb
 - name: github.com/gogo/protobuf
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
@@ -24,14 +24,12 @@ imports:
   - sortkeys
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
-- name: github.com/gorilla/context
-  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/mux
-  version: 392c28fe23e1c45ddba891b0320b3b5df220beea
+  version: 3d80bc801bb034e17cae38591335b3b1110f1c47
 - name: github.com/gorilla/websocket
-  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+  version: 483fb8d7c32fcb4b5636cd293a92e3935932e2f4
 - name: github.com/hanwen/go-fuse
-  version: 815666ab119f4b2e6ac801c66d4b5c06a970f1cc
+  version: c029b69a13a7ca3ffdbf141a3958f9b1f1a45332
   subpackages:
   - fuse
   - fuse/nodefs
@@ -41,15 +39,17 @@ imports:
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jinzhu/gorm
-  version: 5174cc5c242a728b435ea2be8a2f7f998e15429b
+  version: 472c70caa40267cb89fd8facb07fe6454b578626
   subpackages:
   - dialects/mysql
   - dialects/postgres
   - dialects/sqlite
 - name: github.com/jinzhu/inflection
-  version: 1c35d901db3da928c72a72d8458480cc9ade058f
+  version: 04140366298a54a039076d798123ffa108fff46c
+- name: github.com/konsorten/go-windows-terminal-sequences
+  version: 5c8c8bd35d3832f5d134ae1e1e375b69a4d25242
 - name: github.com/kuberlab/lib
-  version: 812866c1439a98278843f49d4b7c0f48694bc1f6
+  version: f2587f242968c206ef33cedfe061f3d2c5e13d21
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/dealerclient
@@ -70,23 +70,27 @@ imports:
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/mattn/go-runewidth
-  version: d6bea18f789704b5f83375793155289da36a3c7f
+  version: c88d7e5f2e24de48a200a2655ac8a0910be9a0f7
 - name: github.com/mattn/go-sqlite3
   version: 2d44decb4941c9cdf72c22297b7890faf7da9bcb
 - name: github.com/patrickmn/go-cache
   version: 5633e0862627c011927fa39556acae8b1f1df58a
 - name: github.com/pborman/uuid
-  version: e790cca94e6cc75c7064b1332e63811d4aae1a53
+  version: 8b1b92947f46224e3b97bb1a3a5b0382be00d31e
 - name: github.com/PuerkitoBio/purell
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
 - name: github.com/Sirupsen/logrus
-  version: 55eb11d21d2a31a3cc93838241d04800f52e823d
+  version: 29d7eb25e8ffa54207ff5a9a5c3d63e95be2cc39
 - name: github.com/spf13/cobra
   version: ef82de70bb3f60c65fb8eebacbb2d122ef517385
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
+- name: golang.org/x/crypto
+  version: 81e90905daefcd6fd217b62423c0908922eadb30
+  subpackages:
+  - ssh/terminal
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
@@ -95,13 +99,14 @@ imports:
   - webdav
   - webdav/internal/xml
 - name: golang.org/x/sync
-  version: 1d60e4601c6fd243af51cc01ddf169918a5407ca
+  version: 42b317875d0fa942474b76e1b46a6060d720ae6e
   subpackages:
   - semaphore
 - name: golang.org/x/sys
   version: 1792d66dc88e503d3cb2400578221cdf1f7fe26f
   subpackages:
   - unix
+  - windows
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
@@ -117,11 +122,11 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 12d5545dc1cfa6047a286d5e853841b6471f4c19
+  version: 4a4468ece617fc8205e99368fa2200e9d1fad421
   subpackages:
   - cloudsql
 - name: gopkg.in/cheggaaa/pb.v1
-  version: 2af8bbdea9e99e83b3ac400d8f6b6d1b8cbbf338
+  version: 007b75a044e968336a69a6c0c617251ab62ac14c
 - name: gopkg.in/cheggaaa/pb.v2
   version: c112833d014c77e8bde723fd0158e3156951639f
 - name: gopkg.in/inf.v0
@@ -141,4 +146,6 @@ imports:
   version: 868f2f29720b192240e18284659231b440f9cda5
   subpackages:
   - pkg/common
-testImports: []
+testImports:
+- name: github.com/google/uuid
+  version: 9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8

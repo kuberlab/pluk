@@ -19,6 +19,8 @@ import (
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 	"golang.org/x/sync/semaphore"
+	"strconv"
+	"os"
 )
 
 func (api *API) fsReadDir(req *restful.Request, resp *restful.Response) {
@@ -252,6 +254,14 @@ func (api *API) readAndSaveFile(req *restful.Request, resp *restful.Response) (f
 	name := req.PathParameter("name")
 	version := req.PathParameter("version")
 	filepath := req.PathParameter("path")
+
+	modeRaw := req.QueryParameter("mode")
+	modeOct, _ := strconv.ParseUint(modeRaw, 8, 32)
+	mode := uint32(modeOct)
+	if modeOct == 0 {
+		mode = 0644
+	}
+
 	tx := api.mgr.Begin()
 	defer func() {
 		if err != nil {
@@ -274,7 +284,7 @@ func (api *API) readAndSaveFile(req *restful.Request, resp *restful.Response) (f
 
 	}
 
-	f = &types.HashedFile{Path: filepath, Mode: 0644, ModeTime: time.Now(), Hashes: make([]types.Hash, 0)}
+	f = &types.HashedFile{Path: filepath, Mode: os.FileMode(mode), ModeTime: time.Now(), Hashes: make([]types.Hash, 0)}
 	var total int64 = 0
 	chunkSize := 1024000
 	reader := utils.NewPreciseReader(req.Request.Body)

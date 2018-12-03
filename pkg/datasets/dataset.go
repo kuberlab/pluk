@@ -147,6 +147,7 @@ func SaveFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFile) error 
 		Workspace:   dsv.Workspace,
 		DatasetName: dsv.Name,
 		DatasetType: dsv.Type,
+		Mode:        uint32(f.Mode),
 	}
 	if existing, errD := tx.GetFile(dsv.Workspace, dsv.Name, dsv.Type, fPath, dsv.Version); errD != nil {
 		// Create

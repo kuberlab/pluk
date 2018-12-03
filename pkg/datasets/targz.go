@@ -44,7 +44,7 @@ func WriteTar(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 
 		h := &tar.Header{
 			Name:    name,
-			Mode:    0644,
+			Mode:    int64(f.Fstat.Mode()),
 			Size:    size,
 			ModTime: f.Fstat.ModTime(),
 		}

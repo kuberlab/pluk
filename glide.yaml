@@ -1,6 +1,12 @@
 package: github.com/kuberlab/pluk
 import:
 - package: github.com/Sirupsen/logrus
+- package: github.com/jinzhu/gorm
+  version: 472c70caa40267cb89fd8facb07fe6454b578626
+  subpackages:
+  - dialects/mysql
+  - dialects/postgres
+  - dialects/sqlite
 - package: github.com/spf13/cobra
   version: v0.0.3
 - package: github.com/spf13/pflag

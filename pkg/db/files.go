@@ -1,5 +1,10 @@
 package db
 
+import (
+	"github.com/kuberlab/lib/pkg/types"
+	"time"
+)
+
 type FileMgr interface {
 	CreateFile(file *File) error
 	UpdateFile(file *File) (*File, error)
@@ -22,10 +27,13 @@ type File struct {
 }
 
 func (mgr *DatabaseMgr) CreateFile(file *File) error {
+	file.CreatedAt = types.NewTime(time.Now())
+	file.UpdatedAt = types.NewTime(time.Now())
 	return mgr.db.Create(file).Error
 }
 
 func (mgr *DatabaseMgr) UpdateFile(file *File) (*File, error) {
+	file.UpdatedAt = types.NewTime(time.Now())
 	err := mgr.db.Save(file).Error
 	return file, err
 }

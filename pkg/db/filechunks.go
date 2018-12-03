@@ -9,6 +9,7 @@ import (
 	libtypes "github.com/kuberlab/lib/pkg/types"
 	"github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"os"
 )
 
 type FileChunkMgr interface {
@@ -147,6 +148,7 @@ type RawFile struct {
 	ChunkID    uint
 	Path       string
 	FileSize   int64
+	FileMode   uint32
 	ChunkSize  int64
 	Version    string
 	ChunkIndex uint
@@ -159,6 +161,7 @@ var columns = []string{
 	"chunk_id",
 	"path",
 	"f.size as file_size",
+	"f.mode as file_mode",
 	"chunks.size as chunk_size",
 	`chunk_index`,
 	"hash",
@@ -171,6 +174,7 @@ SELECT
   chunk_id,
   path,
   f.size      as file_size,
+  f.mode      as file_mode,
   chunks.size as chunk_size,
   chunk_index,
   hash,
@@ -178,7 +182,7 @@ SELECT
 FROM "file_chunks"
   INNER JOIN files f
     ON f.id = file_chunks.file_id
-       AND f.dataset_name = 'zappos'
+       AND f.dataset_name = 'test'
        AND version = '1.0.0'
        AND f.workspace = 'kuberlab-demo'
        AND f.dataset_type = 'dataset'
@@ -246,7 +250,7 @@ func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.C
 						Ref:    version,
 						Fstat: &io.ChunkedFileInfo{
 							Dir:      false,
-							Fmode:    0644,
+							Fmode:    os.FileMode(raw.FileMode),
 							FmodTime: raw.UpdatedAt.Time,
 							Fname:    partPath,
 							Fsize:    raw.FileSize,
