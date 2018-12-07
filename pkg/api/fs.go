@@ -96,6 +96,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 		}
 	default:
 		WriteErrorString(resp, http.StatusBadRequest, "Wrong format: allowed json and gobgz")
+		return
 	}
 
 	if err != nil {
