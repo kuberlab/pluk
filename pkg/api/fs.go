@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"compress/gzip"
+	"encoding/gob"
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/pluk/pkg/gc"
@@ -16,6 +18,10 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 	version := req.PathParameter("version")
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
+	format := req.QueryParameter("format")
+	if format == "" {
+		format = "json"
+	}
 	master := api.masterClient(req)
 
 	err := api.checkEntityExists(req, workspace, name)
@@ -35,7 +41,20 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	resp.WriteEntity(fs)
+	switch format {
+	case "json":
+		resp.WriteEntity(fs)
+	case "gob":
+		enc := gob.NewEncoder(resp.ResponseWriter)
+		enc.Encode(fs)
+	case "gobgz":
+		w := gzip.NewWriter(resp.ResponseWriter)
+		enc := gob.NewEncoder(w)
+		enc.Encode(fs)
+		w.Close()
+	default:
+		WriteErrorString(resp, http.StatusBadRequest, "Wrong format, allowed json/gob/gobgz")
+	}
 	//resp.Header().Add("Content-Type", "application/tar+gzip")
 	//resp.Header().Add("Content-Disposition", fmt.Sprintf("attachment;filename=%s-%s.%s.tgz;", workspace, name, version))
 }

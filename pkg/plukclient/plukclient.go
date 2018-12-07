@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"compress/gzip"
+	"encoding/gob"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	liberrs "github.com/kuberlab/lib/pkg/errors"
@@ -64,6 +66,9 @@ func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
 	}
 	if len(base.Path) < 2 {
 		base.Path = "/pluk/v1"
+	}
+	if auth.InternalKey != "" {
+		base.Path = "/internal"
 	}
 	// Clone default transport
 	var transport = &http.Transport{
@@ -486,14 +491,27 @@ func (c *Client) DownloadChunk(hash string) (io.ReadCloser, error) {
 }
 
 func (c *Client) GetFSStructure(entityType, workspace, name, version string) (*plukio.ChunkedFileFS, error) {
-	u := fmt.Sprintf("/%v/%v/%v/versions/%v/fs", entityType, workspace, name, version)
+	u := fmt.Sprintf("/%v/%v/%v/versions/%v/fs?format=gobgz", entityType, workspace, name, version)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
+	buf := bytes.NewBuffer([]byte{})
 	fs := new(plukio.ChunkedFileFS)
-	_, err = c.Do(req, fs)
+	_, err = c.Do(req, buf)
+
+	rd, err := gzip.NewReader(buf)
+	if err != nil {
+		return nil, err
+	}
+	defer rd.Close()
+
+	dec := gob.NewDecoder(rd)
+	err = dec.Decode(fs)
+	if err != nil {
+		return nil, err
+	}
 
 	if err != nil {
 		return nil, err

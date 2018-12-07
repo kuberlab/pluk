@@ -248,26 +248,27 @@ func (api *API) fsCacheKey(dataset *datasets.Dataset, version string) string {
 func (api *API) getFS(dataset *datasets.Dataset, version string) (fs *plukio.ChunkedFileFS, err error) {
 	fsRaw := api.fsCache.GetRaw(api.fsCacheKey(dataset, version))
 	if fsRaw == nil {
+		logrus.Infof("Caching FS %v:%v...", dataset.Name, version)
 		fs, err = dataset.GetFSStructure(version)
 		if err != nil {
 			return nil, errors.NewStatus(http.StatusNotFound, err.Error())
 		}
+		api.fsCache.SetRaw(api.fsCacheKey(dataset, version), fs)
+		logrus.Infof("Successfully cached FS %v:%v.", dataset.Name, version)
 	} else {
 		fs = fsRaw.(*plukio.ChunkedFileFS)
 	}
-	api.fsCache.SetRaw(api.fsCacheKey(dataset, version), fs)
+
 	return fs.Clone(), err
 }
 
 func (api *API) cacheFS(dataset *datasets.Dataset, versions []string) {
 	for _, v := range versions {
-		logrus.Infof("Caching FS %v:%v...", dataset.Name, v)
 		_, err := api.getFS(dataset, v)
 		if err != nil {
 			logrus.Error(err)
 			return
 		}
-		logrus.Infof("Successfully cached FS %v:%v.", dataset.Name, v)
 	}
 }
 
