@@ -67,9 +67,9 @@ func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
 	if len(base.Path) < 2 {
 		base.Path = "/pluk/v1"
 	}
-	if auth.InternalKey != "" {
-		base.Path = "/internal"
-	}
+	//if auth.InternalKey != "" {
+	//	base.Path = "/internal"
+	//}
 	// Clone default transport
 	var transport = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
