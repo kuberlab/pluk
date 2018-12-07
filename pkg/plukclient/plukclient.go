@@ -366,8 +366,9 @@ func (c *Client) ListVersions(entityType, workspace, datasetName string) (*types
 
 func (c *Client) SaveFileStructure(structure types.FileStructure,
 	entityType, workspace, name, version, comment string, create bool, publish bool) error {
-	u := fmt.Sprintf("/%v/%v/%v/%v?format=gobgz", entityType, workspace, name, version)
+	u := fmt.Sprintf("/%v/%v/%v/%v", entityType, workspace, name, version)
 	q := url.Values{}
+	q.Set("format", "gobgz")
 
 	if create {
 		q.Set("create", "true")
