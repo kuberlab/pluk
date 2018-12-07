@@ -54,6 +54,7 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 		w.Close()
 	default:
 		WriteErrorString(resp, http.StatusBadRequest, "Wrong format, allowed json/gob/gobgz")
+		return
 	}
 	//resp.Header().Add("Content-Type", "application/tar+gzip")
 	//resp.Header().Add("Content-Disposition", fmt.Sprintf("attachment;filename=%s-%s.%s.tgz;", workspace, name, version))
@@ -68,10 +69,35 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	version := req.PathParameter("version")
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
+	format := req.QueryParameter("format")
+	if format == "" {
+		format = "json"
+	}
 	master := api.masterClient(req)
 
-	structure := types.FileStructure{}
-	err := req.ReadEntity(&structure)
+	var err error
+	structure := new(types.FileStructure)
+	switch format {
+	case "json":
+		err = req.ReadEntity(structure)
+	case "gobgz":
+		rd, err := gzip.NewReader(req.Request.Body)
+		defer rd.Close()
+		if err != nil {
+			WriteError(resp, err)
+			return
+		}
+
+		dec := gob.NewDecoder(rd)
+		err = dec.Decode(structure)
+		if err != nil {
+			WriteError(resp, err)
+			return
+		}
+	default:
+		WriteErrorString(resp, http.StatusBadRequest, "Wrong format: allowed json and gobgz")
+	}
+
 	if err != nil {
 		WriteStatusError(resp, http.StatusBadRequest, err)
 		return
@@ -95,7 +121,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	}
 	logrus.Infof("Saving %v for %v/%v:%v...", dataset.Type, workspace, name, version)
 
-	err = dataset.Save(structure, version, comment, create, publish, true)
+	err = dataset.Save(*structure, version, comment, create, publish, true)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return

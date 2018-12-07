@@ -366,7 +366,7 @@ func (c *Client) ListVersions(entityType, workspace, datasetName string) (*types
 
 func (c *Client) SaveFileStructure(structure types.FileStructure,
 	entityType, workspace, name, version, comment string, create bool, publish bool) error {
-	u := fmt.Sprintf("/%v/%v/%v/%v", entityType, workspace, name, version)
+	u := fmt.Sprintf("/%v/%v/%v/%v?format=gobgz", entityType, workspace, name, version)
 	q := url.Values{}
 
 	if create {
@@ -383,7 +383,16 @@ func (c *Client) SaveFileStructure(structure types.FileStructure,
 		u += "?" + q.Encode()
 	}
 
-	req, err := c.NewRequest("POST", u, structure)
+	buf := bytes.NewBuffer([]byte{})
+	w := gzip.NewWriter(buf)
+	enc := gob.NewEncoder(w)
+	err := enc.Encode(structure)
+	if err != nil {
+		return nil
+	}
+	w.Close()
+
+	req, err := c.NewRequest("POST", u, buf)
 	if err != nil {
 		return err
 	}
