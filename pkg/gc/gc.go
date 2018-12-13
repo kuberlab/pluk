@@ -236,7 +236,7 @@ func gcFromMasters(mgr db.DataMgr) {
 		if ds.Deleted {
 			continue
 		}
-		if _, ok := localDatasets[ds.Workspace]; ok {
+		if _, ok := localDatasets[ds.Workspace+"__"+ds.Type]; ok {
 			localDatasets[ds.Workspace+"__"+ds.Type][ds.Name] = true
 		} else {
 			localDatasets[ds.Workspace+"__"+ds.Type] = map[string]bool{ds.Name: true}

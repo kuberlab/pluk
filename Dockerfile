@@ -7,13 +7,13 @@ COPY ./vendor "$GOPATH/src/github.com/kuberlab/pluk/vendor"
 
 RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && go build -ldflags="-s -w" pluksrv.go && go build -ldflags="-s -w" ./cmd/kdataset/
 
-FROM golang:1.10
+FROM ubuntu:16.04
 
 RUN apt-get update
 RUN apt-get install git curl sqlite3 -y
 
-COPY --from=0 $GOPATH/src/github.com/kuberlab/pluk/pluksrv $GOPATH/bin/pluksrv
-COPY --from=0 $GOPATH/src/github.com/kuberlab/pluk/kdataset $GOPATH/bin/kdataset
+COPY --from=0 /go/src/github.com/kuberlab/pluk/pluksrv /go/bin/pluksrv
+COPY --from=0 /go/src/github.com/kuberlab/pluk/kdataset /go/bin/kdataset
 
 VOLUME "/pluk"
 
