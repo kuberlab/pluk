@@ -7,7 +7,7 @@ COPY ./vendor "$GOPATH/src/github.com/kuberlab/pluk/vendor"
 
 RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && go build -ldflags="-s -w" pluksrv.go && go build -ldflags="-s -w" ./cmd/kdataset/
 
-FROM golang:1.9.2
+FROM golang:1.10
 
 RUN apt-get update
 RUN apt-get install git curl sqlite3 -y
