@@ -153,6 +153,7 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 
 	ds := api.ds.GetDataset(currentType(req), workspace, name, master)
 
+	api.invalidateCache(ds)
 	err := api.ds.DeleteDataset(currentType(req), workspace, name, master, true)
 	if err != nil {
 		WriteError(resp, err)
@@ -162,8 +163,6 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	if utils.AuthValidationURL() != "" {
 
 	}
-
-	api.invalidateCache(ds)
 
 	resp.WriteHeader(http.StatusNoContent)
 }
