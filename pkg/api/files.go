@@ -163,7 +163,7 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 			tx.Commit()
 		}
 	}()
-	if err = datasets.DeleteFiles(tx, currentType(req), workspace, name, version, filepath, false); err != nil {
+	if err = datasets.DeleteFiles(tx, currentType(req), workspace, name, version, filepath, false, true); err != nil {
 		WriteError(resp, err)
 		return
 	}
@@ -276,7 +276,7 @@ func (api *API) readAndSaveFile(req *restful.Request, resp *restful.Response) (f
 		// TODO: overwrite
 		// Delete related chunks
 		err = datasets.DeleteFiles(
-			tx, currentType(req), workspace, name, version, filepath, true,
+			tx, currentType(req), workspace, name, version, filepath, true, false,
 		)
 		if err != nil {
 			return nil, err

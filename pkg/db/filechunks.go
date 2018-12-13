@@ -67,6 +67,7 @@ func (mgr *DatabaseMgr) ListRelatedChunksForFiles(
 		INNER JOIN files ON
 		  files.workspace='kuberlab-demo'
 		  AND files.dataset_name='heavy'
+		  AND files.dataset_type='dataset'
 		  AND files.version='1.0.0'
 		  AND file_chunks.file_id=files.id;
 	*/

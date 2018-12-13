@@ -1,17 +1,17 @@
 package datasets
 
 import (
-	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"github.com/kuberlab/lib/pkg/errors"
+	"net/http"
+	"fmt"
 )
 
 var (
@@ -43,25 +43,26 @@ func RunDeleteLoop() {
 	}
 }
 
-func DeleteFiles(mgr db.DataMgr, eType, ws, dataset, version, prefix string, preciseName bool) error {
+func DeleteFiles(mgr db.DataMgr, eType, ws, dataset, version, prefix string, preciseName, strict bool) error {
 	fileChunks, err := mgr.ListRelatedChunksForFiles(eType, ws, dataset, version, prefix, preciseName)
 	if err != nil {
 		return err
-	}
-
-	if len(fileChunks) == 0 {
-		return errors.NewStatus(
-			http.StatusNotFound,
-			fmt.Sprintf("Path %v not found in dataset %v/%v:%v", prefix, ws, dataset, version),
-		)
 	}
 
 	rows, err := mgr.DeleteFiles(eType, ws, dataset, version, prefix, preciseName)
 	if err != nil {
 		return err
 	}
-	var deleted = 0
 	logrus.Infof("Deleted %v virtual files.", rows)
+
+	if len(fileChunks) == 0 && strict {
+		return errors.NewStatus(
+			http.StatusNotFound,
+			fmt.Sprintf("Path %v not found in %v %v/%v:%v", eType, prefix, ws, dataset, version),
+		)
+	}
+
+	var deleted = 0
 	for _, fc := range fileChunks {
 		chunk, err := mgr.GetChunkByID(fc.ChunkID)
 		if err != nil {

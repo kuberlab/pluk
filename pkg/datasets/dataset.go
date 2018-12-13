@@ -124,6 +124,7 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 		dsvOld.Size = dsv.Size
 		dsvOld.Editing = dsv.Editing || dsvOld.Editing
 		dsv.Editing = dsvOld.Editing
+		dsvOld.FileCount = dsv.FileCount
 		if dsv.Message != "" {
 			dsvOld.Message = dsv.Message
 		}
@@ -452,7 +453,10 @@ func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion, messag
 	}()
 
 	// Clean target version
-	DeleteFiles(tx, target.Type, target.Workspace, target.Name, targetVersion, "", false)
+	DeleteFiles(
+		tx, target.Type, target.Workspace,
+		target.Name, targetVersion, "", false, false,
+	)
 
 	files, err := tx.ListFiles(
 		db.File{
