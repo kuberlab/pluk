@@ -32,7 +32,7 @@ func initLogging() {
 
 	if debug {
 		logLevel = "debug"
-		os.Setenv("DEBUG", "true")
+		_ = os.Setenv("DEBUG", "true")
 	}
 	lvl, err := logrus.ParseLevel(logLevel)
 	if err != nil {
@@ -147,8 +147,8 @@ func (cmd *plukeFSCmd) run() int {
 	logrus.Debugf("Start with secret_workspace=%v", cmd.secretWorkspace)
 	logrus.Debugf("Start with secret=%v", cmd.secret)
 
-	os.Setenv(utils.DoNotSaveChunks, "true")
-	os.Setenv(utils.MastersVar, cmd.server)
+	_ = os.Setenv(utils.DoNotSaveChunks, "true")
+	_ = os.Setenv(utils.MastersVar, cmd.server)
 
 	io.MasterClient = plukclient.NewMasterClientWithSecret(cmd.secretWorkspace, cmd.secret)
 	if logrus.GetLevel() == logrus.DebugLevel {
@@ -182,7 +182,7 @@ func (cmd *plukeFSCmd) run() int {
 	go func() {
 		for range c {
 			logrus.Info("Shutdown fs...")
-			server.Unmount()
+			_ = server.Unmount()
 			os.Exit(0)
 		}
 	}()

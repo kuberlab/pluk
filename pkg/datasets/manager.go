@@ -158,7 +158,7 @@ func (m *Manager) DeleteDataset(eType, workspace, name string, master io.PlukCli
 	}
 
 	if utils.HasMasters() && master != nil {
-		master.DeleteEntity(ds.Type, workspace, name, force)
+		_ = master.DeleteEntity(ds.Type, workspace, name, force)
 	}
 
 	if force {

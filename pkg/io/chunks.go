@@ -12,10 +12,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
-	"golang.org/x/sync/semaphore"
 )
-
-var queue = semaphore.NewWeighted(5)
 
 type ChunkedReader struct {
 	ChunkSize int
@@ -99,7 +96,10 @@ func GetChunk(hash string) (reader ReaderInterface, err error) {
 				}
 				//logrus.Debugf("download complete! %v", time.Since(t))
 				readerRaw.Close()
-				SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
+				err = SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
+				if err != nil {
+					logrus.Errorf("Could not save chunk: %v", err)
+				}
 				return NewChunkReaderFromData(data), nil
 			} else {
 				data, err := ioutil.ReadAll(readerRaw)

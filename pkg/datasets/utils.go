@@ -28,7 +28,7 @@ func RunDeleteLoop() {
 	active = true
 	lock.Unlock()
 	for path := range deleteCh {
-		os.Remove(path)
+		_ = os.Remove(path)
 
 		dirName := filepath.Dir(path)
 		remainFiles, err := ioutil.ReadDir(dirName)
@@ -38,7 +38,7 @@ func RunDeleteLoop() {
 
 		// If there are no files in this directory, delete it.
 		if len(remainFiles) == 0 {
-			os.RemoveAll(dirName)
+			_ = os.RemoveAll(dirName)
 		}
 	}
 }
@@ -89,7 +89,7 @@ func CheckAndDeleteChunk(mgr db.DataMgr, chunk *db.Chunk) bool {
 	// If there are no connections, completely delete this chunk.
 	if len(remain) == 0 {
 		path := utils.GetHashedFilename(chunk.Hash)
-		mgr.DeleteChunk(chunk.ID)
+		_ = mgr.DeleteChunk(chunk.ID)
 
 		// Send to delete
 		deleteCh <- path

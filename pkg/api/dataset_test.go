@@ -360,7 +360,7 @@ func TestForkDatasetForce(t *testing.T) {
 	dbPrepare(t)
 	defer teardown(fname)
 
-	db.DbMgr.CreateDataset(&db.Dataset{
+	_ = db.DbMgr.CreateDataset(&db.Dataset{
 		Name:      "dataset",
 		Workspace: "another-ws",
 		Type:      "dataset",
@@ -469,7 +469,7 @@ func TestDownloadDataset(t *testing.T) {
 		case tar.TypeReg, tar.TypeRegA:
 			files++
 		}
-		reader.Read(make([]byte, hd.Size))
+		_, _ = reader.Read(make([]byte, hd.Size))
 	}
 
 	utils.Assert(2, files, t)

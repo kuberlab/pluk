@@ -273,7 +273,7 @@ func (cmd *pushCmd) uploadChunks(bar *pb.ProgressBar, client chunk_io.PlukClient
 	ctx := context.TODO()
 
 	var resp *types.ChunkCheck
-	checkAndUpload := func(chunkData []byte, hash string) error {
+	checkAndUpload := func(chunkData []byte, hash string) {
 		defer func() {
 			lock.Lock()
 			bar.Add(len(chunkData))
@@ -282,7 +282,7 @@ func (cmd *pushCmd) uploadChunks(bar *pb.ProgressBar, client chunk_io.PlukClient
 		}()
 
 		if !upload {
-			return nil
+			return
 		}
 
 		if cmd.websocket {
@@ -306,7 +306,7 @@ func (cmd *pushCmd) uploadChunks(bar *pb.ProgressBar, client chunk_io.PlukClient
 				}
 			}
 		}
-		return nil
+		return
 	}
 
 	err = filepath.Walk(cwd, func(path string, f os.FileInfo, err error) error {

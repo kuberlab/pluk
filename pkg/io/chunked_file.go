@@ -82,8 +82,6 @@ func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
 			return nil
 		}
 	}
-
-	return nil
 }
 
 func (fs *ChunkedFileFS) dirObj(absname string, modtime time.Time) *ChunkedFile {
@@ -285,7 +283,7 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 
 	var r int
 	// Shift read position to current offset
-	f.currentChunkReader.Seek(f.chunkOffset, io.SeekStart)
+	_, _ = f.currentChunkReader.Seek(f.chunkOffset, io.SeekStart)
 	//f.chunkOffset = 0
 	chunk := f.currentChunk
 	for {

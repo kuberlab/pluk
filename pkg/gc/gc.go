@@ -113,23 +113,22 @@ func GoGC() {
 			tx.Commit()
 		}
 	}
-	defer endTx()
 
 	// First: check if repo exists.
 	for _, ds := range vDatasets {
 		if err = deleteDatasetVersion(tx, ds, ""); err != nil {
 			logrus.Error(err)
-			return
+			//return
 		}
 	}
 
 	// Second: Iterate over versions and see if the corresponding version deleted.
 	endTx()
 	tx = mgr.Begin()
-	deletedVersions, err := mgr.ListDatasetVersions(db.DatasetVersion{Deleted: true})
+
+	deletedVersions, err := tx.ListDatasetVersions(db.DatasetVersion{Deleted: true})
 	if err != nil {
 		logrus.Error(err)
-		return
 	}
 	for _, dsv := range deletedVersions {
 		err = deleteDatasetVersion(
@@ -138,10 +137,9 @@ func GoGC() {
 		)
 		if err != nil {
 			logrus.Error(err)
-			return
 		}
 	}
-
+	endTx()
 	// Third: See if there deleted dataset on master; delete those which don't exist on master
 	// but exist on slave.
 	if utils.HasMasters() {
@@ -203,7 +201,7 @@ func deleteDataset(mgr db.DataMgr, d *db.Dataset) {
 		logrus.Error(err)
 		return
 	}
-	mgr.DeleteDataset(d.ID)
+	_ = mgr.DeleteDataset(d.ID)
 }
 
 func gcFromMasters(mgr db.DataMgr) {

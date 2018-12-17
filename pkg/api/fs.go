@@ -1,12 +1,11 @@
 package api
 
 import (
-	"fmt"
-	"net/http"
-	"strconv"
-
 	"compress/gzip"
 	"encoding/gob"
+	"fmt"
+	"net/http"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/pluk/pkg/gc"
@@ -46,11 +45,11 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 		resp.WriteEntity(fs)
 	case "gob":
 		enc := gob.NewEncoder(resp.ResponseWriter)
-		enc.Encode(fs)
+		_ = enc.Encode(fs)
 	case "gobgz":
 		w := gzip.NewWriter(resp.ResponseWriter)
 		enc := gob.NewEncoder(w)
-		enc.Encode(fs)
+		_ = enc.Encode(fs)
 		w.Close()
 	default:
 		WriteErrorString(resp, http.StatusBadRequest, "Wrong format, allowed json/gob/gobgz")
@@ -62,10 +61,8 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 
 func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	comment := req.QueryParameter("comment")
-	createRaw := req.QueryParameter("create")
-	create, _ := strconv.ParseBool(createRaw)
-	publishRaw := req.QueryParameter("publish")
-	publish, _ := strconv.ParseBool(publishRaw)
+	create := getBoolQueryParam(req, "create")
+	publish := getBoolQueryParam(req, "publish")
 	version := req.PathParameter("version")
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")

@@ -10,7 +10,7 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
-	pluk_webdav "github.com/kuberlab/pluk/pkg/webdav"
+	plukwebdav "github.com/kuberlab/pluk/pkg/webdav"
 	"golang.org/x/net/webdav"
 )
 
@@ -115,7 +115,7 @@ func (api *API) webdav() http.HandlerFunc {
 
 		srv := &webdav.Handler{
 			Prefix:     fmt.Sprintf("/webdav/%v/%v/%v", workspace, name, version),
-			FileSystem: pluk_webdav.NewFS(dataset, version),
+			FileSystem: plukwebdav.NewFS(dataset, version),
 			LockSystem: webdav.NewMemLS(),
 			Logger: func(r *http.Request, err error) {
 				if err != nil {

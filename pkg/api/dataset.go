@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -193,8 +192,7 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
 	targetWS := req.PathParameter("targetWorkspace")
-	forceRaw := req.QueryParameter("force")
-	force, _ := strconv.ParseBool(forceRaw)
+	force := getBoolQueryParam(req, "force")
 	targetName := req.QueryParameter("name")
 	if targetName == "" {
 		targetName = name

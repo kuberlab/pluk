@@ -14,7 +14,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/errors"
-	"github.com/kuberlab/lib/pkg/types"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
@@ -117,86 +116,6 @@ func getBoolQueryParam(req *restful.Request, param string) bool {
 		return false
 	}
 	return bVal
-}
-
-func GetQueryParamAs(req *restful.Request, name string, typeExample interface{}, optional bool) interface{} {
-	param := req.QueryParameter(name)
-	var err error
-
-	defer func() {
-		if err != nil {
-			logrus.Errorf("Invalid %v: %v", name, err)
-		}
-	}()
-
-	if param == "" {
-		if !optional {
-			err = fmt.Errorf("required '%v'", name)
-		}
-		return nil
-	}
-
-	switch typeExample.(type) {
-	case int:
-		var value int64
-		value, err = strconv.ParseInt(param, 10, 32)
-		val := new(int)
-		*val = int(value)
-		return val
-	case uint:
-		var value uint64
-		value, err = strconv.ParseUint(param, 10, 32)
-		val := new(uint)
-		*val = uint(value)
-		return val
-	case bool:
-		var value bool
-		value, err = strconv.ParseBool(param)
-		return &value
-	case string:
-		return &param
-	case time.Time:
-		var value time.Time
-		value, err = time.ParseInLocation(types.Format, param, time.FixedZone("UTC", 0))
-		return &value
-	}
-	return &param
-}
-
-// GetQueryParamInt gets query int parameter
-func GetQueryParamInt(req *restful.Request, name string, optional bool) *int {
-	val := GetQueryParamAs(req, name, int(1), optional)
-	if val == nil {
-		return nil
-	}
-	return val.(*int)
-}
-
-// GetQueryParamUint gets query uint parameter
-func GetQueryParamUint(req *restful.Request, name string, optional bool) *uint {
-	val := GetQueryParamAs(req, name, uint(1), optional)
-	if val == nil {
-		return nil
-	}
-	return val.(*uint)
-}
-
-// GetQueryParamBool gets query bool parameter
-func GetQueryParamBool(req *restful.Request, name string, optional bool) *bool {
-	val := GetQueryParamAs(req, name, bool(false), optional)
-	if val == nil {
-		return nil
-	}
-	return val.(*bool)
-}
-
-// GetQueryParamDateTime gets query of date time parameter
-func GetQueryParamDateTime(req *restful.Request, name string, optional bool) *time.Time {
-	val := GetQueryParamAs(req, name, time.Time{}, optional)
-	if val == nil {
-		return nil
-	}
-	return val.(*time.Time)
 }
 
 func (api *API) InternalHook(req *restful.Request, resp *restful.Response, filter *restful.FilterChain) {

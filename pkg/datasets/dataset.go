@@ -29,7 +29,7 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 
 	if utils.HasMasters() && masterSave {
 		// TODO: decide whether it can go in async
-		d.MasterClient.SaveFileStructure(
+		_ = d.MasterClient.SaveFileStructure(
 			structure, d.Type, d.Workspace, d.Name, version, comment, create, publish,
 		)
 	}
@@ -380,7 +380,7 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 			_, ok := versionMap[v.Version]
 			if !ok {
 				// Sync locally
-				d.mgr.CreateDatasetVersion(
+				_ = d.mgr.CreateDatasetVersion(
 					&db.DatasetVersion{
 						Version:   v.Version,
 						Editing:   v.Editing,
@@ -420,7 +420,7 @@ func (d *Dataset) DeleteVersion(version string, force bool) error {
 	}
 
 	if utils.HasMasters() && d.MasterClient != nil {
-		d.MasterClient.DeleteVersion(d.Type, d.Workspace, d.Name, version)
+		_ = d.MasterClient.DeleteVersion(d.Type, d.Workspace, d.Name, version)
 	}
 
 	if force {
@@ -453,7 +453,7 @@ func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion, messag
 	}()
 
 	// Clean target version
-	DeleteFiles(
+	_ = DeleteFiles(
 		tx, target.Type, target.Workspace,
 		target.Name, targetVersion, "", false, false,
 	)
