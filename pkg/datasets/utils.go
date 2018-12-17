@@ -1,17 +1,17 @@
 package datasets
 
 import (
+	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/utils"
-	"github.com/kuberlab/lib/pkg/errors"
-	"net/http"
-	"fmt"
 )
 
 var (

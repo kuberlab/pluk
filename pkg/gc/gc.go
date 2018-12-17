@@ -88,10 +88,14 @@ func Start() {
 func GoGC() {
 	go datasets.RunDeleteLoop()
 
+	utils.AcqureSem(1)
 	lock.Lock()
-	defer lock.Unlock()
 	setActive()
-	defer setInactive()
+	defer func() {
+		utils.ReleaseSem(1)
+		lock.Unlock()
+		setInactive()
+	}()
 	logrus.Info("[GC] Starting garbage collector...")
 	mgr := db.DbMgr
 

@@ -2,13 +2,14 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"mime"
 	"net/http"
+	"os"
 	"path"
+	"strconv"
 	"sync"
 	"time"
 
@@ -18,9 +19,6 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
-	"golang.org/x/sync/semaphore"
-	"strconv"
-	"os"
 )
 
 func (api *API) fsReadDir(req *restful.Request, resp *restful.Response) {
@@ -155,6 +153,10 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 	//	)
 	//	return
 	//}
+
+	acquireConcurrency()
+	defer releaseConcurrency()
+
 	tx := api.mgr.Begin()
 	defer func() {
 		if err != nil {
@@ -178,11 +180,6 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 	resp.WriteHeader(http.StatusNoContent)
 }
 
-var (
-	sem = semaphore.NewWeighted(utils.UploadConcurrency())
-	ctx = context.TODO()
-)
-
 func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	name := req.PathParameter("name")
@@ -190,8 +187,8 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 	filepath := req.PathParameter("path")
 	master := api.masterClient(req)
 
-	sem.Acquire(ctx, 1)
-	defer sem.Release(1)
+	acquireConcurrency()
+	defer releaseConcurrency()
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {

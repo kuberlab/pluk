@@ -1,8 +1,9 @@
 package db
 
 import (
-	"github.com/kuberlab/lib/pkg/types"
 	"time"
+
+	"github.com/kuberlab/lib/pkg/types"
 )
 
 type FileMgr interface {

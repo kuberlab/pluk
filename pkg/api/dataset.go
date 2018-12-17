@@ -150,6 +150,8 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	master := api.masterClient(req)
 
+	acquireConcurrency()
+	defer releaseConcurrency()
 	ds := api.ds.GetDataset(currentType(req), workspace, name, master)
 
 	api.invalidateCache(ds)
@@ -223,8 +225,8 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 		gc.WaitGCCompleted()
 	}
 
-	sem.Acquire(ctx, 1)
-	defer sem.Release(1)
+	acquireConcurrency()
+	defer releaseConcurrency()
 
 	src := types.Dataset{Workspace: workspace, Name: name, Type: currentType(req)}
 	target := types.Dataset{Workspace: targetWS, Name: targetName, Type: targetType}

@@ -2,7 +2,9 @@ package plukclient
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/tls"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,8 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"compress/gzip"
-	"encoding/gob"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	liberrs "github.com/kuberlab/lib/pkg/errors"

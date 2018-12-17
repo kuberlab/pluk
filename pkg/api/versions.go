@@ -139,6 +139,9 @@ func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	master := api.masterClient(req)
 
+	acquireConcurrency()
+	defer releaseConcurrency()
+
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
 		WriteError(resp, EntityNotFoundError(req, name))
@@ -163,6 +166,9 @@ func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
 	targetVersion := req.PathParameter("targetVersion")
 	message := req.QueryParameter("message")
 	master := api.masterClient(req)
+
+	acquireConcurrency()
+	defer releaseConcurrency()
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
@@ -191,6 +197,9 @@ func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {
 	version := req.PathParameter("version")
 	message := req.QueryParameter("message")
 	master := api.masterClient(req)
+
+	acquireConcurrency()
+	defer releaseConcurrency()
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {

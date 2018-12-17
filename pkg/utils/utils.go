@@ -142,7 +142,7 @@ func UploadConcurrency() int64 {
 		if DBType() == "sqlite3" {
 			return 1
 		}
-		return 4
+		return 8
 	}
 	return c
 }

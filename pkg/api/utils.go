@@ -230,3 +230,11 @@ func currentType(req *restful.Request) string {
 	}
 	return sType
 }
+
+func acquireConcurrency() {
+	utils.AcqureSem(1)
+}
+
+func releaseConcurrency() {
+	utils.ReleaseSem(1)
+}
