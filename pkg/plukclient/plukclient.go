@@ -106,6 +106,10 @@ func (c *Client) PrepareWebsocket() error {
 	case "http":
 		scheme = "ws"
 	case "https":
+		tlsConf := &tls.Config{
+			InsecureSkipVerify: true,
+		}
+		dialer.TLSClientConfig = tlsConf
 		scheme = "wss"
 	}
 	u := fmt.Sprintf("%v://%v/%v", scheme, c.BaseURL.Host, strings.TrimPrefix(c.BaseURL.Path, "/"))

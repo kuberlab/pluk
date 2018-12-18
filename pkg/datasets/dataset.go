@@ -366,8 +366,10 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 			CreatedAt: dsv.CreatedAt,
 			Editing:   dsv.Editing,
 			Message:   dsv.Message,
-			Type:      dsv.Type,
+			DType:     dsv.Type,
 			FileCount: dsv.FileCount,
+			Name:      dsv.Name,
+			Workspace: dsv.Workspace,
 		}
 	}
 	if utils.HasMasters() {
@@ -384,7 +386,7 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 					&db.DatasetVersion{
 						Version:   v.Version,
 						Editing:   v.Editing,
-						Type:      v.Type,
+						Type:      v.DType,
 						Size:      v.SizeBytes,
 						Message:   v.Message,
 						Name:      d.Name,

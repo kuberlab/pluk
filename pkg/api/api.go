@@ -43,13 +43,14 @@ func Start() {
 
 func GlobalHandler() http.Handler {
 	plukio.MasterClient = plukclient.NewInternalMasterClient()
+	hub := types.NewHub()
 	api := &API{
 		cache:     utils.NewRequestCache(),
 		fsCache:   utils.NewRequestCache(),
 		client:    &http.Client{Timeout: time.Minute},
-		ds:        datasets.NewManager(db.DbMgr),
+		ds:        datasets.NewManager(db.DbMgr, hub),
 		mgr:       db.DbMgr,
-		hub:       types.NewHub(),
+		hub:       hub,
 		saveLocks: make(map[string]*sync.RWMutex),
 	}
 
@@ -79,6 +80,10 @@ func GlobalHandler() http.Handler {
 	port := utils.HttpPort()
 
 	logrus.Infof("Listen at *:%v", port)
+
+	// Request master via websocket here (deleted version - invalidate cache)
+	api.StartWatcher()
+
 	return WrapLogger(r)
 }
 

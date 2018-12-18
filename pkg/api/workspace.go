@@ -64,7 +64,7 @@ func (api *API) checkEntityAccess(req *restful.Request, write bool) (*types.Data
 		return &types.Dataset{
 			Name:      name,
 			Workspace: workspace,
-			Type:      currentType(req),
+			DType:     currentType(req),
 		}, nil
 	}
 
@@ -103,7 +103,7 @@ func (api *API) checkEntityAccess(req *restful.Request, write bool) (*types.Data
 
 	if strings.Contains(strings.Join(ws.Can, " "), neededPerm) {
 		// Found needed permission
-		return &types.Dataset{Name: name, Workspace: workspace, Type: currentType(req)}, nil
+		return &types.Dataset{Name: name, Workspace: workspace, DType: currentType(req)}, nil
 	} else {
 		// If read, then check if item exists.
 		if !write {
@@ -116,7 +116,7 @@ func (api *API) checkEntityAccess(req *restful.Request, write bool) (*types.Data
 			if err != nil {
 				return nil, err
 			} else {
-				return &types.Dataset{Name: name, Workspace: workspace, Type: currentType(req)}, nil
+				return &types.Dataset{Name: name, Workspace: workspace, DType: currentType(req)}, nil
 			}
 		}
 		return nil, errors.NewStatus(
@@ -138,7 +138,7 @@ func (api *API) checkDatasetExists(req *restful.Request, resp *restful.Response)
 	ds := &types.Dataset{
 		Name:      name,
 		Workspace: workspace,
-		Type:      currentType(req),
+		DType:     currentType(req),
 	}
 	resp.WriteEntity(ds)
 }

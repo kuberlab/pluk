@@ -6,7 +6,7 @@ NC='\033[0m' # No color
 
 out=$(go test -v github.com/kuberlab/pluk/...)
 exit_code=$(echo $?)
-echo "$out" | tee /dev/tty
+echo "$out"
 num=$(echo "$out" | grep RUN | wc -l)
 
 if [ $exit_code -eq 0 ]; then

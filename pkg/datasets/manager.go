@@ -16,10 +16,11 @@ import (
 
 type Manager struct {
 	mgr db.DataMgr
+	hub *types.Hub
 }
 
-func NewManager(mgr db.DataMgr) *Manager {
-	return &Manager{mgr: mgr}
+func NewManager(mgr db.DataMgr, hub *types.Hub) *Manager {
+	return &Manager{mgr: mgr, hub: hub}
 }
 
 func (m *Manager) ListDatasets(eType, workspace string) []*Dataset {
@@ -92,22 +93,22 @@ func (m *Manager) NewDataset(eType, workspace, name string, master io.PlukClient
 }
 
 func (m *Manager) ForkDataset(src types.Dataset, target types.Dataset, master io.PlukClient) (*Dataset, error) {
-	_, err := m.mgr.GetDataset(target.Type, target.Workspace, target.Name)
+	_, err := m.mgr.GetDataset(target.DType, target.Workspace, target.Name)
 	if err == nil {
 		msg := fmt.Sprintf(
 			"%v %v/%v already exists. Please delete it first and try again.",
-			strings.Title(target.Type), target.Workspace, target.Name,
+			strings.Title(target.DType), target.Workspace, target.Name,
 		)
 		return nil, errors.NewStatus(409, msg)
 	}
 
-	source := m.GetDataset(src.Type, src.Workspace, src.Name, master)
+	source := m.GetDataset(src.DType, src.Workspace, src.Name, master)
 	if source == nil {
-		msg := fmt.Sprintf("Probably %v %v/%v doesn't exist", src.Type, src.Workspace, src.Name)
+		msg := fmt.Sprintf("Probably %v %v/%v doesn't exist", src.DType, src.Workspace, src.Name)
 		return nil, errors.NewStatus(404, msg)
 	}
 
-	ds, err := m.NewDataset(target.Type, target.Workspace, target.Name, master)
+	ds, err := m.NewDataset(target.DType, target.Workspace, target.Name, master)
 	if err != nil {
 		return nil, err
 	}
@@ -165,5 +166,26 @@ func (m *Manager) DeleteDataset(eType, workspace, name string, master io.PlukCli
 		utils.GCChan <- fmt.Sprintf("Clean dataset %v/%v", workspace, name)
 	}
 
+	// Push message about deleting dataset here
+	m.PushMessageDataset(&types.Dataset{Workspace: ds.Workspace, Name: ds.Name, DType: ds.Type})
+
 	return nil
+}
+
+func (m *Manager) PushMessageDataset(ds *types.Dataset) {
+	if m.hub == nil {
+		return
+	}
+
+	msg := ds
+	m.hub.Push(msg)
+}
+
+func (m *Manager) PushMessageVersion(dsv *types.Version) {
+	if m.hub == nil {
+		return
+	}
+
+	msg := dsv
+	m.hub.Push(msg)
 }

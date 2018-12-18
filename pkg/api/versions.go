@@ -122,12 +122,15 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 
 	res := types.Version{
 		Version:   version,
-		Type:      dsv.Type,
+		DType:     dsv.Type,
 		CreatedAt: dsv.CreatedAt,
 		UpdatedAt: dsv.UpdatedAt,
 		Message:   dsv.Message,
 		Editing:   dsv.Editing,
 		SizeBytes: dsv.Size,
+		Workspace: dsv.Workspace,
+		Name:      dsv.Name,
+		FileCount: dsv.FileCount,
 	}
 
 	resp.WriteHeaderAndEntity(http.StatusCreated, res)
@@ -153,6 +156,10 @@ func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
+
+	api.ds.PushMessageVersion(
+		&types.Version{Workspace: workspace, Name: name, DType: currentType(req), Version: version},
+	)
 
 	// Invalidate cache
 	api.fsCache.Cache.Delete(api.fsCacheKey(dataset, version))
@@ -187,6 +194,10 @@ func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
+
+	api.ds.PushMessageVersion(
+		&types.Version{Workspace: workspace, Name: name, DType: currentType(req), Version: version},
+	)
 
 	resp.WriteHeaderAndEntity(http.StatusCreated, dsv)
 }

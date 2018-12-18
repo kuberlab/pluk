@@ -51,7 +51,7 @@ func (api *API) datasets(req *restful.Request, resp *restful.Response) {
 	for _, d := range sets {
 		ds.Items = append(
 			ds.Items,
-			types.Dataset{Name: d.Name, Workspace: d.Workspace, Type: d.Type},
+			types.Dataset{Name: d.Name, Workspace: d.Workspace, DType: d.Type},
 		)
 	}
 	if len(ds.Items) == 0 {
@@ -228,8 +228,8 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 	acquireConcurrency()
 	defer releaseConcurrency()
 
-	src := types.Dataset{Workspace: workspace, Name: name, Type: currentType(req)}
-	target := types.Dataset{Workspace: targetWS, Name: targetName, Type: targetType}
+	src := types.Dataset{Workspace: workspace, Name: name, DType: currentType(req)}
+	target := types.Dataset{Workspace: targetWS, Name: targetName, DType: targetType}
 
 	dataset, err := api.ds.ForkDataset(src, target, master)
 	if err != nil {

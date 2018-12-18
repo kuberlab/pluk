@@ -225,7 +225,7 @@ func gcFromMasters(mgr db.DataMgr) {
 	}
 	defer endTx()
 
-	dsManager := datasets.NewManager(tx)
+	dsManager := datasets.NewManager(tx, nil)
 	vDatasets, err := tx.ListDatasets(db.Dataset{})
 	if err != nil {
 		logrus.Error(err)
@@ -262,14 +262,14 @@ func gcFromMasters(mgr db.DataMgr) {
 		// Then we delete it as well on the slave.
 		for slaveName := range slaveDatasets {
 			if _, ok := masterDatasetMap[slaveName]; !ok {
-				candidates = append(candidates, types.Dataset{Name: slaveName, Workspace: ws, Type: eType})
+				candidates = append(candidates, types.Dataset{Name: slaveName, Workspace: ws, DType: eType})
 			}
 		}
 	}
 
 	for _, candidate := range candidates {
-		logrus.Infof("[GC] Delete %v %v/%v from slave", candidate.Type, candidate.Workspace, candidate.Name)
-		if err = dsManager.DeleteDataset(candidate.Type, candidate.Workspace, candidate.Name, plukclient.NewInternalMasterClient(), false); err != nil {
+		logrus.Infof("[GC] Delete %v %v/%v from slave", candidate.DType, candidate.Workspace, candidate.Name)
+		if err = dsManager.DeleteDataset(candidate.DType, candidate.Workspace, candidate.Name, plukclient.NewInternalMasterClient(), false); err != nil {
 			logrus.Error(err)
 			return
 		}

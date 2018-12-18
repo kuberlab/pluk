@@ -19,6 +19,9 @@ type MultiMasterClient struct {
 
 func NewInternalMasterClient() plukio.PlukClient {
 	masters := utils.Masters()
+	if len(masters) == 0 {
+		return nil
+	}
 	mClient := &MultiMasterClient{
 		Masters: masters,
 		AuthOpts: AuthOpts{

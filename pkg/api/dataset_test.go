@@ -31,7 +31,7 @@ func TestListDatasets(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := types.DataSetList{
-		Items: []types.Dataset{types.Dataset{Type: "dataset", Workspace: "workspace", Name: "dataset"}},
+		Items: []types.Dataset{{DType: "dataset", Workspace: "workspace", Name: "dataset"}},
 	}
 	utils.Assert(want, datasets, t)
 }
@@ -86,12 +86,12 @@ func TestCreateVersionAuto(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := types.Version{
-		Type:      "dataset",
+		DType:     "dataset",
 		SizeBytes: 0,
 		Version:   "1.0.0-new",
 		Editing:   true,
 	}
-	utils.Assert(want.Type, version.Type, t)
+	utils.Assert(want.DType, version.DType, t)
 	utils.Assert(want.SizeBytes, version.SizeBytes, t)
 	utils.Assert(want.Version, version.Version, t)
 	utils.Assert(want.Editing, version.Editing, t)

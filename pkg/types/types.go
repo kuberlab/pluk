@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/kuberlab/lib/pkg/dealerclient"
 	"github.com/kuberlab/lib/pkg/types"
@@ -34,7 +33,11 @@ func (d DataSetList) Swap(i, j int) {
 type Dataset struct {
 	Workspace string `json:"workspace"`
 	Name      string `json:"name"`
-	Type      string `json:"type"`
+	DType     string `json:"type"`
+}
+
+func (d *Dataset) Type() string {
+	return "dataset"
 }
 
 type VersionList struct {
@@ -73,8 +76,14 @@ type Version struct {
 	SizeBytes int64      `json:"size_bytes"`
 	FileCount int64      `json:"file_count"`
 	Message   string     `json:"message,omitempty"`
-	Type      string     `json:"type"`
+	Workspace string     `json:"workspace"`
+	Name      string     `json:"name"`
+	DType     string     `json:"type,omitempty"`
 	Editing   bool       `json:"editing"`
+}
+
+func (dv *Version) Type() string {
+	return "dataset_version"
 }
 
 type FileStructure struct {
@@ -128,51 +137,4 @@ func (c *WebsocketClient) WriteMessage(sType string, content interface{}) error 
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	return utils.WriteMessage(c.Ws, sType, c.ID, content)
-}
-
-type Hub struct {
-	lock        *sync.RWMutex
-	connections map[*WebsocketClient]bool
-}
-
-type Message interface {
-	Type() string
-}
-
-func NewHub() *Hub {
-	return &Hub{
-		lock:        &sync.RWMutex{},
-		connections: make(map[*WebsocketClient]bool),
-	}
-}
-
-func (h *Hub) Register(client *WebsocketClient) {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-	h.connections[client] = true
-}
-
-func (h *Hub) Drop(client *WebsocketClient) {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-	if _, ok := h.connections[client]; ok {
-		delete(h.connections, client)
-	}
-}
-
-func (h *Hub) PushMany(client *WebsocketClient, statuses []Message) {
-	for _, s := range statuses {
-		client.WriteMessage(s.Type(), s)
-	}
-}
-
-func (h *Hub) Push(message Message) {
-	h.lock.RLock()
-	defer h.lock.RUnlock()
-	for client := range h.connections {
-		err := client.WriteMessage(message.Type(), message)
-		if err != nil {
-			logrus.Error(err)
-		}
-	}
 }
