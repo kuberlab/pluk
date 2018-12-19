@@ -375,7 +375,7 @@ func (d *Dataset) Versions() ([]types.Version, error) {
 			Workspace: dsv.Workspace,
 		}
 	}
-	if utils.HasMasters() {
+	if utils.HasMasters() && d.MasterClient != nil {
 		vList, err := d.MasterClient.ListVersions(d.Type, d.Workspace, d.Name)
 		if err != nil {
 			return nil, err
