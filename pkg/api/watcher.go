@@ -72,7 +72,6 @@ func (w *Watcher) continuousConnect() {
 			return
 		}
 
-		w.attempt++
 		if w.attempt < sleepLimit {
 			toSleep = w.attempt
 		} else {
@@ -80,6 +79,7 @@ func (w *Watcher) continuousConnect() {
 		}
 		logrus.Warnf("[Watcher] %v; reconnect in %vs", err, toSleep)
 		time.Sleep(time.Second * time.Duration(toSleep))
+		w.attempt++
 	}
 }
 
