@@ -2,8 +2,6 @@ package io
 
 import (
 	"bytes"
-	"crypto/sha512"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -32,8 +30,8 @@ func (c *ChunkedReader) NextChunk() ([]byte, string, error) {
 	n, err := c.reader.Read(data)
 	if n > 0 {
 		res := data[:n]
-		sum := sha512.Sum512(res)
-		return res, fmt.Sprintf("%x", sum[:]), nil
+		sum := utils.CalcHash(res)
+		return res, sum, nil
 	}
 	if err != nil {
 		return nil, "", err

@@ -172,6 +172,7 @@ func String(s string) *string {
 }
 
 func CalcHash(data []byte) string {
+	//sum := sha256.Sum256(data)
 	sum := sha512.Sum512(data)
 	return fmt.Sprintf("%x", sum[:])
 }
