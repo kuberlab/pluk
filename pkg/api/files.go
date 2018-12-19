@@ -176,7 +176,7 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 		return
 	}
 	// Invalidate cache
-	api.fsCache.Cache.Delete(api.fsCacheKey(dataset, version))
+	api.invalidateVersionCache(dataset, version)
 	resp.WriteHeader(http.StatusNoContent)
 }
 
@@ -221,7 +221,7 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 		return
 	}
 	// Invalidate cache
-	api.fsCache.Cache.Delete(api.fsCacheKey(dataset, version))
+	api.invalidateVersionCache(dataset, version)
 	resp.WriteHeaderAndEntity(http.StatusCreated, f)
 }
 

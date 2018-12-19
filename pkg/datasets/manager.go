@@ -49,7 +49,7 @@ func (m *Manager) GetDataset(eType, workspace, name string, master io.PlukClient
 	}
 
 	// If none found, that means that it probably on master side.
-	if !utils.HasMasters() {
+	if !utils.HasMasters() || master == nil {
 		return nil
 	}
 

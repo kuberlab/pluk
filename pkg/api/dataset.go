@@ -180,7 +180,9 @@ func (api *API) createDataset(req *restful.Request, resp *restful.Response) {
 	}
 
 	// Wait
-	gc.WaitGCCompleted()
+	acquireConcurrency()
+	defer releaseConcurrency()
+	//gc.WaitGCCompleted()
 
 	if ds, err := api.ds.NewDataset(currentType(req), workspace, name, master); err != nil {
 		WriteError(resp, err)
@@ -241,7 +243,11 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 }
 
 func (api *API) fsCacheKey(dataset *datasets.Dataset, version string) string {
-	return dataset.Type + dataset.Workspace + dataset.Name + version + "-fs"
+	return api.fsCacheKeyPrefix(dataset) + ":" + version + "-fs"
+}
+
+func (api *API) fsCacheKeyPrefix(ds *datasets.Dataset) string {
+	return fmt.Sprintf("%v/%v/%v", ds.Type, ds.Workspace, ds.Name)
 }
 
 func (api *API) getFS(dataset *datasets.Dataset, version string) (fs *plukio.ChunkedFileFS, err error) {
@@ -275,19 +281,29 @@ func (api *API) invalidateCache(ds *datasets.Dataset) {
 	if ds == nil {
 		return
 	}
-	vs, err := ds.Versions()
-	if err != nil {
-		return
+	// Drop all cache by prefix
+	prefix := api.fsCacheKeyPrefix(ds)
+	for k := range api.fsCache.Cache.Items() {
+		if strings.HasPrefix(k, prefix) {
+			logrus.Infof("Drop cache for %v", k)
+			api.fsCache.Cache.Delete(k)
+		}
 	}
-	for _, v := range vs {
-		// Invalidate cache
-		api.fsCache.Cache.Delete(api.fsCacheKey(ds, v.Version))
-	}
+	//vs, err := ds.Versions()
+	//if err != nil {
+	//	return
+	//}
+	//for _, v := range vs {
+	//	// Invalidate cache
+	//	api.fsCache.Cache.Delete(api.fsCacheKey(ds, v.Version))
+	//}
 }
 
 func (api *API) invalidateVersionCache(ds *datasets.Dataset, version string) {
 	// Invalidate cache
-	api.fsCache.Cache.Delete(api.fsCacheKey(ds, version))
+	key := api.fsCacheKey(ds, version)
+	logrus.Infof("Drop cache for %v", key)
+	api.fsCache.Cache.Delete(key)
 }
 
 func (api *API) dealerClient(req *restful.Request) (*dealerclient.Client, error) {

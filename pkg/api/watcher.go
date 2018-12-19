@@ -12,6 +12,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	libtypes "github.com/kuberlab/lib/pkg/types"
+	"github.com/kuberlab/pluk/pkg/datasets"
+	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
@@ -165,6 +167,14 @@ func (w *Watcher) processQueue() {
 
 			// Delete dataset
 			logrus.Infof("[Watcher] Delete %v %v/%v", ds.DType, ds.Workspace, ds.Name)
+			_ = w.api.ds.DeleteDataset(ds.DType, ds.Workspace, ds.Name, nil, true)
+			w.api.invalidateCache(&datasets.Dataset{
+				Dataset: &db.Dataset{
+					Name:      ds.Name,
+					Type:      ds.DType,
+					Workspace: ds.Workspace,
+				},
+			})
 		case "dataset_version":
 			dsv := &types.Version{}
 			err := utils.LoadAsJson(m.Content.(map[string]interface{}), dsv)
@@ -175,6 +185,25 @@ func (w *Watcher) processQueue() {
 
 			// Delete version
 			logrus.Infof("[Watcher] Delete %v version %v/%v:%v", dsv.DType, dsv.Workspace, dsv.Name, dsv.Version)
+			ds := &datasets.Dataset{
+				Dataset: &db.Dataset{
+					Name:      dsv.Name,
+					Type:      dsv.DType,
+					Workspace: dsv.Workspace,
+				},
+			}
+			w.api.invalidateVersionCache(ds, dsv.Version)
+			dataset := w.api.ds.GetDataset(dsv.DType, dsv.Workspace, dsv.Name, nil)
+			if dataset == nil {
+				logrus.Errorf("[Watcher] %v %v/%v not found", dsv.DType, dsv.Workspace, dsv.Name)
+				return
+			}
+
+			err = dataset.DeleteVersion(dsv.Version, true)
+			if err != nil {
+				logrus.Errorf("[Watcher] %v", err)
+				return
+			}
 		}
 	}
 }

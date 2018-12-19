@@ -56,12 +56,12 @@ func CreateAll(db *gorm.DB) error {
 	//).Error; err != nil {
 	//	logrus.Error(err)
 	//}
-	//if err := db.Debug().Model(&FileChunk{}).AddIndex(
-	//	"chunk_id",
-	//	"chunk_id",
-	//).Error; err != nil {
-	//	logrus.Error(err)
-	//}
+	if err := db.Debug().Model(&FileChunk{}).AddIndex(
+		"idx_chunk_id",
+		"chunk_id",
+	).Error; err != nil {
+		logrus.Error(err)
+	}
 	//if err := db.Debug().Model(&FileChunk{}).AddIndex(
 	//	"file_id",
 	//	"file_id",
