@@ -64,7 +64,7 @@ func teardown(fname string) {
 
 	db.DbMgr.Close()
 	os.RemoveAll("/tmp/tmp_pluk")
-	os.RemoveAll(fname)
+	os.Remove(fname)
 }
 
 func buildURL(urlStr string) string {

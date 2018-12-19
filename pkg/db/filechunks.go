@@ -26,8 +26,8 @@ type FileChunkMgr interface {
 }
 
 type FileChunk struct {
-	FileID     uint `gorm:"index:file_chunk_id" json:"file_id"`
-	ChunkID    uint `gorm:"index:file_chunk_id" json:"chunk_id"`
+	FileID     uint `gorm:"unique_index:file_chunk_id" json:"file_id"`
+	ChunkID    uint `gorm:"unique_index:file_chunk_id" json:"chunk_id"`
 	ChunkIndex uint `json:"chunk_index"`
 }
 
@@ -37,7 +37,22 @@ type FileChunkHash struct {
 }
 
 func (mgr *DatabaseMgr) CreateFileChunk(file *FileChunk) error {
-	return mgr.db.Create(file).Error
+	if mgr.DBType() == "sqlite3" {
+		tpl := "INSERT OR REPLACE INTO file_chunks " +
+			"(file_id, chunk_id, chunk_index) VALUES (?, ?, ?)"
+		return mgr.db.Exec(tpl, file.FileID, file.ChunkID, file.ChunkIndex).Error
+	} else if mgr.DBType() == "postgres" {
+		tpl := "INSERT INTO file_chunks " +
+			"(file_id, chunk_id, chunk_index) VALUES (?, ?, ?) ON CONFLICT (file_id,chunk_id) DO UPDATE SET " +
+			"file_id=?, chunk_id=?, chunk_index=?"
+		values := []interface{}{
+			file.FileID, file.ChunkID, file.ChunkIndex,
+			file.FileID, file.ChunkID, file.ChunkIndex,
+		}
+		return mgr.db.Exec(tpl, values...).Error
+	} else {
+		return mgr.db.Create(file).Error
+	}
 }
 
 func (mgr *DatabaseMgr) GetFileChunk(fileID uint, chunkID uint, index int) (*FileChunk, error) {

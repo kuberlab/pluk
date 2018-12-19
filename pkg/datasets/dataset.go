@@ -159,7 +159,7 @@ func SaveFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFile) error 
 	} else {
 		// Need to clear unneeded chunks
 		//
-		if err = ClearExtraChunks(tx, dsv, existing, f); err != nil {
+		if err = ClearExtraChunks(tx, dsv, fPath, f); err != nil {
 			return err
 		}
 
@@ -175,35 +175,38 @@ func SaveFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFile) error 
 
 	for i, hash := range f.Hashes {
 		chunk := &db.Chunk{Hash: hash.Hash, Size: hash.Size}
-		if eChunk, errD := tx.GetChunk(hash.Hash); errD != nil {
-			if err = tx.CreateChunk(chunk); err != nil {
-				return err
-			}
-		} else {
-			chunk.ID = eChunk.ID
-			if eChunk.Size != chunk.Size {
-				_, err = tx.UpdateChunk(chunk)
-				if err != nil {
-					return err
-				}
-			}
+		//if eChunk, errD := tx.GetChunk(hash.Hash); errD != nil {
+		if err = tx.CreateChunk(chunk); err != nil {
+			return err
 		}
+		//} else {
+		//	chunk.ID = eChunk.ID
+		//	if eChunk.Size != chunk.Size {
+		//		_, err = tx.UpdateChunk(chunk)
+		//		if err != nil {
+		//			return err
+		//		}
+		//	}
+		//}
 		// Create connection
 		fileChunk := &db.FileChunk{ChunkID: chunk.ID, FileID: fileDB.ID, ChunkIndex: uint(i)}
 
-		if _, errD := tx.GetFileChunk(fileDB.ID, chunk.ID, i); errD != nil {
-			if err = tx.CreateFileChunk(fileChunk); err != nil {
-				return err
-			}
+		//if _, errD := tx.GetFileChunk(fileDB.ID, chunk.ID, i); errD != nil {
+		if err = tx.CreateFileChunk(fileChunk); err != nil {
+			return err
 		}
+		//}
 	}
 	return nil
 }
 
-func ClearExtraChunks(tx db.DataMgr, dsv *db.DatasetVersion, existing *db.File, replacement *types.HashedFile) error {
-	exChunks, err := tx.GetRawFiles(dsv.Type, dsv.Workspace, dsv.Name, dsv.Version, existing.Path)
+func ClearExtraChunks(tx db.DataMgr, dsv *db.DatasetVersion, path string, replacement *types.HashedFile) error {
+	exChunks, err := tx.GetRawFiles(dsv.Type, dsv.Workspace, dsv.Name, dsv.Version, path)
 	if err != nil {
 		return err
+	}
+	if len(exChunks) == 0 {
+		return nil
 	}
 	candidates := make(map[string]db.RawFile)
 	for _, exChunk := range exChunks {

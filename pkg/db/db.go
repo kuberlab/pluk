@@ -8,6 +8,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/kuberlab/pluk/pkg/db/gorm"
+	"github.com/kuberlab/pluk/pkg/utils"
 )
 
 var DbMgr DataMgr
@@ -20,13 +21,15 @@ type DataMgr interface {
 	DatasetMgr
 	DatasetVersionVersionMgr
 	DB() *gorm.DB
+	DBType() string
 	Begin() *DatabaseMgr
 	Commit() *DatabaseMgr
 	Rollback() *DatabaseMgr
 	Close() error
 }
 type DatabaseMgr struct {
-	db *gorm.DB
+	db     *gorm.DB
+	dbType string
 }
 
 func (mgr *DatabaseMgr) Close() error {
@@ -34,7 +37,8 @@ func (mgr *DatabaseMgr) Close() error {
 }
 func NewDatabaseMgr(db *gorm.DB) *DatabaseMgr {
 	return &DatabaseMgr{
-		db: db,
+		db:     db,
+		dbType: utils.DBType(),
 	}
 }
 
@@ -53,20 +57,27 @@ func (mgr *DatabaseMgr) DB() *gorm.DB {
 	return mgr.db
 }
 
+func (mgr *DatabaseMgr) DBType() string {
+	return mgr.dbType
+}
+
 func (mgr *DatabaseMgr) Begin() *DatabaseMgr {
 	return &DatabaseMgr{
-		db: mgr.db.Begin(),
+		db:     mgr.db.Begin(),
+		dbType: mgr.dbType,
 	}
 }
 
 func (mgr *DatabaseMgr) Commit() *DatabaseMgr {
 	return &DatabaseMgr{
-		db: mgr.db.Commit(),
+		db:     mgr.db.Commit(),
+		dbType: mgr.dbType,
 	}
 }
 
 func (mgr *DatabaseMgr) Rollback() *DatabaseMgr {
 	return &DatabaseMgr{
-		db: mgr.db.Rollback(),
+		db:     mgr.db.Rollback(),
+		dbType: mgr.dbType,
 	}
 }

@@ -16,7 +16,7 @@ type Dataset struct {
 	BaseModel
 	ID        uint   `json:"id" sql:"AUTO_INCREMENT" gorm:"primary_key"`
 	Workspace string `json:"workspace" gorm:"index:idx_workspace_type"`
-	Name      string `json:"name" gorm:"index:idx_name"`
+	Name      string `json:"name"`
 	Type      string `json:"type" gorm:"index:idx_workspace_type"`
 	Deleted   bool   `json:"deleted"`
 }

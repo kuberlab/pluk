@@ -229,6 +229,18 @@ func TestForkDataset(t *testing.T) {
 
 	utils.Assert(http.StatusOK, resp.StatusCode, t)
 
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/tree")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fs []plukio.ChunkedFileInfo
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(2, len(fs), t)
+
 	url = buildURL("dataset/workspace/dataset/fork/another-ws")
 	resp, err = client.Post(url, "application/json", nil)
 	if err != nil {
@@ -242,7 +254,6 @@ func TestForkDataset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var fs []plukio.ChunkedFileInfo
 	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
 		t.Fatal(err)
 	}

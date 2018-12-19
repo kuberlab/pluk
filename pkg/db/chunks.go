@@ -11,13 +11,39 @@ type ChunkMgr interface {
 
 type Chunk struct {
 	BaseModel
-	ID   uint   `sql:"AUTO_INCREMENT" gorm:"primary_key"`
-	Hash string `json:"hash" gorm:"index:idx_hash"`
+	ID   uint   `sql:"AUTO_INCREMENT"`
+	Hash string `json:"hash" gorm:"primary_key"`
 	Size int64  `json:"size"`
 }
 
 func (mgr *DatabaseMgr) CreateChunk(chunk *Chunk) error {
-	return mgr.db.Create(chunk).Error
+	if mgr.DBType() == "postgres" {
+		tpl := "INSERT INTO chunks " +
+			"(hash, size) VALUES (?, ?) ON CONFLICT (hash) DO UPDATE SET size=? RETURNING id"
+		var newC = &Chunk{}
+		err := mgr.db.Raw(tpl, chunk.Hash, chunk.Size, chunk.Size).Scan(newC).Error
+		if err != nil {
+			return err
+		}
+		chunk.ID = newC.ID
+		return nil
+
+	} else if mgr.DBType() == "sqlite3" {
+		tpl := "INSERT OR REPLACE INTO chunks " +
+			"(hash, size) VALUES (?, ?)"
+		err := mgr.db.Exec(tpl, chunk.Hash, chunk.Size).Error
+		if err != nil {
+			return err
+		}
+		updated, err := mgr.GetChunk(chunk.Hash)
+		if err != nil {
+			return err
+		}
+		chunk.ID = updated.ID
+		return nil
+	} else {
+		return mgr.db.Create(chunk).Error
+	}
 }
 
 func (mgr *DatabaseMgr) UpdateChunk(chunk *Chunk) (*Chunk, error) {

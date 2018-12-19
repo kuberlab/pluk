@@ -56,23 +56,34 @@ func CreateAll(db *gorm.DB) error {
 	//).Error; err != nil {
 	//	logrus.Error(err)
 	//}
-	if err := db.Debug().Model(&FileChunk{}).AddIndex(
-		"chunk_id",
-		"chunk_id",
-	).Error; err != nil {
-		logrus.Error(err)
+	//if err := db.Debug().Model(&FileChunk{}).AddIndex(
+	//	"chunk_id",
+	//	"chunk_id",
+	//).Error; err != nil {
+	//	logrus.Error(err)
+	//}
+	//if err := db.Debug().Model(&FileChunk{}).AddIndex(
+	//	"file_id",
+	//	"file_id",
+	//).Error; err != nil {
+	//	logrus.Error(err)
+	//}
+	if db.Dialect().GetName() == "sqlite3" {
+		if err := db.Debug().Model(&Chunk{}).AddIndex(
+			"idx_hash",
+			"hash",
+		).Error; err != nil {
+			logrus.Error(err)
+		}
 	}
-	if err := db.Debug().Model(&FileChunk{}).AddIndex(
-		"file_id",
-		"file_id",
-	).Error; err != nil {
-		logrus.Error(err)
-	}
-	if err := db.Debug().Model(&Chunk{}).AddIndex(
-		"idx_hash",
-		"hash",
-	).Error; err != nil {
-		logrus.Error(err)
+
+	if db.Dialect().GetName() == "postgres" {
+		if err := db.Debug().Model(&Chunk{}).AddIndex(
+			"idx_chunks_id",
+			"id",
+		).Error; err != nil {
+			logrus.Error(err)
+		}
 	}
 
 	return nil
