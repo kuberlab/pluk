@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,6 +24,7 @@ type FileChunkMgr interface {
 	DeleteFiles(dsType, workspace, dataset, version, prefix string, preciseName bool) (int64, error)
 	ListRelatedChunks(dsType, workspace, dataset, version string) ([]*FileChunk, error)
 	ListRelatedChunksForFiles(dsType, workspace, dataset, version, prefix string, preciseName bool) ([]*FileChunk, error)
+	ListFileChunksByChunks(chunks []Chunk) ([]*FileChunk, error)
 }
 
 type FileChunk struct {
@@ -63,6 +65,19 @@ func (mgr *DatabaseMgr) GetFileChunk(fileID uint, chunkID uint, index int) (*Fil
 func (mgr *DatabaseMgr) ListFileChunks(filter FileChunk) ([]*FileChunk, error) {
 	var fileChunks = make([]*FileChunk, 0)
 	err := mgr.db.Find(&fileChunks, filter).Error
+	return fileChunks, err
+}
+
+func (mgr *DatabaseMgr) ListFileChunksByChunks(chunks []Chunk) ([]*FileChunk, error) {
+	var fileChunks = make([]*FileChunk, 0)
+	where := bytes.NewBufferString("chunk_id IN (")
+	ids := make([]string, 0)
+	for _, c := range chunks {
+		ids = append(ids, fmt.Sprintf("%v", c.ID))
+	}
+	where.WriteString(strings.Join(ids, ","))
+	where.WriteString(")")
+	err := mgr.db.Where(where.String()).Find(&fileChunks).Error
 	return fileChunks, err
 }
 

@@ -87,6 +87,7 @@ func Start() {
 
 func GoGC() {
 	go datasets.RunDeleteLoop()
+	go datasets.RunChunkDBDeleteLoop()
 
 	utils.AcqureSem(1)
 	lock.Lock()
@@ -164,7 +165,7 @@ func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) e
 	if err != nil {
 		return err
 	}
-	var deleted = 0
+	//var deleted = 0
 	logrus.Infof("[GC] Deleted %v virtual files.", rows)
 
 	for _, raw := range rawFiles {
@@ -176,13 +177,15 @@ func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) e
 		//	return err
 		//}
 		chunk := &db.Chunk{Hash: raw.Hash, Size: raw.ChunkSize, ID: raw.ChunkID}
-		if datasets.CheckAndDeleteChunk(mgr, chunk) {
-			deleted++
-		}
-		if deleted%500 == 0 && deleted != 0 {
-			logrus.Infof("[GC] Deleted %v chunks.", deleted)
-		}
+		datasets.CheckAndDeleteChunk(mgr, chunk)
+		//if datasets.CheckAndDeleteChunk(mgr, chunk) {
+		//	deleted++
+		//}
+		//if deleted%500 == 0 && deleted != 0 {
+		//	logrus.Infof("[GC] Deleted %v chunks.", deleted)
+		//}
 	}
+	deleted := datasets.TriggerDeleteChunks(mgr)
 	logrus.Infof("[GC] Deleted %v chunks.", deleted)
 
 	if version != "" {

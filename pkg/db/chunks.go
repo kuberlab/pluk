@@ -1,5 +1,11 @@
 package db
 
+import (
+	"bytes"
+	"fmt"
+	"strings"
+)
+
 type ChunkMgr interface {
 	CreateChunk(chunk *Chunk) error
 	UpdateChunk(chunk *Chunk) (*Chunk, error)
@@ -7,6 +13,7 @@ type ChunkMgr interface {
 	GetChunkByID(chunkID uint) (*Chunk, error)
 	ListChunks(filter Chunk) ([]*Chunk, error)
 	DeleteChunk(id uint) error
+	DeleteChunks(chunks []Chunk) error
 }
 
 type Chunk struct {
@@ -71,4 +78,16 @@ func (mgr *DatabaseMgr) ListChunks(filter Chunk) ([]*Chunk, error) {
 
 func (mgr *DatabaseMgr) DeleteChunk(id uint) error {
 	return mgr.db.Delete(Chunk{}, Chunk{ID: id}).Error
+}
+
+func (mgr *DatabaseMgr) DeleteChunks(chunks []Chunk) error {
+	where := bytes.NewBufferString("id IN (")
+	ids := make([]string, 0)
+	for _, c := range chunks {
+		ids = append(ids, fmt.Sprintf("%v", c.ID))
+	}
+	where.WriteString(strings.Join(ids, ","))
+	where.WriteString(")")
+	err := mgr.db.Where(where.String()).Delete(&chunks).Error
+	return err
 }

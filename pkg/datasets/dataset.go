@@ -220,7 +220,7 @@ func ClearExtraChunks(tx db.DataMgr, dsv *db.DatasetVersion, path string, replac
 	}
 
 	// Delete candidates
-	deleted := 0
+	//deleted := 0
 	for _, candidate := range candidates {
 		err := tx.DeleteFileChunk(candidate.FileID, candidate.ChunkID)
 		if err != nil {
@@ -231,10 +231,9 @@ func ClearExtraChunks(tx db.DataMgr, dsv *db.DatasetVersion, path string, replac
 			Size: candidate.ChunkSize,
 			ID:   candidate.ChunkID,
 		}
-		if CheckAndDeleteChunk(tx, chunk) {
-			deleted++
-		}
+		CheckAndDeleteChunk(tx, chunk)
 	}
+	deleted := TriggerDeleteChunks(tx)
 	if deleted != 0 {
 		logrus.Infof("Deleted %v chunks.", deleted)
 	}
