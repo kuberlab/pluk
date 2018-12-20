@@ -173,19 +173,19 @@ func (m *Manager) DeleteDataset(eType, workspace, name string, master io.PlukCli
 }
 
 func (m *Manager) PushMessageDataset(ds *types.Dataset) {
-	if m.hub == nil {
+	if m.hub == nil || ds == nil {
 		return
 	}
 
-	msg := ds
-	m.hub.Push(msg)
+	msg := *ds
+	m.hub.Push(&msg)
 }
 
 func (m *Manager) PushMessageVersion(dsv *types.Version) {
-	if m.hub == nil {
+	if m.hub == nil || dsv == nil {
 		return
 	}
 
-	msg := dsv
-	m.hub.Push(msg)
+	msg := *dsv
+	m.hub.Push(&msg)
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/pluk/pkg/datasets"
 	"github.com/kuberlab/pluk/pkg/db"
-	"github.com/kuberlab/pluk/pkg/gc"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
@@ -72,7 +71,9 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 	master := api.masterClient(req)
 
 	// Wait
-	gc.WaitGCCompleted()
+	acquireConcurrency()
+	defer releaseConcurrency()
+	//gc.WaitGCCompleted()
 
 	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {

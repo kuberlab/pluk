@@ -53,7 +53,7 @@ func CheckChunk(hash string) (*types.ChunkCheck, error) {
 
 		// If chunk on master has a smaller size, then mark it with this size
 		// which will be treated as wrong and will lead to uploading that chunk.
-		if sizeM < size {
+		if sizeM != size {
 			size = sizeM
 		}
 		// For ignoring uploading chunk, it must exists on master as well.

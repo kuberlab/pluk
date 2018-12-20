@@ -8,7 +8,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
-	"github.com/kuberlab/pluk/pkg/gc"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
@@ -107,7 +106,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	}
 
 	// Wait
-	gc.WaitGCCompleted()
+	//gc.WaitGCCompleted()
 
 	acquireConcurrency()
 	defer releaseConcurrency()
