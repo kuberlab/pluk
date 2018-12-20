@@ -69,7 +69,7 @@ func CreateAll(db *gorm.DB) error {
 	//	logrus.Error(err)
 	//}
 	if db.Dialect().GetName() == "sqlite3" {
-		if err := db.Debug().Model(&Chunk{}).AddIndex(
+		if err := db.Debug().Model(&Chunk{}).AddUniqueIndex(
 			"idx_hash",
 			"hash",
 		).Error; err != nil {

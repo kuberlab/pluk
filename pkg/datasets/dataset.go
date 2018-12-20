@@ -312,15 +312,19 @@ func (d *Dataset) getFSStructureFromMaster(version string) (*plukio.ChunkedFileF
 }
 
 func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error {
-	dest := types.FileStructure{}
+	dest := types.FileStructure{
+		Files: make([]*types.HashedFile, 0),
+	}
 	err := src.Walk("/", func(path string, f *plukio.ChunkedFile, err error) error {
 		if f.Fstat.IsDir() {
 			return nil
 		}
 		file := types.HashedFile{
-			Path:   strings.TrimPrefix(path, "/"),
-			Size:   f.Size,
-			Hashes: make([]types.Hash, 0),
+			Path:     strings.TrimPrefix(path, "/"),
+			Size:     f.Size,
+			Hashes:   make([]types.Hash, 0),
+			Mode:     f.Fstat.Fmode,
+			ModeTime: f.Fstat.FmodTime,
 		}
 		for _, chunk := range f.Chunks {
 			hash := utils.GetHashFromPath(chunk.Path)
