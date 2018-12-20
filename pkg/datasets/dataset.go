@@ -201,7 +201,7 @@ func SaveFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFile) error 
 }
 
 func ClearExtraChunks(tx db.DataMgr, dsv *db.DatasetVersion, path string, replacement *types.HashedFile) error {
-	exChunks, err := tx.GetRawFiles(dsv.Type, dsv.Workspace, dsv.Name, dsv.Version, path)
+	exChunks, err := tx.GetRawFiles(dsv.Type, dsv.Workspace, dsv.Name, dsv.Version, path, true)
 	if err != nil {
 		return err
 	}
@@ -499,23 +499,28 @@ func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion, messag
 			Size:        f.Size,
 			Path:        f.Path,
 			DatasetType: target.Type,
+			Mode:        f.Mode,
 		}
-		if existing, errD := tx.GetFile(target.Workspace, target.Name, target.Type, f.Path, targetVersion); errD != nil {
-			// Create
-			err = tx.CreateFile(newF)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			// Update
-			newF.ID = existing.ID
-			if existing.Size != newF.Size {
-				_, err = tx.UpdateFile(newF)
-				if err != nil {
-					return nil, err
-				}
-			}
+		err := tx.ForceCreateFile(newF)
+		if err != nil {
+			return nil, err
 		}
+		//if existing, errD := tx.GetFile(target.Workspace, target.Name, target.Type, f.Path, targetVersion); errD != nil {
+		//	// Create
+		//	err = tx.CreateFile(newF)
+		//	if err != nil {
+		//		return nil, err
+		//	}
+		//} else {
+		//	// Update
+		//	newF.ID = existing.ID
+		//	if existing.Size != newF.Size {
+		//		_, err = tx.UpdateFile(newF)
+		//		if err != nil {
+		//			return nil, err
+		//		}
+		//	}
+		//}
 
 		// Create another chunk links for new file
 		for _, oldFC := range fileChunksMap[f.ID] {

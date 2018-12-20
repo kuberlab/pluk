@@ -44,7 +44,7 @@ func RunDeleteLoop() {
 }
 
 func DeleteFiles(mgr db.DataMgr, eType, ws, dataset, version, prefix string, preciseName, strict bool) error {
-	fileChunks, err := mgr.ListRelatedChunksForFiles(eType, ws, dataset, version, prefix, preciseName)
+	rawFiles, err := mgr.GetRawFiles(eType, ws, dataset, version, prefix, preciseName)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func DeleteFiles(mgr db.DataMgr, eType, ws, dataset, version, prefix string, pre
 	}
 	logrus.Infof("Deleted %v virtual files.", rows)
 
-	if len(fileChunks) == 0 && strict {
+	if len(rawFiles) == 0 && strict {
 		return errors.NewStatus(
 			http.StatusNotFound,
 			fmt.Sprintf("Path %v not found in %v %v/%v:%v", eType, prefix, ws, dataset, version),
@@ -63,11 +63,12 @@ func DeleteFiles(mgr db.DataMgr, eType, ws, dataset, version, prefix string, pre
 	}
 
 	var deleted = 0
-	for _, fc := range fileChunks {
-		chunk, err := mgr.GetChunkByID(fc.ChunkID)
-		if err != nil {
-			return err
-		}
+	for _, raw := range rawFiles {
+		//chunk, err := mgr.GetChunkByID(raw.ChunkID)
+		//if err != nil {
+		//	return err
+		//}
+		chunk := &db.Chunk{Hash: raw.Hash, Size: raw.ChunkSize, ID: raw.ChunkID}
 		if CheckAndDeleteChunk(mgr, chunk) {
 			deleted++
 		}

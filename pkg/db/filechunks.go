@@ -18,7 +18,7 @@ type FileChunkMgr interface {
 	ListFileChunks(filter FileChunk) ([]*FileChunk, error)
 	DeleteFileChunk(fileID, chunkID uint) error
 	GetFS(dsType, workspace, dataset, version string) (*io.ChunkedFileFS, error)
-	GetRawFiles(dsType, workspace, dataset, version, path string) ([]RawFile, error)
+	GetRawFiles(dsType, workspace, dataset, version, prefix string, precise bool) ([]RawFile, error)
 	DeleteRelatedFiles(dsType, workspace, dataset, version string) (int64, error)
 	DeleteFiles(dsType, workspace, dataset, version, prefix string, preciseName bool) (int64, error)
 	ListRelatedChunks(dsType, workspace, dataset, version string) ([]*FileChunk, error)
@@ -43,13 +43,8 @@ func (mgr *DatabaseMgr) CreateFileChunk(file *FileChunk) error {
 		return mgr.db.Exec(tpl, file.FileID, file.ChunkID, file.ChunkIndex).Error
 	} else if mgr.DBType() == "postgres" {
 		tpl := "INSERT INTO file_chunks " +
-			"(file_id, chunk_id, chunk_index) VALUES (?, ?, ?) ON CONFLICT (file_id,chunk_id) DO UPDATE SET " +
-			"file_id=?, chunk_id=?, chunk_index=?"
-		values := []interface{}{
-			file.FileID, file.ChunkID, file.ChunkIndex,
-			file.FileID, file.ChunkID, file.ChunkIndex,
-		}
-		return mgr.db.Exec(tpl, values...).Error
+			"(file_id, chunk_id, chunk_index) VALUES (?, ?, ?) ON CONFLICT (file_id,chunk_id) DO NOTHING"
+		return mgr.db.Exec(tpl, file.FileID, file.ChunkID, file.ChunkIndex).Error
 	} else {
 		return mgr.db.Create(file).Error
 	}
@@ -205,18 +200,25 @@ FROM "file_chunks"
   INNER JOIN chunks ON file_chunks.chunk_id = chunks.id
 ORDER BY path, chunk_index;
 */
-func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, path string) ([]RawFile, error) {
+func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, prefix string, precise bool) ([]RawFile, error) {
 	join1 := fmt.Sprintf(
 		"INNER JOIN files f ON f.id = file_chunks.file_id " +
 			"AND f.dataset_name = ? " +
-			"AND version = ? " +
 			"AND f.workspace = ? " +
 			"AND f.dataset_type = ?",
 	)
-	values := []interface{}{dataset, version, workspace, dsType}
-	if path != "" {
-		join1 = join1 + fmt.Sprintf(" AND f.path = ?")
-		values = append(values, path)
+	values := []interface{}{dataset, workspace, dsType}
+	if version != "" {
+		join1 = join1 + fmt.Sprintf(" AND version = ?")
+		values = append(values, version)
+	}
+	if prefix != "" {
+		if precise {
+			join1 = join1 + fmt.Sprintf(" AND f.path = ?")
+			values = append(values, prefix)
+		} else {
+			join1 = join1 + fmt.Sprintf(" AND f.path LIKE '%v%%'", prefix)
+		}
 	}
 	rawFiles := make([]RawFile, 0)
 	err := mgr.db.
@@ -230,7 +232,7 @@ func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, path st
 }
 
 func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.ChunkedFileFS, error) {
-	rawFiles, err := mgr.GetRawFiles(dsType, workspace, dataset, version, "")
+	rawFiles, err := mgr.GetRawFiles(dsType, workspace, dataset, version, "", false)
 
 	if err != nil {
 		return nil, err

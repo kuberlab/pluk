@@ -155,7 +155,7 @@ func GoGC() {
 
 func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) error {
 	// Delete all files within this repo
-	fileChunks, err := mgr.ListRelatedChunks(dataset.Type, dataset.Workspace, dataset.Name, version)
+	rawFiles, err := mgr.GetRawFiles(dataset.Type, dataset.Workspace, dataset.Name, version, "", false)
 	if err != nil {
 		return err
 	}
@@ -166,14 +166,16 @@ func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) e
 	}
 	var deleted = 0
 	logrus.Infof("[GC] Deleted %v virtual files.", rows)
-	for _, fc := range fileChunks {
-		chunk, err := mgr.GetChunkByID(fc.ChunkID)
-		if err != nil {
-			if err == gorm.ErrRecordNotFound {
-				continue
-			}
-			return err
-		}
+
+	for _, raw := range rawFiles {
+		//chunk, err := mgr.GetChunkByID(raw.ChunkID)
+		//if err != nil {
+		//	if err == gorm.ErrRecordNotFound {
+		//		continue
+		//	}
+		//	return err
+		//}
+		chunk := &db.Chunk{Hash: raw.Hash, Size: raw.ChunkSize, ID: raw.ChunkID}
 		if datasets.CheckAndDeleteChunk(mgr, chunk) {
 			deleted++
 		}
