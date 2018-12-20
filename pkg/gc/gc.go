@@ -62,7 +62,7 @@ func WaitGCCompleted() {
 }
 
 func Start() {
-	utils.GCChan = make(chan string, 2)
+	utils.GCChan = make(chan string, utils.UploadConcurrency()+1)
 	utils.GCClearChunks = make(chan string, 2)
 
 	GoGC()
