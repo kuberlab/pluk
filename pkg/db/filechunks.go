@@ -15,6 +15,7 @@ import (
 
 type FileChunkMgr interface {
 	CreateFileChunk(file *FileChunk) error
+	CreateFileChunks(raws []RawFile) error
 	GetFileChunk(fileID uint, chunkID uint, index int) (*FileChunk, error)
 	ListFileChunks(filter FileChunk) ([]*FileChunk, error)
 	DeleteFileChunk(fileID, chunkID uint) error
@@ -40,8 +41,8 @@ type FileChunkHash struct {
 
 func (mgr *DatabaseMgr) CreateFileChunk(file *FileChunk) error {
 	if mgr.DBType() == "sqlite3" {
-		tpl := "INSERT OR REPLACE INTO file_chunks " +
-			"(file_id, chunk_id, chunk_index) VALUES (?, ?, ?)"
+		tpl := "INSERT INTO file_chunks " +
+			"(file_id, chunk_id, chunk_index) VALUES (?, ?, ?) ON CONFLICT (file_id,chunk_id) DO NOTHING"
 		return mgr.db.Exec(tpl, file.FileID, file.ChunkID, file.ChunkIndex).Error
 	} else if mgr.DBType() == "postgres" {
 		tpl := "INSERT INTO file_chunks " +
@@ -49,6 +50,40 @@ func (mgr *DatabaseMgr) CreateFileChunk(file *FileChunk) error {
 		return mgr.db.Exec(tpl, file.FileID, file.ChunkID, file.ChunkIndex).Error
 	} else {
 		return mgr.db.Create(file).Error
+	}
+}
+
+func (mgr *DatabaseMgr) CreateFileChunks(raws []RawFile) error {
+	sql := bytes.NewBufferString("")
+	if mgr.DBType() == "postgres" {
+		sql.WriteString("INSERT INTO file_chunks (file_id, chunk_id, chunk_index) VALUES ")
+		values := make([]string, 0)
+		for _, raw := range raws {
+			values = append(values, fmt.Sprintf(`(%v,%v,%v)`, raw.FileID, raw.ChunkID, raw.ChunkIndex))
+		}
+		sql.WriteString(strings.Join(values, ","))
+		sql.WriteString(" ON CONFLICT (file_id, chunk_id) DO NOTHING")
+		return mgr.db.Exec(sql.String()).Error
+	} else if mgr.DBType() == "sqlite3" {
+		// Get next insert ID
+		sql.WriteString("INSERT INTO file_chunks (file_id, chunk_id, chunk_index) VALUES ")
+		values := make([]string, 0)
+		for _, raw := range raws {
+			values = append(values, fmt.Sprintf(`(%v, %v, %v)`, raw.FileID, raw.ChunkID, raw.ChunkIndex))
+		}
+		sql.WriteString(strings.Join(values, ","))
+		sql.WriteString(" ON CONFLICT (file_id, chunk_id) DO NOTHING")
+
+		return mgr.db.Exec(sql.String()).Error
+	} else {
+		for _, raw := range raws {
+			fileChunk := &FileChunk{FileID: raw.FileID, ChunkID: raw.ChunkID}
+			err := mgr.db.Create(fileChunk).Error
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 }
 

@@ -83,7 +83,7 @@ func RunChunkDBDeleteLoop() {
 				}
 
 				//deleteChunks(mgr, chunksBuf)
-				chunksBuf = make([]db.Chunk, 0)
+				chunksBuf = nil
 			}
 			chunksDeleted <- deleted
 		}

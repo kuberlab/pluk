@@ -7,6 +7,8 @@ import:
   - dialects/mysql
   - dialects/postgres
   - dialects/sqlite
+- package: github.com/mattn/go-sqlite3
+  version: 87ac1cb49789a0ef6b0d7be6b7aa458a9b90d7ae
 - package: github.com/spf13/cobra
   version: v0.0.3
 - package: github.com/spf13/pflag

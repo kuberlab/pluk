@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
@@ -13,6 +14,11 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+)
+
+const (
+	limit      = 100
+	chunkLimit = 250
 )
 
 type Dataset struct {
@@ -68,6 +74,7 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 	for _, f := range files {
 		if _, ok := fileSizeMap[f.Path]; !ok {
 			totalSize += f.Size
+			fileSizeMap[f.Path] = f.Size
 		}
 	}
 
@@ -83,20 +90,152 @@ func (d *Dataset) SaveFSToDB(structure types.FileStructure, version string) (err
 		return err
 	}
 
-	// For batch insert:
-	// 1. Delete all related files of workspace + dataset_name + version
-	// 2. Generate insert query for files
-	// 3. Batch insert files
-	// 4. Create chunks if needed (one by one only), collect their ids and index
-	// 5. Get all file_ids for workspace + dataset + version
-	// 6. Generate insert query for file_chunks connections
-	// 7. Batch insert file_chunks
-	for _, f := range structure.Files {
-		if err = SaveFile(tx, dsv, f); err != nil {
+	endCh := make(chan error)
+	fileChannel := make(chan *types.HashedFile)
+	lock := &sync.RWMutex{}
+	go func(structure types.FileStructure) {
+		for _, f := range structure.Files {
+			if err = CheckAndQueueFile(tx, dsv, f, fileChannel, lock); err != nil {
+				endCh <- err
+				return
+			}
+		}
+		endCh <- nil
+
+	}(structure)
+
+	return receiveFileToSave(tx, dsv, fileChannel, endCh, lock)
+}
+
+func receiveFileToSave(tx db.DataMgr, dsv *db.DatasetVersion, fileChannel chan *types.HashedFile, endCh chan error, lock *sync.RWMutex) error {
+	buffer := make([]db.RawFile, 0)
+	bufFiles := make([]*db.File, 0)
+	fileMap := make(map[string][]db.RawFile)
+
+	tryFlushBuffer := func(chunk db.RawFile) error {
+		buffer = append(buffer, chunk)
+		if len(buffer) >= chunkLimit {
+			lock.Lock()
+			TriggerDeleteChunks(tx)
+			err := createConnections(tx, buffer)
+			lock.Unlock()
+			buffer = nil
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	for {
+		select {
+		case f := <-fileChannel:
+			//
+			//go func() {
+			fileDB := &db.File{
+				Size:        f.Size,
+				Path:        f.Path,
+				Version:     dsv.Version,
+				Workspace:   dsv.Workspace,
+				DatasetName: dsv.Name,
+				DatasetType: dsv.Type,
+				Mode:        uint32(f.Mode),
+			}
+			bufFiles = append(bufFiles, fileDB)
+			for i, h := range f.Hashes {
+				chunk := db.RawFile{
+					ChunkSize:  h.Size,
+					Hash:       h.Hash,
+					ChunkIndex: uint(i),
+					Path:       f.Path,
+				}
+				if _, ok := fileMap[f.Path]; !ok {
+					fileMap[f.Path] = []db.RawFile{chunk}
+				}
+			}
+			if len(bufFiles) >= limit {
+				lock.Lock()
+				// Create batch of files
+				err := tx.CreateFiles(bufFiles)
+				lock.Unlock()
+
+				if err != nil {
+					logrus.Error(err)
+					endCh <- err
+				}
+
+				for _, bufFile := range bufFiles {
+					raws := fileMap[bufFile.Path]
+					for _, raw := range raws {
+						raw.FileID = bufFile.ID
+						if err = tryFlushBuffer(raw); err != nil {
+							endCh <- err
+						}
+					}
+				}
+
+				bufFiles = nil
+				fileMap = make(map[string][]db.RawFile)
+			}
+
+		case err := <-endCh:
+			//
+			lock.Lock()
+			TriggerDeleteChunks(tx)
+			if err != nil {
+				close(fileChannel)
+				lock.Unlock()
+				return err
+			}
+			err = tx.CreateFiles(bufFiles)
+			if err != nil {
+				return err
+			}
+			if err != nil {
+				logrus.Error(err)
+				endCh <- err
+			}
+
+			for _, bufFile := range bufFiles {
+				raws := fileMap[bufFile.Path]
+				for _, raw := range raws {
+					raw.FileID = bufFile.ID
+					//chunksCh <- raw
+					buffer = append(buffer, raw)
+				}
+			}
+			err = createConnections(tx, buffer)
+			lock.Unlock()
+			fileMap = nil
+			buffer = nil
+			bufFiles = nil
 			return err
 		}
 	}
-	return nil
+}
+
+func createConnections(mgr db.DataMgr, raws []db.RawFile) error {
+	// Exclude duplicates
+	chunkMap := make(map[string]db.RawFile)
+	for _, raw := range raws {
+		chunkMap[raw.Hash] = raw
+	}
+	newRaws := make([]db.RawFile, len(chunkMap))
+	i := 0
+	for _, c := range chunkMap {
+		newRaws[i] = c
+		i++
+	}
+	// Create and get chunk ids
+	chunks, err := mgr.CreateChunks(newRaws)
+	if err != nil {
+		return err
+	}
+	for i, c := range chunks {
+		newRaws[i].ChunkID = c.ID
+	}
+	// Create file_chunks
+	return mgr.CreateFileChunks(newRaws)
 }
 
 func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
@@ -135,68 +274,24 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 	return nil
 }
 
-func SaveFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFile) error {
-	var fPath = f.Path
-	var err error
-	//if !strings.HasPrefix(fPath, "/") {
-	//	fPath = "/" + fPath
-	//}
-	fileDB := &db.File{
-		Size:        f.Size,
-		Path:        fPath,
-		Version:     dsv.Version,
-		Workspace:   dsv.Workspace,
-		DatasetName: dsv.Name,
-		DatasetType: dsv.Type,
-		Mode:        uint32(f.Mode),
-	}
-	if existing, errD := tx.GetFile(dsv.Workspace, dsv.Name, dsv.Type, fPath, dsv.Version); errD != nil {
-		// Create
-		err = tx.CreateFile(fileDB)
-		if err != nil {
-			return err
-		}
-	} else {
+func CheckAndQueueFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFile,
+	fileChannel chan *types.HashedFile, lock *sync.RWMutex) error {
+	lock.Lock()
+	if _, err := tx.GetFile(dsv.Workspace, dsv.Name, dsv.Type, f.Path, dsv.Version); err == nil {
 		// Need to clear unneeded chunks
 		//
-		if err = ClearExtraChunks(tx, dsv, fPath, f); err != nil {
+		if err = ClearExtraChunks(tx, dsv, f.Path, f); err != nil {
+			lock.Unlock()
 			return err
-		}
-
-		// Update
-		fileDB.ID = existing.ID
-		if existing.Size != fileDB.Size {
-			_, err = tx.UpdateFile(fileDB)
-			if err != nil {
-				return err
-			}
 		}
 	}
+	lock.Unlock()
 
-	for i, hash := range f.Hashes {
-		chunk := &db.Chunk{Hash: hash.Hash, Size: hash.Size}
-		//if eChunk, errD := tx.GetChunk(hash.Hash); errD != nil {
-		if err = tx.CreateChunk(chunk); err != nil {
-			return err
-		}
-		//} else {
-		//	chunk.ID = eChunk.ID
-		//	if eChunk.Size != chunk.Size {
-		//		_, err = tx.UpdateChunk(chunk)
-		//		if err != nil {
-		//			return err
-		//		}
-		//	}
-		//}
-		// Create connection
-		fileChunk := &db.FileChunk{ChunkID: chunk.ID, FileID: fileDB.ID, ChunkIndex: uint(i)}
+	defer func() {
+		recover()
+	}()
+	fileChannel <- f
 
-		//if _, errD := tx.GetFileChunk(fileDB.ID, chunk.ID, i); errD != nil {
-		if err = tx.CreateFileChunk(fileChunk); err != nil {
-			return err
-		}
-		//}
-	}
 	return nil
 }
 
@@ -233,10 +328,10 @@ func ClearExtraChunks(tx db.DataMgr, dsv *db.DatasetVersion, path string, replac
 		}
 		CheckAndDeleteChunk(tx, chunk)
 	}
-	deleted := TriggerDeleteChunks(tx)
-	if deleted != 0 {
-		logrus.Infof("Deleted %v chunks.", deleted)
-	}
+	//deleted := TriggerDeleteChunks(tx)
+	//if deleted != 0 {
+	//	logrus.Infof("Deleted %v chunks.", deleted)
+	//}
 	return nil
 }
 

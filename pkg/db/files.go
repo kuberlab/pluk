@@ -1,6 +1,9 @@
 package db
 
 import (
+	"bytes"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/kuberlab/lib/pkg/types"
@@ -8,6 +11,7 @@ import (
 
 type FileMgr interface {
 	CreateFile(file *File) error
+	CreateFiles(files []*File) error
 	ForceCreateFile(file *File) error
 	UpdateFile(file *File) (*File, error)
 	GetFile(workspace, dataset, dsType, path, version string) (*File, error)
@@ -32,6 +36,116 @@ func (mgr *DatabaseMgr) CreateFile(file *File) error {
 	file.CreatedAt = types.NewTime(time.Now())
 	file.UpdatedAt = types.NewTime(time.Now())
 	return mgr.db.Create(file).Error
+}
+
+func (mgr *DatabaseMgr) CreateFiles(files []*File) error {
+	//if len(files) == 0 {
+	//	return nil
+	//}
+	for _, f := range files {
+		f.CreatedAt = types.NewTime(time.Now())
+		f.UpdatedAt = types.NewTime(time.Now())
+	}
+
+	sql := bytes.NewBufferString("")
+	if mgr.DBType() == "postgres" {
+		sql.WriteString("INSERT INTO files (created_at,updated_at,path,size,mode,version,workspace,dataset_type,dataset_name) VALUES ")
+		values := make([]string, 0)
+		for _, f := range files {
+			values = append(
+				values,
+				fmt.Sprintf(`('%v','%v','%v',%v,%v,'%v','%v','%v','%v')`,
+					f.CreatedAt.SQLFormat(), f.UpdatedAt.SQLFormat(), strings.Replace(f.Path, "'", "''", -1), f.Size, f.Mode, f.Version,
+					f.Workspace, f.DatasetType, f.DatasetName,
+				),
+			)
+		}
+		sql.WriteString(strings.Join(values, ","))
+		sql.WriteString(
+			" ON CONFLICT (dataset_type,dataset_name,workspace,version,path)" +
+				" DO UPDATE SET size=excluded.size")
+		err := mgr.db.Exec(sql.String()).Error
+		if err != nil {
+			return err
+		}
+		newFiles, err := mgr.ListFilesByPath(
+			files, files[0].DatasetType, files[0].Workspace, files[0].DatasetName, files[0].Version,
+		)
+		for i, f := range files {
+			f.ID = newFiles[i].ID
+		}
+		return nil
+	} else if mgr.DBType() == "sqlite3" {
+		// Get next insert ID
+		sql.WriteString("INSERT INTO files (created_at,updated_at,path,size,mode,version,workspace,dataset_type,dataset_name) VALUES ")
+		values := make([]string, 0)
+		for _, f := range files {
+			values = append(
+				values,
+				fmt.Sprintf(`('%v','%v','%v',%v,%v,'%v','%v','%v','%v')`,
+					f.CreatedAt.SQLFormat(), f.UpdatedAt.SQLFormat(), strings.Replace(f.Path, "'", "''", -1), f.Size, f.Mode, f.Version,
+					f.Workspace, f.DatasetType, f.DatasetName,
+				),
+			)
+		}
+		sql.WriteString(strings.Join(values, ","))
+		sql.WriteString(
+			" ON CONFLICT (dataset_type,dataset_name,workspace,version,path)" +
+				" DO UPDATE SET size=excluded.size")
+
+		err := mgr.db.Exec(sql.String()).Error
+		if err != nil {
+			return err
+		}
+		newFiles, err := mgr.ListFilesByPath(
+			files, files[0].DatasetType, files[0].Workspace, files[0].DatasetName, files[0].Version,
+		)
+		for i, f := range files {
+			f.ID = newFiles[i].ID
+		}
+		return nil
+	} else {
+		for _, f := range files {
+			err := mgr.db.Create(f).Error
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
+func (mgr *DatabaseMgr) ListFilesByPath(files []*File, dsType, workspace, dsName, version string) ([]*File, error) {
+	where := bytes.NewBufferString("path IN (")
+	ids := make([]string, 0)
+	for _, f := range files {
+		ids = append(ids, fmt.Sprintf("'%v'", strings.Replace(f.Path, "'", "''", -1)))
+	}
+	where.WriteString(strings.Join(ids, ","))
+	where.WriteString(")")
+	where.WriteString(fmt.Sprintf(" AND dataset_type='%v'", dsType))
+	where.WriteString(fmt.Sprintf(" AND workspace='%v'", workspace))
+	where.WriteString(fmt.Sprintf(" AND dataset_name='%v'", dsName))
+	where.WriteString(fmt.Sprintf(" AND version='%v'", version))
+	filesDB := make([]*File, 0)
+	err := mgr.db.
+		Select("id,path").
+		Where(where.String()).
+		Find(&filesDB).Error
+
+	hashMap := make(map[string]int)
+	for i, f := range files {
+		hashMap[f.Path] = i
+	}
+
+	newFiles := make([]*File, len(filesDB))
+	// Re-sort
+	for _, f := range filesDB {
+		place := hashMap[f.Path]
+		newFiles[place] = f
+	}
+
+	return newFiles, err
 }
 
 func (mgr *DatabaseMgr) ForceCreateFile(file *File) error {

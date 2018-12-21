@@ -50,7 +50,7 @@ func NewFakeDatabaseMgr(fname string) *DatabaseMgr {
 	if dbName == "" {
 		os.Setenv("DB_NAME", fname)
 	}
-	return NewDatabaseMgr(db.InitMain(CreateTables))
+	return NewDatabaseMgr(db.InitMain(CreateAll))
 }
 
 func (mgr *DatabaseMgr) DB() *gorm.DB {
