@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	DefaultExpiration = time.Hour * 3
+	DefaultExpiration = time.Hour * 1
 )
 
 type RequestCache struct {

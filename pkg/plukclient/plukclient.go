@@ -505,7 +505,7 @@ func (c *Client) DownloadChunk(hash string) (io.ReadCloser, error) {
 }
 
 func (c *Client) GetFSStructure(entityType, workspace, name, version string) (*plukio.ChunkedFileFS, error) {
-	u := fmt.Sprintf("/%v/%v/%v/versions/%v/fs?format=gobgz", entityType, workspace, name, version)
+	u := fmt.Sprintf("/%v/%v/%v/versions/%v/fs?format=gob", entityType, workspace, name, version)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {

@@ -336,7 +336,7 @@ func ClearExtraChunks(tx db.DataMgr, dsv *db.DatasetVersion, path string, replac
 }
 
 func (d *Dataset) Download(resp *restful.Response) error {
-	return WriteTar(d.FS, resp)
+	return WriteTar(d.FS.Clone(), resp)
 }
 
 func (d *Dataset) TarSize() (int64, error) {

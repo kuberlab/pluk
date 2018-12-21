@@ -39,7 +39,7 @@ func (api *API) versions(req *restful.Request, resp *restful.Response) {
 	for _, v := range versions {
 		onlyVersions = append(onlyVersions, v.Version)
 	}
-	go api.cacheFS(dataset, utils.GetFirstN(onlyVersions, 3))
+	//go api.cacheFS(dataset, utils.GetFirstN(onlyVersions, 3))
 	resp.WriteEntity(types.VersionList{Versions: versions})
 }
 
