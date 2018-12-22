@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/datasets"
@@ -76,7 +77,10 @@ func (api *API) fsReadFile(req *restful.Request, resp *restful.Response) {
 	setContentTypeByFile(filepath, resp)
 	resp.ResponseWriter.WriteHeader(http.StatusOK)
 
-	io.Copy(resp, file)
+	_, err = io.Copy(resp, file)
+	if err != nil {
+		logrus.Error(err)
+	}
 }
 
 func setContentTypeByFile(filepath string, resp *restful.Response) {

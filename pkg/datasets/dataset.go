@@ -151,6 +151,8 @@ func receiveFileToSave(tx db.DataMgr, dsv *db.DatasetVersion, fileChannel chan *
 				}
 				if _, ok := fileMap[f.Path]; !ok {
 					fileMap[f.Path] = []db.RawFile{chunk}
+				} else {
+					fileMap[f.Path] = append(fileMap[f.Path], chunk)
 				}
 			}
 			if len(bufFiles) >= limit {
