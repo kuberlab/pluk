@@ -259,6 +259,20 @@ func (f *ChunkedFile) Close() error {
 	return nil
 }
 
+func (f *ChunkedFile) Clone() *ChunkedFile {
+	chunks := make([]Chunk, 0)
+	for _, c := range f.Chunks {
+		chunks = append(chunks, c)
+	}
+	return &ChunkedFile{
+		Size:   f.Size,
+		Fstat:  f.Fstat.Clone(),
+		Name:   f.Name,
+		Chunks: chunks,
+		Ref:    f.Ref,
+	}
+}
+
 func (f *ChunkedFile) getChunkReader(chunkPath string) (reader ReaderInterface, err error) {
 	hash := utils.GetHashFromPath(chunkPath)
 	return GetChunk(hash)
@@ -400,6 +414,16 @@ type ChunkedFileInfo struct {
 	Fsize    int64       `json:"size"`
 	Fmode    os.FileMode `json:"mode"`
 	FmodTime time.Time   `json:"modtime"`
+}
+
+func (fs *ChunkedFileInfo) Clone() *ChunkedFileInfo {
+	return &ChunkedFileInfo{
+		FmodTime: fs.FmodTime,
+		Fmode:    os.FileMode(uint32(fs.Fmode)),
+		Dir:      fs.Dir,
+		Fname:    fs.Fname,
+		Fsize:    fs.Fsize,
+	}
 }
 
 func (fs *ChunkedFileInfo) Name() string       { return fs.Fname }

@@ -72,6 +72,7 @@ func (api *API) fsReadFile(req *restful.Request, resp *restful.Response) {
 		WriteErrorString(resp, http.StatusNotFound, fmt.Sprintf("No such file: %v", filepath))
 		return
 	}
+	file = file.Clone()
 
 	resp.Header().Add("Content-Length", fmt.Sprintf("%v", file.Size))
 	setContentTypeByFile(filepath, resp)

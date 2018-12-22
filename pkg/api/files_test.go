@@ -90,6 +90,62 @@ func TestUploadFileManyChunks(t *testing.T) {
 	utils.Assert(targetLen, len(data), t)
 }
 
+func TestFileManyChunksPartlyRead(t *testing.T) {
+	fname := getFname()
+	setup(fname)
+	dbPrepare(t)
+	defer teardown(fname)
+
+	fileData := bytes.NewBufferString("")
+	dataLenLimit := 2048000
+	for fileData.Len() < dataLenLimit {
+		fileData.WriteString(fileData1)
+	}
+
+	targetLen := fileData.Len()
+
+	url := buildURL("dataset/workspace/dataset/versions/1.0.0/upload/file.txt")
+	resp, err := client.Post(url, "application/json", fileData)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	var f types.HashedFile
+	if err := json.NewDecoder(resp.Body).Decode(&f); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert("file.txt", f.Path, t)
+	utils.Assert(int64(targetLen), f.Size, t)
+	utils.Assert(uint32(0644), uint32(f.Mode), t)
+	utils.Assert(true, len(f.Hashes) > 1, t)
+
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/raw/file.txt")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Read only first 500kb
+	buf := make([]byte, 500000)
+	_, err = resp.Body.Read(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	// Read again
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/raw/file.txt")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := mustRead(resp.Body)
+
+	utils.Assert(targetLen, len(data), t)
+}
+
 func TestUploadFileNotFound(t *testing.T) {
 	fname := getFname()
 	setup(fname)
