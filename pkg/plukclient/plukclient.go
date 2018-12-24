@@ -515,11 +515,9 @@ func (c *Client) GetFSStructure(entityType, workspace, name, version string) (*p
 	fs := new(plukio.ChunkedFileFS)
 	_, err = c.Do(req, buf)
 
-	//rd, err := gzip.NewReader(buf)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//defer rd.Close()
+	if err != nil {
+		return nil, err
+	}
 
 	dec := gob.NewDecoder(buf)
 	err = dec.Decode(fs)

@@ -93,6 +93,10 @@ func newPlukeFSCmd() *cobra.Command {
 					plukeFS.mountPoint = value
 				case "type":
 					plukeFS.dsType = value
+				case "workspace":
+					logrus.Info("Fallback to use 'workspace' as the object and secret workspace both.")
+					plukeFS.objectWorkspace = value
+					plukeFS.secretWorkspace = value
 				default:
 					logrus.Errorf("Unrecognized option: %v", name)
 					return

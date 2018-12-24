@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/db"
@@ -545,6 +546,7 @@ func TestUploadCorrectChunk(t *testing.T) {
 }
 
 func dbPrepare(t *testing.T) {
+	time.Sleep(10 * time.Millisecond)
 	if err := db.DbMgr.CreateDataset(
 		&db.Dataset{
 			Workspace: "workspace",

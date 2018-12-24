@@ -275,7 +275,6 @@ func (api *API) readAndSaveFile(req *restful.Request, resp *restful.Response) (f
 	_, err = tx.GetFile(workspace, name, currentType(req), filepath, version)
 	if err == nil {
 		// File exists, need overwrite
-		// TODO: overwrite
 		// Delete related chunks
 		err = datasets.DeleteFiles(
 			tx, currentType(req), workspace, name, version, filepath, true, false,

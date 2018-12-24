@@ -8,7 +8,7 @@ import (
 
 type ChunkMgr interface {
 	CreateChunk(chunk *Chunk) error
-	CreateChunks(raws []RawFile) ([]*Chunk, error)
+	CreateChunks(raws []*RawFile) error
 	UpdateChunk(chunk *Chunk) (*Chunk, error)
 	GetChunk(hash string) (*Chunk, error)
 	GetChunkByID(chunkID uint) (*Chunk, error)
@@ -54,7 +54,7 @@ func (mgr *DatabaseMgr) CreateChunk(chunk *Chunk) error {
 	}
 }
 
-func (mgr *DatabaseMgr) ListChunksByHash(hashes []RawFile) ([]*Chunk, error) {
+func (mgr *DatabaseMgr) ListChunksByHash(hashes []*RawFile) ([]*Chunk, error) {
 	where := bytes.NewBufferString("hash IN (")
 	ids := make([]string, 0)
 	for _, h := range hashes {
@@ -81,26 +81,53 @@ func (mgr *DatabaseMgr) ListChunksByHash(hashes []RawFile) ([]*Chunk, error) {
 	return newChunks, err
 }
 
-func (mgr *DatabaseMgr) CreateChunks(raws []RawFile) ([]*Chunk, error) {
+// Inserts Chunk IDs in place
+func (mgr *DatabaseMgr) CreateChunks(raws []*RawFile) error {
 	sql := bytes.NewBufferString("")
 	var chunks = make([]*Chunk, 0)
+
+	// What if there are duplicates of chunk hashes somewhere in raws?
+	// Need to:
+	// 1. Delete duplicates
+	// 2. Send them to DB
+	// 3. Get non-duplicated chunks
+	exclusivesMap := make(map[string]*RawFile)
+	chunkMap := make(map[string][]*RawFile)
+	for _, raw := range raws {
+		exclusivesMap[raw.Hash] = raw
+		if _, ok := chunkMap[raw.Hash]; ok {
+			chunkMap[raw.Hash] = append(chunkMap[raw.Hash], raw)
+		} else {
+			chunkMap[raw.Hash] = []*RawFile{raw}
+		}
+	}
+	exclusives := make([]*RawFile, len(exclusivesMap))
+	i := 0
+	for _, ex := range exclusivesMap {
+		exclusives[i] = ex
+		i++
+	}
+
 	if mgr.DBType() == "postgres" {
 		sql.WriteString("INSERT INTO chunks (hash, size) VALUES ")
 		values := make([]string, 0)
-		for _, raw := range raws {
+		for _, raw := range exclusives {
 			values = append(values, fmt.Sprintf(`('%v', %v)`, raw.Hash, raw.ChunkSize))
 		}
 		sql.WriteString(strings.Join(values, ","))
 		sql.WriteString(" ON CONFLICT (hash) DO UPDATE SET size=excluded.size")
 		err := mgr.db.Exec(sql.String()).Error
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return mgr.ListChunksByHash(raws)
+		chunks, err = mgr.ListChunksByHash(exclusives)
+		if err != nil {
+			return err
+		}
 	} else if mgr.DBType() == "sqlite3" {
 		sql.WriteString("INSERT INTO chunks (hash, size) VALUES ")
 		values := make([]string, 0)
-		for _, raw := range raws {
+		for _, raw := range exclusives {
 			values = append(values, fmt.Sprintf(`('%v', %v)`, raw.Hash, raw.ChunkSize))
 		}
 		sql.WriteString(strings.Join(values, ","))
@@ -108,21 +135,33 @@ func (mgr *DatabaseMgr) CreateChunks(raws []RawFile) ([]*Chunk, error) {
 
 		err := mgr.db.Exec(sql.String()).Error
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		return mgr.ListChunksByHash(raws)
+		chunks, err = mgr.ListChunksByHash(exclusives)
+		if err != nil {
+			return err
+		}
 	} else {
-		for _, raw := range raws {
+		for _, raw := range exclusives {
 			chunk := &Chunk{Hash: raw.Hash, Size: raw.ChunkSize}
 			err := mgr.CreateChunk(chunk)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			chunks = append(chunks, chunk)
 		}
-		return chunks, nil
 	}
+
+	// Got exclusive chunks.
+	// Need to distribute them to appropriate files.
+	for _, chunk := range chunks {
+		raws := chunkMap[chunk.Hash]
+		for _, raw := range raws {
+			raw.ChunkID = chunk.ID
+		}
+	}
+	return nil
 }
 
 func (mgr *DatabaseMgr) UpdateChunk(chunk *Chunk) (*Chunk, error) {

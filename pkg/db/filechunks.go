@@ -15,7 +15,7 @@ import (
 
 type FileChunkMgr interface {
 	CreateFileChunk(file *FileChunk) error
-	CreateFileChunks(raws []RawFile) error
+	CreateFileChunks(fileChunks []*FileChunk) error
 	GetFileChunk(fileID uint, chunkID uint, index int) (*FileChunk, error)
 	ListFileChunks(filter FileChunk) ([]*FileChunk, error)
 	DeleteFileChunk(fileID, chunkID uint) error
@@ -53,12 +53,12 @@ func (mgr *DatabaseMgr) CreateFileChunk(file *FileChunk) error {
 	}
 }
 
-func (mgr *DatabaseMgr) CreateFileChunks(raws []RawFile) error {
+func (mgr *DatabaseMgr) CreateFileChunks(fileChunks []*FileChunk) error {
 	sql := bytes.NewBufferString("")
 	if mgr.DBType() == "postgres" {
 		sql.WriteString("INSERT INTO file_chunks (file_id, chunk_id, chunk_index) VALUES ")
 		values := make([]string, 0)
-		for _, raw := range raws {
+		for _, raw := range fileChunks {
 			values = append(values, fmt.Sprintf(`(%v,%v,%v)`, raw.FileID, raw.ChunkID, raw.ChunkIndex))
 		}
 		sql.WriteString(strings.Join(values, ","))
@@ -68,7 +68,7 @@ func (mgr *DatabaseMgr) CreateFileChunks(raws []RawFile) error {
 		// Get next insert ID
 		sql.WriteString("INSERT INTO file_chunks (file_id, chunk_id, chunk_index) VALUES ")
 		values := make([]string, 0)
-		for _, raw := range raws {
+		for _, raw := range fileChunks {
 			values = append(values, fmt.Sprintf(`(%v, %v, %v)`, raw.FileID, raw.ChunkID, raw.ChunkIndex))
 		}
 		sql.WriteString(strings.Join(values, ","))
@@ -76,7 +76,7 @@ func (mgr *DatabaseMgr) CreateFileChunks(raws []RawFile) error {
 
 		return mgr.db.Exec(sql.String()).Error
 	} else {
-		for _, raw := range raws {
+		for _, raw := range fileChunks {
 			fileChunk := &FileChunk{FileID: raw.FileID, ChunkID: raw.ChunkID}
 			err := mgr.db.Create(fileChunk).Error
 			if err != nil {

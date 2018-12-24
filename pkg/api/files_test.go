@@ -684,6 +684,13 @@ func TestCommitNoMoreUpload(t *testing.T) {
 
 	utils.Assert(http.StatusOK, resp.StatusCode, t)
 
+	var v types.Version
+	if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(false, v.Editing, t)
+
 	// Try upload more
 	url = buildURL("dataset/workspace/dataset/versions/1.0.0/upload/file2.txt")
 	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))

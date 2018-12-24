@@ -128,11 +128,13 @@ func SaveChunk(hash string, data io.ReadCloser, sendToMaster bool) error {
 	baseDir := splitted[:len(splitted)-1]
 
 	if err := os.MkdirAll(strings.Join(baseDir, "/"), os.ModePerm); err != nil {
+		data.Close()
 		return err
 	}
 
 	file, err := os.Create(filePath)
 	if err != nil {
+		data.Close()
 		return err
 	}
 	logrus.Debugf("Created %v", filePath)
@@ -148,6 +150,7 @@ func SaveChunk(hash string, data io.ReadCloser, sendToMaster bool) error {
 	}
 	written, err = io.Copy(writer, data)
 	if err != nil {
+		data.Close()
 		return err
 	}
 	data.Close()
