@@ -31,7 +31,7 @@ docker run -it --rm kuberlab/pluk:latest
 * run `go install -v ./...`
 * binaries are saved in `$GOPATH/bin` and named **pluk**, **plukefs** and **kdataset**
 
-**Note**: Paths marked as env variables `DATA_DIR` and `DB_PATH`
+**Note**: Paths marked as env variables `DATA_DIR` and `DB_NAME`
  (by default `/data` and `/pluk/pluke.db` accordingly, see below) must be available for write.
 
 ## Configuration variables
@@ -43,12 +43,18 @@ There are a couple of environment variables for configuration of authentication,
 Currently, **pluk** sends `Authorization` and `Cookie` headers to that URL. If response status code not in *4xx/5xx* codes,
 then authentication process succeeds and then will be cached for future requests. Currently it is used with **cloud-dealer** service auth.
 * `MASTERS`: this variable may contain **pluk** instance(s) master URL(s). Those **pluk** instances which have masters specified are
-treated as *slaves* and usually slaves re-request auth for mounting **webdav** and re-request datasets file structure and also
+treated as *slaves* and usually slaves re-request datasets file structure and also
  file chunks if they are absent on this slave. If some data is pushed to slave, then slave reports it to master to keep data consistence.
 * `INTERNAL_KEY`: used for internal slave-to-master requests to skip authentication on master. The key on the master must be equal to the key on each slave in this case.
+* `PLUK_HTTP_PORT`: http port which server will listen to upon a start.
 
 * `DATA_DIR`: directory which contains real file chunks. Defaults to `/data`.
-* `DB_PATH`: path to sqlite3 DB. Defaults to `/pluk/pluke.db`.
+* `DB_TYPE`: Database type. Only `mysql`, `postgres` and `sqlite3` are supported. Defaults to `sqlite3`.
+* `DB_NAME`: Database name (or path to sqlite3 database). Defaults to `/pluk/pluke.db`.
+* `DB_HOST`: Database server host (for mysql or postgres).
+* `DB_PORT`: Database server port (for mysql or postgres). Defaults: `5432` for postgres and `3306` for mysql.
+* `DB_USER`: Database user (for mysql or postgres).
+* `DB_PASSWORD`: Database password (for mysql or postgres).
 
 ## Mounting dataset using plukefs
 
@@ -104,9 +110,9 @@ To see the help, type `kdataset --help`.
 `kdataset` provides the following commands:
  * `kdataset push <workspace> <dataset-name>:<version>`
  * `kdataset pull <workspace> <dataset-name>:<version>`
- * `kdataset dataset-list <workspace>`
+ * `kdataset list <workspace>`
  * `kdataset version-list <workspace> <dataset-name>`
- * `kdataset dataset-delete <workspace> <dataset-name>`
+ * `kdataset delete <workspace> <dataset-name>`
  * `kdataset version-delete <workspace> <dataset-name>:<version>`
 
 ### CLI Configuration
@@ -117,9 +123,9 @@ by default. If a config file doesn't exist, it needs to be created.
 It contains simple yaml with the following values:
 
 ```yaml
-base_url: https://go.kuberlab.io/api/v0.2
+base_url: https://cloud.kibernetika.io/api/v0.2
 token: <your-user-token>
-# pluk_url: https://go.kuberlab.io/pluk/v1 (optional, need in case you want to use another pluk instance)
+# pluk_url: https://cloud.kibernetika.io/pluk/v1 (optional, need in case you want to use another pluk instance)
 ```
 
 By default, Pluk URL is calculated automatically using `base_url` from
