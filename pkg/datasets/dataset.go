@@ -140,7 +140,7 @@ func receiveFileToSave(tx db.DataMgr, dsv *db.DatasetVersion, fileChannel chan *
 
 		if err != nil {
 			logrus.Error(err)
-			endCh <- err
+			return err
 		}
 
 		for _, bufFile := range bufFiles {
@@ -681,6 +681,10 @@ func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion, messag
 		case err = <-endChan:
 			//
 			close(fcChan)
+			if err != nil {
+				return nil, err
+			}
+
 			if err = flushChunksBuffer(); err != nil {
 				return nil, err
 			}
