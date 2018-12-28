@@ -126,6 +126,8 @@ func (api *API) InternalHook(req *restful.Request, resp *restful.Response, filte
 	filter.ProcessFilter(req, resp)
 }
 
+const checkWorkspace = "check-for-auth-workspace"
+
 func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *restful.FilterChain) {
 	internal := req.HeaderParameter("Internal")
 	if internal != "" && utils.InternalKey() == internal {
@@ -177,10 +179,47 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 				return
 			}
 		} else if ws != "" && secret != "" {
-			if requestWorkspace != "" && requestWorkspace != ws {
-				logrus.Error(fmt.Sprintf("Invalid auth to %v: workspace and secret don't match.", authURL))
-				WriteErrorString(resp, http.StatusUnauthorized, "Unauthorized.")
-				return
+			// workspace is empty if we request chunks
+			//allow := requestWorkspace == "kuberlab" || requestWorkspace == ""
+			//deny := requestWorkspace != ws
+			if requestWorkspace != "" {
+				if requestWorkspace != ws && requestWorkspace != "kuberlab" {
+					// Try request workspace (in case if it is public)
+					u, err := url.Parse(authURL)
+					if err != nil {
+						WriteError(resp, err)
+						return
+					}
+					validationURL := fmt.Sprintf("%v://%v/api/v0.2/workspace/%v", u.Scheme, u.Host, requestWorkspace)
+					request, _ := http.NewRequest("GET", validationURL, nil)
+					request.Header.Add("Cookie", cookie)
+					request.Header.Add("Authorization", authHeader)
+					logrus.Debugf("GET %v", request.URL)
+					r, err := api.client.Do(request)
+					if err != nil {
+						WriteStatusError(resp, http.StatusInternalServerError, err)
+						return
+					}
+					logrus.Debugf("Got %v", r.StatusCode)
+					if r.StatusCode >= 400 {
+						WriteStatusError(resp, r.StatusCode, fmt.Errorf("Cannot authenticate to %v", authURL))
+						return
+					} else {
+						wspace := &dealerclient.Workspace{}
+						err = json.NewDecoder(r.Body).Decode(wspace)
+						if err != nil {
+							WriteStatusError(resp, http.StatusUnauthorized, fmt.Errorf("Cannot authenticate to %v: %v", authURL, err))
+							return
+						}
+						if len(wspace.Can) == 0 {
+							WriteStatusError(resp, http.StatusForbidden, fmt.Errorf("Cannot authenticate to %v", authURL))
+							return
+						}
+					}
+				}
+				//logrus.Error(fmt.Sprintf("Invalid auth to %v: workspace and secret don't match.", authURL))
+				//WriteErrorString(resp, http.StatusUnauthorized, "Unauthorized.")
+				//return
 			}
 			u, err := url.Parse(authURL)
 			if err != nil {
