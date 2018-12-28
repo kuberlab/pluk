@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/kuberlab/lib/pkg/dealerclient"
 	"net"
 	"net/http"
 	"net/url"
@@ -142,7 +143,19 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 	cookie := req.HeaderParameter("Cookie")
 	secret := req.HeaderParameter("X-Workspace-Secret")
 	ws := req.HeaderParameter("X-Workspace-Name")
-	key := authHeader + cookie + ws + secret
+
+	// /pluk/v1/entity-type/workspace/
+	splitted := strings.Split(req.Request.URL.Path, "/")
+	var requestWorkspace string
+	if len(splitted) >= 4 {
+		if splitted[3] == "workspaces" {
+			requestWorkspace = splitted[4]
+		} else if _, ok := plukclient.AllowedTypes[splitted[3]]; ok {
+			requestWorkspace = splitted[4]
+		}
+	}
+
+	key := authHeader + requestWorkspace + cookie + ws + secret
 
 	masterClient := plukclient.NewMasterClientFromHeaders(req.Request.Header)
 	req.SetAttribute("masterclient", masterClient)
@@ -154,12 +167,21 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 		if utils.HasMasters() {
 			// Talk to master.
 			logrus.Debugf("Auth request to master %v", utils.Masters()[0])
-			_, err := masterClient.ListEntities(currentType(req), "kuberlab")
+			ws := requestWorkspace
+			if ws == "" {
+				ws = "kuberlab"
+			}
+			_, err := masterClient.ListEntities(currentType(req), ws)
 			if err != nil {
 				WriteErrorString(resp, http.StatusUnauthorized, err.Error())
 				return
 			}
 		} else if ws != "" && secret != "" {
+			if requestWorkspace != "" && requestWorkspace != ws {
+				logrus.Error(fmt.Sprintf("Invalid auth to %v: workspace and secret don't match.", authURL))
+				WriteErrorString(resp, http.StatusUnauthorized, "Unauthorized.")
+				return
+			}
 			u, err := url.Parse(authURL)
 			if err != nil {
 				WriteError(resp, err)
@@ -180,21 +202,56 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 				return
 			}
 		} else {
-			request, _ := http.NewRequest("GET", authURL, nil)
-			request.Header.Add("Cookie", cookie)
-			request.Header.Add("Authorization", authHeader)
+			if requestWorkspace != "" {
+				u, err := url.Parse(authURL)
+				if err != nil {
+					WriteError(resp, err)
+					return
+				}
+				validationURL := fmt.Sprintf("%v://%v/api/v0.2/workspace/%v", u.Scheme, u.Host, requestWorkspace)
+				request, _ := http.NewRequest("GET", validationURL, nil)
+				request.Header.Add("Cookie", cookie)
+				request.Header.Add("Authorization", authHeader)
+				logrus.Debugf("GET %v", request.URL)
+				r, err := api.client.Do(request)
+				if err != nil {
+					WriteStatusError(resp, http.StatusInternalServerError, err)
+					return
+				}
+				logrus.Debugf("Got %v", r.StatusCode)
+				if r.StatusCode >= 400 {
+					WriteStatusError(resp, r.StatusCode, fmt.Errorf("Cannot authenticate to %v", authURL))
+					return
+				} else {
+					wspace := &dealerclient.Workspace{}
+					err = json.NewDecoder(r.Body).Decode(wspace)
+					if err != nil {
+						WriteStatusError(resp, http.StatusUnauthorized, fmt.Errorf("Cannot authenticate to %v: %v", authURL, err))
+						return
+					}
+					if len(wspace.Can) == 0 {
+						WriteStatusError(resp, http.StatusForbidden, fmt.Errorf("Cannot authenticate to %v", authURL))
+						return
+					}
+				}
 
-			logrus.Debugf("GET %v", request.URL)
+			} else {
+				request, _ := http.NewRequest("GET", authURL, nil)
+				request.Header.Add("Cookie", cookie)
+				request.Header.Add("Authorization", authHeader)
 
-			r, err := api.client.Do(request)
-			if err != nil {
-				WriteStatusError(resp, http.StatusInternalServerError, err)
-				return
-			}
-			logrus.Debugf("Got %v", r.StatusCode)
-			if r.StatusCode >= 400 {
-				WriteStatusError(resp, r.StatusCode, fmt.Errorf("Cannot authenticate to %v", authURL))
-				return
+				logrus.Debugf("GET %v", request.URL)
+
+				r, err := api.client.Do(request)
+				if err != nil {
+					WriteStatusError(resp, http.StatusInternalServerError, err)
+					return
+				}
+				logrus.Debugf("Got %v", r.StatusCode)
+				if r.StatusCode >= 400 {
+					WriteStatusError(resp, r.StatusCode, fmt.Errorf("Cannot authenticate to %v", authURL))
+					return
+				}
 			}
 		}
 
