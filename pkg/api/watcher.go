@@ -164,6 +164,7 @@ func (w *Watcher) processQueue() {
 				logrus.Error(err)
 				break
 			}
+			acquireConcurrency()
 
 			// Delete dataset
 			logrus.Infof("[Watcher] Delete %v %v/%v", ds.DType, ds.Workspace, ds.Name)
@@ -175,6 +176,7 @@ func (w *Watcher) processQueue() {
 					Workspace: ds.Workspace,
 				},
 			})
+			releaseConcurrency()
 		case "dataset_version":
 			dsv := &types.Version{}
 			err := utils.LoadAsJson(m.Content.(map[string]interface{}), dsv)
@@ -182,6 +184,7 @@ func (w *Watcher) processQueue() {
 				logrus.Error(err)
 				break
 			}
+			acquireConcurrency()
 
 			// Delete version
 			logrus.Infof("[Watcher] Delete %v version %v/%v:%v", dsv.DType, dsv.Workspace, dsv.Name, dsv.Version)
@@ -195,15 +198,18 @@ func (w *Watcher) processQueue() {
 			w.api.invalidateVersionCache(ds, dsv.Version)
 			dataset := w.api.ds.GetDataset(dsv.DType, dsv.Workspace, dsv.Name, nil)
 			if dataset == nil {
+				releaseConcurrency()
 				logrus.Errorf("[Watcher] %v %v/%v not found", dsv.DType, dsv.Workspace, dsv.Name)
 				return
 			}
 
 			err = dataset.DeleteVersion(dsv.Version, true)
 			if err != nil {
+				releaseConcurrency()
 				logrus.Errorf("[Watcher] %v", err)
 				return
 			}
+			releaseConcurrency()
 		}
 	}
 }
