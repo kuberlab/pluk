@@ -184,6 +184,10 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 			//deny := requestWorkspace != ws
 			if requestWorkspace != "" {
 				if requestWorkspace != ws && requestWorkspace != "kuberlab" {
+					if req.Request.Method != http.MethodGet {
+						WriteStatusError(resp, http.StatusForbidden, fmt.Errorf("Forbidden access to another workspace."))
+						return
+					}
 					// Try request workspace (in case if it is public)
 					u, err := url.Parse(authURL)
 					if err != nil {
