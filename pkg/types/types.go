@@ -123,13 +123,21 @@ func (c *ChunkData) Type() string {
 }
 
 type WebsocketClient struct {
-	lock *sync.RWMutex
-	Ws   *websocket.Conn
-	ID   string
+	lock        *sync.RWMutex
+	Ws          *websocket.Conn `json:"-"`
+	ID          string          `json:"id"`
+	IP          string          `json:"ip"`
+	ConnectedAt types.Time      `json:"connected_at"`
 }
 
-func NewWebsocketClient(ws *websocket.Conn, id string) *WebsocketClient {
-	return &WebsocketClient{Ws: ws, ID: id, lock: &sync.RWMutex{}}
+func NewWebsocketClient(ws *websocket.Conn, id, ip string) *WebsocketClient {
+	return &WebsocketClient{
+		Ws:          ws,
+		ID:          id,
+		IP:          ip,
+		lock:        &sync.RWMutex{},
+		ConnectedAt: types.NewTime(time.Now()),
+	}
 }
 
 func (c *WebsocketClient) WriteMessage(sType string, content interface{}) error {

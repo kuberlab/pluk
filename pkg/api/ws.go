@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
@@ -35,10 +36,15 @@ func (api API) websocket(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	id := req.HeaderParameter("Sec-Websocket-Key")
-	wsClient := types.NewWebsocketClient(ws, id)
+	ip := strings.Split(req.Request.RemoteAddr, ":")[0]
+	wsClient := types.NewWebsocketClient(ws, id, ip)
 
 	api.hub.Register(wsClient)
 	api.wsReader(wsClient)
+}
+
+func (api *API) wsConnections(req *restful.Request, resp *restful.Response) {
+	resp.WriteEntity(api.hub.Connections())
 }
 
 func (api *API) wsReader(client *types.WebsocketClient) {

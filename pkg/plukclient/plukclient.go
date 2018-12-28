@@ -122,7 +122,7 @@ func (c *Client) PrepareWebsocket() error {
 	}
 	c.conn = conn
 	id := resp.Header.Get("Sec-Websocket-Accept")
-	c.ws = types.NewWebsocketClient(conn, id)
+	c.ws = types.NewWebsocketClient(conn, id, "0.0.0.0")
 	return nil
 }
 
