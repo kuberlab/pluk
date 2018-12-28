@@ -1,18 +1,13 @@
 package api
 
 import (
-	"bytes"
-	"io/ioutil"
+	"github.com/Sirupsen/logrus"
 	"net/http"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/gorilla/websocket"
-	libtypes "github.com/kuberlab/lib/pkg/types"
-	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
-	"github.com/kuberlab/pluk/pkg/utils"
 )
 
 var (
@@ -53,50 +48,63 @@ func (api *API) wsReader(client *types.WebsocketClient) {
 	client.Ws.SetReadLimit(0) // No limit.
 
 	for {
-		message := libtypes.Message{}
-		err := client.Ws.ReadJSON(&message)
+		_, msg, err := client.Ws.ReadMessage()
 		if err != nil {
-			if errC, ok := err.(*websocket.CloseError); ok {
-				if errC.Code == websocket.CloseAbnormalClosure {
-					break
-				}
-			}
 			logrus.Error(err)
 			break
 		}
-
-		switch message.Type {
-		case "chunkData":
-			chunk := types.ChunkData{}
-			err = utils.LoadAsJson(message.Content.(map[string]interface{}), &chunk)
+		if string(msg) == "ping" {
+			err = client.Ws.WriteMessage(websocket.TextMessage, []byte("pong"))
 			if err != nil {
 				logrus.Error(err)
-				return
+				break
 			}
-
-			err = plukio.SaveChunk(
-				chunk.Hash,
-				ioutil.NopCloser(bytes.NewReader(chunk.Data)),
-				true,
-			)
-			if err != nil {
-				logrus.Error(err)
-				return
-			}
-		case "chunkCheck":
-			check := types.ChunkCheck{}
-			err = utils.LoadAsJson(message.Content.(map[string]interface{}), &check)
-			if err != nil {
-				logrus.Error(err)
-				return
-			}
-			size, exists := plukio.CheckLocalChunk(check.Hash)
-			check.Exists = exists
-			check.Size = size
-			if err := client.WriteMessage(check.Type(), check); err != nil {
-				return
-			}
+			logrus.Debugf("Received 'ping' signal from websocket id '%v'", client.ID)
 		}
+		//message := libtypes.Message{}
+		//err := client.Ws.ReadJSON(&message)
+		//if err != nil {
+		//	if errC, ok := err.(*websocket.CloseError); ok {
+		//		if errC.Code == websocket.CloseAbnormalClosure {
+		//			break
+		//		}
+		//	}
+		//	logrus.Error(err)
+		//	break
+		//}
+		//
+		//switch message.Type {
+		//case "chunkData":
+		//	chunk := types.ChunkData{}
+		//	err = utils.LoadAsJson(message.Content.(map[string]interface{}), &chunk)
+		//	if err != nil {
+		//		logrus.Error(err)
+		//		return
+		//	}
+		//
+		//	err = plukio.SaveChunk(
+		//		chunk.Hash,
+		//		ioutil.NopCloser(bytes.NewReader(chunk.Data)),
+		//		true,
+		//	)
+		//	if err != nil {
+		//		logrus.Error(err)
+		//		return
+		//	}
+		//case "chunkCheck":
+		//	check := types.ChunkCheck{}
+		//	err = utils.LoadAsJson(message.Content.(map[string]interface{}), &check)
+		//	if err != nil {
+		//		logrus.Error(err)
+		//		return
+		//	}
+		//	size, exists := plukio.CheckLocalChunk(check.Hash)
+		//	check.Exists = exists
+		//	check.Size = size
+		//	if err := client.WriteMessage(check.Type(), check); err != nil {
+		//		return
+		//	}
+		//}
 
 	}
 }

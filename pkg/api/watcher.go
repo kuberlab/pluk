@@ -2,6 +2,7 @@ package api
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -126,10 +127,31 @@ func (w *Watcher) connect() error {
 	return nil
 }
 
+func (w *Watcher) pinger() {
+	ticker := time.NewTicker(time.Second * 30)
+	for range ticker.C {
+		if w.mode == receive {
+			err := w.conn.WriteMessage(websocket.TextMessage, []byte("ping"))
+			if err != nil {
+				logrus.Errorf("Error during ping: %v", err)
+				w.mode = connect
+				return
+			}
+		} else {
+			return
+		}
+	}
+}
+
 func (w *Watcher) continuousReceive() {
+	go w.pinger()
 	for {
 		msg, err := w.receive()
 		if err != nil {
+			if _, ok := err.(*json.SyntaxError); ok {
+				// Probably "pong" sent, receive again
+				continue
+			}
 			logrus.Errorf("[Watcher] Receive: %v", err)
 			// Now connect
 			w.mode = connect
