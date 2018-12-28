@@ -211,7 +211,7 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 							WriteStatusError(resp, http.StatusUnauthorized, fmt.Errorf("Cannot authenticate to %v: %v", authURL, err))
 							return
 						}
-						if len(wspace.Can) == 0 {
+						if len(wspace.Can) == 0 && wspace.Type != "public" {
 							WriteStatusError(resp, http.StatusForbidden, fmt.Errorf("Cannot authenticate to %v", authURL))
 							return
 						}
