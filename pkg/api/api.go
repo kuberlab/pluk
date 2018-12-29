@@ -68,9 +68,6 @@ func GlobalHandler() http.Handler {
 	r.PathPrefix(utils.ApiPrefix).Handler(apiContainer)
 	r.PathPrefix(utils.InternalPrefix).Handler(internalContainer)
 
-	// webdav
-	r.PathPrefix("/webdav/{workspace}/{name}/{version}").Handler(api.webdavAuth())
-
 	r.Path("/probe").HandlerFunc(
 		func(resp http.ResponseWriter, req *http.Request) {
 			resp.Write([]byte("Ok\n"))

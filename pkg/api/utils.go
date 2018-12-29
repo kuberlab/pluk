@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
-	"github.com/kuberlab/lib/pkg/dealerclient"
 	"net"
 	"net/http"
 	"net/url"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
+	"github.com/kuberlab/lib/pkg/dealerclient"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
@@ -45,6 +45,7 @@ func (r *LogRecordHandler) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 }
 
 func WrapLogger(f http.Handler) http.Handler {
+	cache := utils.NewRequestCache()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		record := &LogRecordHandler{
 			ResponseWriter: w,
@@ -63,7 +64,7 @@ func WrapLogger(f http.Handler) http.Handler {
 		ws := r.Header.Get("X-Workspace-Name")
 		internal := r.Header.Get("Internal")
 
-		authLog := authInfo(authHeader, cookie, ws, secret, internal)
+		authLog := authInfo(cache, authHeader, cookie, ws, secret, internal)
 
 		if authLog == "" {
 			logrus.Infof("%v %v => %v, %v", r.Method, r.RequestURI, record.status, time.Since(t))
@@ -73,21 +74,37 @@ func WrapLogger(f http.Handler) http.Handler {
 	})
 }
 
-func authInfo(authHeader, cookie, ws, secret, internal string) string {
+func authInfo(cache *utils.RequestCache, authHeader, cookie, ws, secret, internal string) string {
 	if authHeader == "" && cookie == "" && ws == "" && secret == "" && internal == "" {
 		return ""
 	}
 
 	if internal != "" {
-		return fmt.Sprintf("[internal=%x]", sha1.Sum([]byte(internal)))
+		return cacheHash(cache, internal, "internal", internal)
 	} else if ws != "" && secret != "" {
-		return fmt.Sprintf("[ws=%v,secret=%x]", ws, sha1.Sum([]byte(secret)))
+		key := "ws-secret-" + ws + secret
+		val := cache.GetString(key)
+		if val == "" {
+			val = fmt.Sprintf("%x", sha1.Sum([]byte(secret)))
+			cache.SetString(key, val)
+		}
+		return fmt.Sprintf("[ws=%v,secret=%v]", ws, val)
 	} else if authHeader != "" {
-		return fmt.Sprintf("[token=%x]", sha1.Sum([]byte(strings.TrimPrefix(authHeader, "Bearer "))))
+		return cacheHash(cache, authHeader, "token", strings.TrimPrefix(authHeader, "Bearer "))
 	} else if cookie != "" {
-		return fmt.Sprintf("[cookie=%x]", sha1.Sum([]byte(cookie)))
+		return cacheHash(cache, cookie, "cookie", cookie)
 	}
 	return ""
+}
+
+func cacheHash(cache *utils.RequestCache, cacheKey, prefix, value string) string {
+	key := prefix + "-" + cacheKey
+	val := cache.GetString(key)
+	if val == "" {
+		val = fmt.Sprintf("%x", sha1.Sum([]byte(value)))
+		cache.SetString(key, val)
+	}
+	return "[" + prefix + "=" + val + "]"
 }
 
 type ResponseError struct {
