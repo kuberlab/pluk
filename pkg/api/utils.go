@@ -2,6 +2,7 @@ package api
 
 import (
 	"bufio"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"github.com/kuberlab/lib/pkg/dealerclient"
@@ -56,8 +57,37 @@ func WrapLogger(f http.Handler) http.Handler {
 			record.status = http.StatusOK
 		}
 
-		logrus.Infof("%v %v => %v, %v", r.Method, r.RequestURI, record.status, time.Since(t))
+		authHeader := r.Header.Get("Authorization")
+		cookie := r.Header.Get("Cookie")
+		secret := r.Header.Get("X-Workspace-Secret")
+		ws := r.Header.Get("X-Workspace-Name")
+		internal := r.Header.Get("Internal")
+
+		authLog := authInfo(authHeader, cookie, ws, secret, internal)
+
+		if authLog == "" {
+			logrus.Infof("%v %v => %v, %v", r.Method, r.RequestURI, record.status, time.Since(t))
+		} else {
+			logrus.Infof("%v %v => %v, %v, %v", r.Method, r.RequestURI, record.status, time.Since(t), authLog)
+		}
 	})
+}
+
+func authInfo(authHeader, cookie, ws, secret, internal string) string {
+	if authHeader == "" && cookie == "" && ws == "" && secret == "" && internal == "" {
+		return ""
+	}
+
+	if internal != "" {
+		return fmt.Sprintf("[internal=%x]", sha1.Sum([]byte(internal)))
+	} else if ws != "" && secret != "" {
+		return fmt.Sprintf("[ws=%v,secret=%x]", ws, sha1.Sum([]byte(secret)))
+	} else if authHeader != "" {
+		return fmt.Sprintf("[token=%x]", sha1.Sum([]byte(strings.TrimPrefix(authHeader, "Bearer "))))
+	} else if cookie != "" {
+		return fmt.Sprintf("[cookie=%x]", sha1.Sum([]byte(cookie)))
+	}
+	return ""
 }
 
 type ResponseError struct {
@@ -149,7 +179,7 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 	// /pluk/v1/entity-type/workspace/
 	splitted := strings.Split(req.Request.URL.Path, "/")
 	var requestWorkspace string
-	if len(splitted) >= 4 {
+	if len(splitted) >= 5 {
 		if splitted[3] == "workspaces" {
 			requestWorkspace = splitted[4]
 		} else if _, ok := plukclient.AllowedTypes[splitted[3]]; ok {
