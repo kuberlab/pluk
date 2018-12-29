@@ -255,7 +255,7 @@ func gcFromMasters(mgr db.DataMgr) {
 		ws, eType := wsAndType(wsType)
 		remoteDatasets, err := io.MasterClient.ListEntities(eType, ws)
 		if err != nil {
-			logrus.Error(err)
+			logrus.Errorf("[GC] list from master: %v", err)
 			return
 		}
 		masterDatasetMap := make(map[string]bool)

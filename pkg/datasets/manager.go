@@ -23,22 +23,25 @@ func NewManager(mgr db.DataMgr, hub *types.Hub) *Manager {
 	return &Manager{mgr: mgr, hub: hub}
 }
 
-func (m *Manager) ListDatasets(eType, workspace string) []*Dataset {
+func (m *Manager) ListDatasets(eType, workspace string) ([]*Dataset, error) {
 	datasets, err := m.mgr.ListDatasets(db.Dataset{Type: eType, Workspace: workspace})
 	if err != nil {
-		logrus.Error(err)
-		return []*Dataset{}
+		return nil, err
 	}
 	sets := make([]*Dataset, 0)
 	for _, d := range datasets {
 		sets = append(sets, &Dataset{Dataset: d, mgr: m.mgr})
 	}
 
-	return sets
+	return sets, nil
 }
 
 func (m *Manager) GetDataset(eType, workspace, name string, master io.PlukClient) *Dataset {
-	datasets := m.ListDatasets(eType, workspace)
+	datasets, err := m.ListDatasets(eType, workspace)
+	if err != nil {
+		logrus.Errorf("List datasets: %v", err)
+		return nil
+	}
 
 	for _, d := range datasets {
 		if d.Name == name {

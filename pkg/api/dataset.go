@@ -31,7 +31,11 @@ func (api *API) masterClient(req *restful.Request) plukio.PlukClient {
 }
 
 func (api *API) allDatasets(req *restful.Request, resp *restful.Response) {
-	sets := api.ds.ListDatasets(currentType(req), "")
+	sets, err := api.ds.ListDatasets(currentType(req), "")
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
 	ds := types.DataSetList{}
 	for _, d := range sets {
 		ds.Items = append(ds.Items, types.Dataset{Name: d.Name, Workspace: d.Workspace})
@@ -46,7 +50,11 @@ func (api *API) allDatasets(req *restful.Request, resp *restful.Response) {
 func (api *API) datasets(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 
-	sets := api.ds.ListDatasets(currentType(req), workspace)
+	sets, err := api.ds.ListDatasets(currentType(req), workspace)
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
 	ds := types.DataSetList{}
 	for _, d := range sets {
 		ds.Items = append(
