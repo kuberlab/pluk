@@ -5,14 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
-	"sync"
-
 	"github.com/Sirupsen/logrus"
 	chunk_io "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
@@ -20,6 +12,12 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/semaphore"
 	"gopkg.in/cheggaaa/pb.v1"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 )
 
 type pushCmd struct {
@@ -269,21 +267,24 @@ func (cmd *pushCmd) uploadChunks(bar *pb.ProgressBar, client chunk_io.PlukClient
 	} else {
 		sem = semaphore.NewWeighted(cmd.concurrency)
 	}
-	lock := &sync.RWMutex{}
+	//lock := &sync.RWMutex{}
 	ctx := context.TODO()
 
 	var resp *types.ChunkCheck
 	checkAndUpload := func(chunkData []byte, hash string) {
 		defer func() {
-			lock.Lock()
-			bar.Add(len(chunkData))
-			lock.Unlock()
+			//lock.Lock()
+			//bar.Add(len(chunkData))
+			//lock.Unlock()
 			sem.Release(1)
 		}()
 
 		if !upload {
 			return
 		}
+
+		rd := bytes.NewReader(chunkData)
+		chReader := io.TeeReader(rd, bar)
 
 		if cmd.websocket {
 			resp, err = client.CheckChunkWebsocket(hash)
@@ -301,10 +302,12 @@ func (cmd *pushCmd) uploadChunks(bar *pb.ProgressBar, client chunk_io.PlukClient
 					os.Exit(1)
 				}
 			} else {
-				if err = client.SaveChunk(hash, chunkData); err != nil {
+				if err = client.SaveChunkReader(hash, chReader); err != nil {
 					logrus.Fatalf("Failed to upload chunk: %v", err)
 				}
 			}
+		} else {
+			bar.Add(len(chunkData))
 		}
 		return
 	}

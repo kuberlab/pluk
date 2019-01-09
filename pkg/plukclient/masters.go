@@ -272,6 +272,20 @@ func (c *MultiMasterClient) SaveChunk(hash string, data []byte) (err error) {
 	return err
 }
 
+func (c *MultiMasterClient) SaveChunkReader(hash string, reader io.Reader) (err error) {
+	for i, cl := range c.baseClients {
+		if err != nil {
+			return err
+		}
+		err = cl.SaveChunkReader(hash, reader)
+		if err != nil {
+			logrus.Errorf("Failed save chunk to %v", c.Masters[i])
+			return
+		}
+	}
+	return err
+}
+
 func (c *MultiMasterClient) UploadFile(entityType, workspace, entityName, version, fileName string, body io.ReadCloser) (f *types.HashedFile, err error) {
 	for i, cl := range c.baseClients {
 		if err != nil {

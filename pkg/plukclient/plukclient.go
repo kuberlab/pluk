@@ -549,6 +549,23 @@ func (c *Client) SaveChunk(hash string, data []byte) error {
 	return err
 }
 
+func (c *Client) SaveChunkReader(hash string, reader io.Reader) error {
+	u := fmt.Sprintf("/chunks/%v", hash)
+
+	req, err := c.NewRequest("POST", u, nil)
+	if err != nil {
+		return err
+	}
+	req.Body = ioutil.NopCloser(reader)
+	_, err = c.Do(req, nil)
+
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
 func (c *Client) SaveChunkWebsocket(hash string, data []byte) error {
 	chunkData := types.ChunkData{Data: data, Hash: hash}
 	return c.ws.WriteMessage(chunkData.Type(), chunkData)

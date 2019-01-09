@@ -44,6 +44,7 @@ type PlukClient interface {
 	DeleteFile(entityType, workspace, entityName, version, fileName string) error
 
 	SaveChunk(hash string, data []byte) error
+	SaveChunkReader(hash string, reader io.Reader) error
 	SaveChunkWebsocket(hash string, data []byte) error
 	SaveFileStructure(structure types.FileStructure,
 		entityType, workspace, name, version, comment string, create bool, publish bool) error
