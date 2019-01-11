@@ -36,45 +36,33 @@ func (m *Manager) ListDatasets(eType, workspace string) ([]*Dataset, error) {
 	return sets, nil
 }
 
-func (m *Manager) GetDataset(eType, workspace, name string, master io.PlukClient) *Dataset {
-	datasets, err := m.ListDatasets(eType, workspace)
-	if err != nil {
-		logrus.Errorf("List datasets: %v", err)
-		return nil
-	}
-
-	for _, d := range datasets {
-		if d.Name == name {
-			res := d
-			res.MasterClient = master
-			return res
-		}
+func (m *Manager) GetDataset(eType, workspace, name string, master io.PlukClient) (*Dataset, error) {
+	datasetDB, err := m.mgr.GetDataset(eType, workspace, name)
+	if err == nil {
+		// Found
+		return &Dataset{MasterClient: master, mgr: m.mgr, Dataset: datasetDB}, nil
+	} else {
+		logrus.Errorf("Get dataset: %v", err)
 	}
 
 	// If none found, that means that it probably on master side.
 	if !utils.HasMasters() || master == nil {
-		return nil
+		return nil, err
 	}
 
-	ds, err := master.ListEntities(eType, workspace)
+	_, err = master.GetEntity(eType, workspace, name)
 	if err != nil {
 		logrus.Errorf("From master: %v", err)
-		return nil
+		return nil, err
 	}
-	for _, d := range ds.Items {
-		if d.Name == name {
-			// Create locally.
-			dataset, err := m.NewDataset(eType, workspace, name, nil)
-			if err != nil {
-				logrus.Error(err)
-				return nil
-			}
-			dataset.MasterClient = master
-			return dataset
-		}
+	// Create locally.
+	dataset, err := m.NewDataset(eType, workspace, name, nil)
+	if err != nil {
+		logrus.Error(err)
+		return nil, err
 	}
-
-	return nil
+	dataset.MasterClient = master
+	return dataset, nil
 }
 
 func (m *Manager) NewDataset(eType, workspace, name string, master io.PlukClient) (*Dataset, error) {
@@ -105,10 +93,10 @@ func (m *Manager) ForkDataset(src types.Dataset, target types.Dataset, master io
 		return nil, errors.NewStatus(409, msg)
 	}
 
-	source := m.GetDataset(src.DType, src.Workspace, src.Name, master)
-	if source == nil {
+	source, err := m.GetDataset(src.DType, src.Workspace, src.Name, master)
+	if err != nil {
 		msg := fmt.Sprintf("Probably %v %v/%v doesn't exist", src.DType, src.Workspace, src.Name)
-		return nil, errors.NewStatus(404, msg)
+		return nil, errors.NewStatusReason(404, msg, err.Error())
 	}
 
 	ds, err := m.NewDataset(target.DType, target.Workspace, target.Name, master)

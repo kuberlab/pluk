@@ -28,9 +28,9 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 	fs, err := api.getFS(dataset, version)

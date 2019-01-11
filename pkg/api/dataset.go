@@ -75,13 +75,13 @@ func (api *API) downloadDataset(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 
-	err := api.checkEntityExists(req, workspace, name)
+	err = api.checkEntityExists(req, workspace, name)
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -117,9 +117,9 @@ func (api *API) getDataset(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 
@@ -132,9 +132,9 @@ func (api *API) datasetTarSize(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 	fs, err := api.getFS(dataset, version)
@@ -160,7 +160,7 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 
 	acquireConcurrency()
 	defer releaseConcurrency()
-	ds := api.ds.GetDataset(currentType(req), workspace, name, master)
+	ds, _ := api.ds.GetDataset(currentType(req), workspace, name, master)
 
 	api.invalidateCache(ds)
 	err := api.ds.DeleteDataset(currentType(req), workspace, name, master, true)
@@ -181,9 +181,9 @@ func (api *API) createDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset != nil {
-		WriteStatusError(resp, http.StatusConflict, fmt.Errorf("%v '%v' already exists", strings.Title(currentType(req)), name))
+	_, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err == nil {
+		WriteError(resp, AlreadyExistsError(req, name))
 		return
 	}
 
@@ -222,7 +222,7 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 
 	master := api.masterClient(req)
 
-	checkTarget := api.ds.GetDataset(targetType, targetWS, targetName, master)
+	checkTarget, _ := api.ds.GetDataset(targetType, targetWS, targetName, master)
 	if checkTarget != nil && force {
 		// Clean old dataset
 		err := api.ds.DeleteDataset(targetType, targetWS, targetName, master, true)

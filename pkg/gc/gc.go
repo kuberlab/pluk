@@ -292,14 +292,14 @@ type Answer struct {
 
 func ClearChunks(db db.DataMgr) {
 	var err error
-	tx := db.DB().Begin()
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
-		}
-	}()
+	//tx := db.DB().Begin()
+	//defer func() {
+	//	if err != nil {
+	//		tx.Rollback()
+	//	} else {
+	//		tx.Commit()
+	//	}
+	//}()
 
 	err = filepath.Walk(utils.DataDir(), func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
@@ -311,7 +311,7 @@ func ClearChunks(db db.DataMgr) {
 		size := info.Size()
 		answer := Answer{}
 		sql := fmt.Sprintf(`SELECT size from chunks WHERE hash='%v'`, hash)
-		err = tx.Raw(sql).Scan(&answer).Error
+		err = db.DB().Raw(sql).Scan(&answer).Error
 		if err == gorm.ErrRecordNotFound {
 			// Extra chunk / unneeded.
 			os.Remove(path)

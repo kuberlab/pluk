@@ -29,9 +29,9 @@ func (api *API) fsReadDir(req *restful.Request, resp *restful.Response) {
 	filepath := req.PathParameter("path")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 	fs, err := api.getFS(dataset, version)
@@ -56,9 +56,9 @@ func (api *API) fsReadFile(req *restful.Request, resp *restful.Response) {
 	filepath := req.PathParameter("path")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 	fs, err := api.getFS(dataset, version)
@@ -131,9 +131,9 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 	filepath := req.PathParameter("path")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 
@@ -142,7 +142,7 @@ func (api *API) deleteDatasetFile(req *restful.Request, resp *restful.Response) 
 		return
 	}
 
-	_, err := api.findDatasetVersion(dataset, version, false)
+	_, err = api.findDatasetVersion(dataset, version, false)
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -195,9 +195,9 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 	acquireConcurrency()
 	defer releaseConcurrency()
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 
@@ -206,7 +206,7 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 		return
 	}
 
-	_, err := api.findDatasetVersion(dataset, version, false)
+	_, err = api.findDatasetVersion(dataset, version, false)
 	if err != nil {
 		WriteError(resp, err)
 		return

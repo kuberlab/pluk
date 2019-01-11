@@ -23,9 +23,9 @@ func (api *API) versions(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 	versions, err := dataset.Versions()
@@ -49,9 +49,9 @@ func (api *API) getVersion(req *restful.Request, resp *restful.Response) {
 	version := req.PathParameter("version")
 	master := api.masterClient(req)
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 
@@ -76,7 +76,7 @@ func (api *API) createVersion(req *restful.Request, resp *restful.Response) {
 	defer releaseConcurrency()
 	gc.WaitGCCompleted()
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
+	dataset, _ := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if dataset == nil {
 		// Create
 		var err error
@@ -147,13 +147,13 @@ func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
 	acquireConcurrency()
 	defer releaseConcurrency()
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 
-	err := dataset.DeleteVersion(version, true)
+	err = dataset.DeleteVersion(version, true)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
@@ -179,9 +179,9 @@ func (api *API) cloneVersion(req *restful.Request, resp *restful.Response) {
 	acquireConcurrency()
 	defer releaseConcurrency()
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 
@@ -214,9 +214,9 @@ func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {
 	acquireConcurrency()
 	defer releaseConcurrency()
 
-	dataset := api.ds.GetDataset(currentType(req), workspace, name, master)
-	if dataset == nil {
-		WriteError(resp, EntityNotFoundError(req, name))
+	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
+	if err != nil {
+		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
 

@@ -218,10 +218,10 @@ func (w *Watcher) processQueue() {
 				},
 			}
 			w.api.invalidateVersionCache(ds, dsv.Version)
-			dataset := w.api.ds.GetDataset(dsv.DType, dsv.Workspace, dsv.Name, nil)
-			if dataset == nil {
+			dataset, err := w.api.ds.GetDataset(dsv.DType, dsv.Workspace, dsv.Name, nil)
+			if err != nil {
 				releaseConcurrency()
-				logrus.Errorf("[Watcher] %v %v/%v not found", dsv.DType, dsv.Workspace, dsv.Name)
+				logrus.Errorf("[Watcher] %v %v/%v not found: %v", dsv.DType, dsv.Workspace, dsv.Name, err)
 				return
 			}
 

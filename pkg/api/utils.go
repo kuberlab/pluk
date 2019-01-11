@@ -112,8 +112,19 @@ type ResponseError struct {
 	Message string `json:"message"`
 }
 
-func EntityNotFoundError(req *restful.Request, name string) error {
-	return errors.NewStatus(http.StatusNotFound, fmt.Sprintf("%v '%v' not found", strings.Title(currentType(req)), name))
+func EntityNotFoundError(req *restful.Request, name string, err error) error {
+	return errors.NewStatusReason(
+		http.StatusNotFound,
+		fmt.Sprintf("%v '%v' not found", strings.Title(currentType(req)), name),
+		err.Error(),
+	)
+}
+
+func AlreadyExistsError(req *restful.Request, name string) error {
+	return errors.NewStatus(
+		http.StatusConflict,
+		fmt.Sprintf("%v '%v' already exists", strings.Title(currentType(req)), name),
+	)
 }
 
 func WriteErrorString(resp *restful.Response, status int, message string) {
