@@ -184,7 +184,8 @@ func receiveFileToSave(tx db.DataMgr, dsv *db.DatasetVersion, fileChannel chan *
 			}
 			if len(bufFiles) >= limit {
 				if err := flushFileBuffer(); err != nil {
-					endCh <- err
+					close(fileChannel)
+					return err
 				}
 
 				bufFiles = nil
@@ -265,9 +266,9 @@ func SaveDatasetVersion(tx db.DataMgr, dsv *db.DatasetVersion) error {
 }
 
 func CheckAndQueueFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFile,
-	fileChannel chan *types.HashedFile, lock *sync.RWMutex) error {
+	fileChannel chan *types.HashedFile, lock *sync.RWMutex) (err error) {
 	lock.Lock()
-	if _, err := tx.GetFile(dsv.Workspace, dsv.Name, dsv.Type, f.Path, dsv.Version); err == nil {
+	if _, err = tx.GetFile(dsv.Workspace, dsv.Name, dsv.Type, f.Path, dsv.Version); err == nil {
 		// Need to clear unneeded chunks
 		if err = ClearExtraChunks(tx, dsv, f.Path, f); err != nil {
 			lock.Unlock()
@@ -275,13 +276,16 @@ func CheckAndQueueFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFil
 		}
 	}
 	lock.Unlock()
+	err = nil
 
 	defer func() {
-		recover()
+		if r := recover(); r != nil {
+			err = fmt.Errorf("Possible DB error.")
+		}
 	}()
 	fileChannel <- f
 
-	return nil
+	return err
 }
 
 func ClearExtraChunks(tx db.DataMgr, dsv *db.DatasetVersion, path string, replacement *types.HashedFile) error {
