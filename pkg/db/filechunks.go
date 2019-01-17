@@ -29,9 +29,9 @@ type FileChunkMgr interface {
 }
 
 type FileChunk struct {
-	FileID     uint `gorm:"unique_index:file_chunk_id" json:"file_id"`
-	ChunkID    uint `gorm:"unique_index:file_chunk_id" json:"chunk_id"`
-	ChunkIndex uint `json:"chunk_index"`
+	FileID     uint `gorm:"unique_index:file_chunk_id_index" json:"file_id"`
+	ChunkID    uint `gorm:"unique_index:file_chunk_id_index" json:"chunk_id"`
+	ChunkIndex uint `gorm:"unique_index:file_chunk_id_index" json:"chunk_index"`
 }
 
 type FileChunkHash struct {
@@ -62,7 +62,7 @@ func (mgr *DatabaseMgr) CreateFileChunks(fileChunks []*FileChunk) error {
 			values = append(values, fmt.Sprintf(`(%v,%v,%v)`, raw.FileID, raw.ChunkID, raw.ChunkIndex))
 		}
 		sql.WriteString(strings.Join(values, ","))
-		sql.WriteString(" ON CONFLICT (file_id, chunk_id) DO NOTHING")
+		sql.WriteString(" ON CONFLICT (file_id, chunk_id, chunk_index) DO NOTHING")
 		return mgr.db.Exec(sql.String()).Error
 	} else if mgr.DBType() == "sqlite3" {
 		// Get next insert ID
@@ -72,7 +72,7 @@ func (mgr *DatabaseMgr) CreateFileChunks(fileChunks []*FileChunk) error {
 			values = append(values, fmt.Sprintf(`(%v, %v, %v)`, raw.FileID, raw.ChunkID, raw.ChunkIndex))
 		}
 		sql.WriteString(strings.Join(values, ","))
-		sql.WriteString(" ON CONFLICT (file_id, chunk_id) DO NOTHING")
+		sql.WriteString(" ON CONFLICT (file_id, chunk_id, chunk_index) DO NOTHING")
 
 		return mgr.db.Exec(sql.String()).Error
 	} else {
