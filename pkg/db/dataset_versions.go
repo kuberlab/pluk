@@ -40,8 +40,8 @@ func (mgr *DatabaseMgr) UpdateDatasetVersion(datasetVersion *DatasetVersion) (*D
 }
 
 func (mgr *DatabaseMgr) RecoverDatasetVersion(dsv *DatasetVersion) error {
-	sql := fmt.Sprintf("UPDATE dataset_versions SET deleted=? where name='%v' AND workspace='%v' AND version='%v'", dsv.Name, dsv.Workspace, dsv.Version)
-	return mgr.db.Exec(sql, false).Error
+	sql := "UPDATE dataset_versions SET deleted=? where name=? AND type=? AND workspace=? AND version=?"
+	return mgr.db.Exec(sql, false, dsv.Name, dsv.Type, dsv.Workspace, dsv.Version).Error
 }
 
 func (mgr *DatabaseMgr) GetDatasetVersion(dsType, workspace, name, version string) (*DatasetVersion, error) {

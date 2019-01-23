@@ -32,42 +32,19 @@ func CreateTables(db *gorm.DB) error {
 
 // CreateAll is to be used for initial database setup on new deployments or
 // adding new tables and columns in existing environments. As for now deletions
-// or type convertions of any type should be handled manually.
+// or type conversions of any type should be handled manually.
 func CreateAll(db *gorm.DB) error {
 	if err := CreateTables(db); err != nil {
 		return err
 	}
 
-	//if err := db.Debug().Model(&File{}).AddIndex(
-	//	"idx_path",
-	//	"path",
-	//).Error; err != nil {
-	//	logrus.Error(err)
-	//}
-	//if err := db.Debug().Model(&File{}).AddIndex(
-	//	"idx_dataset_workspace",
-	//	"dataset_name", "workspace",
-	//).Error; err != nil {
-	//	logrus.Error(err)
-	//}
-	//if err := db.Debug().Model(&File{}).AddIndex(
-	//	"idx_dataset_workspace_version",
-	//	"dataset_name", "workspace", "version",
-	//).Error; err != nil {
-	//	logrus.Error(err)
-	//}
 	if err := db.Debug().Model(&FileChunk{}).AddIndex(
 		"idx_chunk_id",
 		"chunk_id",
 	).Error; err != nil {
 		logrus.Error(err)
 	}
-	//if err := db.Debug().Model(&FileChunk{}).AddIndex(
-	//	"file_id",
-	//	"file_id",
-	//).Error; err != nil {
-	//	logrus.Error(err)
-	//}
+
 	if db.Dialect().GetName() == "sqlite3" {
 		if err := db.Debug().Model(&Chunk{}).AddUniqueIndex(
 			"idx_hash",

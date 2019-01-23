@@ -42,29 +42,31 @@ func (mgr *DatabaseMgr) CreateFiles(files []*File) error {
 	//if len(files) == 0 {
 	//	return nil
 	//}
+	t := time.Now()
 	for _, f := range files {
-		f.CreatedAt = types.NewTime(time.Now())
-		f.UpdatedAt = types.NewTime(time.Now())
+		f.CreatedAt = types.NewTime(t)
+		f.UpdatedAt = types.NewTime(t)
 	}
 
-	sql := bytes.NewBufferString("")
+	sql := strings.Builder{}
+	replacements := make([]interface{}, 0)
 	if mgr.DBType() == "postgres" {
 		sql.WriteString("INSERT INTO files (created_at,updated_at,path,size,mode,version,workspace,dataset_type,dataset_name) VALUES ")
 		values := make([]string, 0)
 		for _, f := range files {
 			values = append(
 				values,
-				fmt.Sprintf(`('%v','%v','%v',%v,%v,'%v','%v','%v','%v')`,
-					f.CreatedAt.SQLFormat(), f.UpdatedAt.SQLFormat(), strings.Replace(f.Path, "'", "''", -1), f.Size, f.Mode, f.Version,
-					f.Workspace, f.DatasetType, f.DatasetName,
+				fmt.Sprintf(`('%v','%v',?,%v,%v,?,?,?,?)`,
+					f.CreatedAt.SQLFormat(), f.UpdatedAt.SQLFormat(), f.Size, f.Mode,
 				),
 			)
+			replacements = append(replacements, f.Path, f.Version, f.Workspace, f.DatasetType, f.DatasetName)
 		}
 		sql.WriteString(strings.Join(values, ","))
 		sql.WriteString(
 			" ON CONFLICT (dataset_type,dataset_name,workspace,version,path)" +
 				" DO UPDATE SET size=excluded.size")
-		err := mgr.db.Exec(sql.String()).Error
+		err := mgr.db.Exec(sql.String(), replacements...).Error
 		if err != nil {
 			return err
 		}
@@ -82,18 +84,18 @@ func (mgr *DatabaseMgr) CreateFiles(files []*File) error {
 		for _, f := range files {
 			values = append(
 				values,
-				fmt.Sprintf(`('%v','%v','%v',%v,%v,'%v','%v','%v','%v')`,
-					f.CreatedAt.SQLFormat(), f.UpdatedAt.SQLFormat(), strings.Replace(f.Path, "'", "''", -1), f.Size, f.Mode, f.Version,
-					f.Workspace, f.DatasetType, f.DatasetName,
+				fmt.Sprintf(`('%v','%v',?,%v,%v,?,?,?,?)`,
+					f.CreatedAt.SQLFormat(), f.UpdatedAt.SQLFormat(), f.Size, f.Mode,
 				),
 			)
+			replacements = append(replacements, f.Path, f.Version, f.Workspace, f.DatasetType, f.DatasetName)
 		}
 		sql.WriteString(strings.Join(values, ","))
 		sql.WriteString(
 			" ON CONFLICT (dataset_type,dataset_name,workspace,version,path)" +
 				" DO UPDATE SET size=excluded.size")
 
-		err := mgr.db.Exec(sql.String()).Error
+		err := mgr.db.Exec(sql.String(), replacements...).Error
 		if err != nil {
 			return err
 		}
@@ -117,20 +119,25 @@ func (mgr *DatabaseMgr) CreateFiles(files []*File) error {
 
 func (mgr *DatabaseMgr) ListFilesByPath(files []*File, dsType, workspace, dsName, version string) ([]*File, error) {
 	where := bytes.NewBufferString("path IN (")
-	ids := make([]string, 0)
+	placeholders := make([]string, 0)
+	values := make([]interface{}, 0)
 	for _, f := range files {
-		ids = append(ids, fmt.Sprintf("'%v'", strings.Replace(f.Path, "'", "''", -1)))
+		placeholders = append(placeholders, "?")
+		values = append(values, f.Path)
 	}
-	where.WriteString(strings.Join(ids, ","))
+	where.WriteString(strings.Join(placeholders, ","))
 	where.WriteString(")")
-	where.WriteString(fmt.Sprintf(" AND dataset_type='%v'", dsType))
-	where.WriteString(fmt.Sprintf(" AND workspace='%v'", workspace))
-	where.WriteString(fmt.Sprintf(" AND dataset_name='%v'", dsName))
-	where.WriteString(fmt.Sprintf(" AND version='%v'", version))
+	where.WriteString(" AND dataset_type=?")
+	where.WriteString(" AND workspace=?")
+	where.WriteString(" AND dataset_name=?")
+	where.WriteString(" AND version=?")
+
+	values = append(values, dsType, workspace, dsName, version)
+
 	filesDB := make([]*File, 0)
 	err := mgr.db.
 		Select("id,path").
-		Where(where.String()).
+		Where(where.String(), values...).
 		Find(&filesDB).Error
 
 	hashMap := make(map[string]int)

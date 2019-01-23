@@ -1,7 +1,6 @@
 package db
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -54,7 +53,7 @@ func (mgr *DatabaseMgr) CreateFileChunk(file *FileChunk) error {
 }
 
 func (mgr *DatabaseMgr) CreateFileChunks(fileChunks []*FileChunk) error {
-	sql := bytes.NewBufferString("")
+	sql := strings.Builder{}
 	if mgr.DBType() == "postgres" {
 		sql.WriteString("INSERT INTO file_chunks (file_id, chunk_id, chunk_index) VALUES ")
 		values := make([]string, 0)
@@ -105,7 +104,9 @@ func (mgr *DatabaseMgr) ListFileChunks(filter FileChunk) ([]*FileChunk, error) {
 
 func (mgr *DatabaseMgr) ListFileChunksByChunks(chunks []Chunk) ([]*FileChunk, error) {
 	var fileChunks = make([]*FileChunk, 0)
-	where := bytes.NewBufferString("chunk_id IN (")
+	where := strings.Builder{}
+	where.WriteString("chunk_id IN (")
+
 	ids := make([]string, 0)
 	for _, c := range chunks {
 		ids = append(ids, fmt.Sprintf("%v", c.ID))
@@ -131,17 +132,20 @@ func (mgr *DatabaseMgr) ListRelatedChunksForFiles(
 		  AND files.version='1.0.0'
 		  AND file_chunks.file_id=files.id;
 	*/
+	values := []interface{}{workspace, dataset, dsType}
 	conditions := []string{
-		fmt.Sprintf("files.workspace='%v'", workspace),
-		fmt.Sprintf("files.dataset_name='%v'", dataset),
-		fmt.Sprintf("files.dataset_type='%v'", dsType),
+		"files.workspace=?",
+		"files.dataset_name=?",
+		"files.dataset_type=?",
 		"file_chunks.file_id=files.id",
 	}
 	if version != "" {
-		conditions = append(conditions, fmt.Sprintf("files.version='%v'", version))
+		conditions = append(conditions, "files.version=?")
+		values = append(values, version)
 	}
 	if prefix != "" {
 		var cond string
+		prefix = strings.Replace(prefix, "'", "''", -1)
 		if preciseName {
 			cond = fmt.Sprintf("files.path = '%v'", prefix)
 		} else {
@@ -155,7 +159,7 @@ func (mgr *DatabaseMgr) ListRelatedChunksForFiles(
 	err := mgr.db.
 		Table("file_chunks").
 		Select("chunk_id,file_id,chunk_index").
-		Joins(join).
+		Joins(join, values...).
 		Scan(&fileChunks).Error
 
 	return fileChunks, err
@@ -166,16 +170,19 @@ func (mgr *DatabaseMgr) ListRelatedChunks(dsType, workspace, dataset, version st
 }
 
 func (mgr *DatabaseMgr) DeleteFiles(dsType, workspace, dataset, version, prefix string, preciseName bool) (int64, error) {
+	values := []interface{}{workspace, dataset, dsType}
 	conditions := []string{
-		fmt.Sprintf("files.workspace='%v'", workspace),
-		fmt.Sprintf("files.dataset_name='%v'", dataset),
-		fmt.Sprintf("files.dataset_type='%v'", dsType),
+		"files.workspace=?",
+		"files.dataset_name=?",
+		"files.dataset_type=?",
 	}
 	if version != "" {
-		conditions = append(conditions, fmt.Sprintf("files.version='%v'", version))
+		conditions = append(conditions, "files.version=?")
+		values = append(values, version)
 	}
 	if prefix != "" {
 		var cond string
+		prefix = strings.Replace(prefix, "'", "''", -1)
 		if preciseName {
 			cond = fmt.Sprintf("files.path = '%v'", prefix)
 		} else {
@@ -189,13 +196,13 @@ func (mgr *DatabaseMgr) DeleteFiles(dsType, workspace, dataset, version, prefix 
 			"SELECT id from files where %v)", condition,
 	)
 
-	err := mgr.db.Exec(sqlDeleteRelation).Error
+	err := mgr.db.Exec(sqlDeleteRelation, values...).Error
 	if err != nil {
 		return 0, err
 	}
 
 	sqlDeleteFiles := fmt.Sprintf("DELETE FROM files where %v", condition)
-	db := mgr.db.Exec(sqlDeleteFiles)
+	db := mgr.db.Exec(sqlDeleteFiles, values...)
 
 	return db.RowsAffected, db.Error
 }
@@ -251,7 +258,8 @@ FROM "file_chunks"
 ORDER BY path, chunk_index;
 */
 func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, prefix string, precise bool) ([]RawFile, error) {
-	join1 := fmt.Sprintf(
+	join := strings.Builder{}
+	join.WriteString(
 		"INNER JOIN files f ON f.id = file_chunks.file_id " +
 			"AND f.dataset_name = ? " +
 			"AND f.workspace = ? " +
@@ -259,22 +267,23 @@ func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, prefix 
 	)
 	values := []interface{}{dataset, workspace, dsType}
 	if version != "" {
-		join1 = join1 + fmt.Sprintf(" AND version = ?")
+		join.WriteString(" AND version = ?")
 		values = append(values, version)
 	}
 	if prefix != "" {
 		if precise {
-			join1 = join1 + fmt.Sprintf(" AND f.path = ?")
+			join.WriteString(" AND f.path = ?")
 			values = append(values, prefix)
 		} else {
-			join1 = join1 + fmt.Sprintf(" AND f.path LIKE '%v%%'", prefix)
+			prefix = strings.Replace(prefix, "'", "''", -1)
+			join.WriteString(fmt.Sprintf(" AND f.path LIKE '%v%%'", prefix))
 		}
 	}
 	rawFiles := make([]RawFile, 0)
 	err := mgr.db.
 		Table("file_chunks").
 		Select(strings.Join(columns, ",")).
-		Joins(join1, values...).
+		Joins(join.String(), values...).
 		Joins("INNER JOIN chunks ON file_chunks.chunk_id = chunks.id").
 		Order(`path, chunk_index`).
 		Scan(&rawFiles).Error

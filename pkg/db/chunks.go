@@ -55,16 +55,22 @@ func (mgr *DatabaseMgr) CreateChunk(chunk *Chunk) error {
 }
 
 func (mgr *DatabaseMgr) ListChunksByHash(hashes []*RawFile) ([]*Chunk, error) {
-	where := bytes.NewBufferString("hash IN (")
-	ids := make([]string, 0)
+	where := strings.Builder{}
+	where.WriteString("hash IN (")
+
+	values := make([]interface{}, 0)
+	placeholders := strings.Repeat("?,", len(hashes))[:len(hashes)*2-1]
+
 	for _, h := range hashes {
-		ids = append(ids, fmt.Sprintf("'%v'", h.Hash))
+		values = append(values, h.Hash)
 	}
-	where.WriteString(strings.Join(ids, ","))
+
+	where.WriteString(placeholders)
 	where.WriteString(")")
+
 	chunks := make([]*Chunk, 0)
 	err := mgr.db.
-		Where(where.String()).
+		Where(where.String(), values...).
 		Find(&chunks).Error
 
 	hashMap := make(map[string]int)

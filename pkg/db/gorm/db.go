@@ -28,7 +28,7 @@ func InitFake(postCreate postCreateFunc, fname string) *gorm.DB {
 		logrus.Panic("Error configure sqlite database: ", err)
 	}
 	db = db.LogMode(false)
-	db.SetLogger(gorm.Logger{mainDBLogger{}})
+	db.SetLogger(gorm.Logger{LogWriter: mainDBLogger{}})
 	mainDB = db
 
 	if err := postCreate(mainDB); err != nil {
@@ -58,7 +58,7 @@ func InitMain(postCreate postCreateFunc) *gorm.DB {
 				logrus.Error(errC)
 			}
 			dbTemp = dbTemp.LogMode(true)
-			dbTemp.SetLogger(gorm.Logger{mainDBLogger{}})
+			dbTemp.SetLogger(gorm.Logger{LogWriter: mainDBLogger{}})
 			logrus.Infof("Trying to create database %v...", utils.DBName())
 			// Try create database
 			_, errC = dbTemp.DB().Exec(fmt.Sprintf("CREATE DATABASE %q", utils.DBName()))
@@ -88,7 +88,7 @@ func InitMain(postCreate postCreateFunc) *gorm.DB {
 		logrus.Panic("Error configure database: ", err)
 	}
 	db = db.LogMode(utils.DebugEnabled())
-	db.SetLogger(gorm.Logger{mainDBLogger{}})
+	db.SetLogger(gorm.Logger{LogWriter: mainDBLogger{}})
 	mainDB = db
 
 	if err := postCreate(mainDB); err != nil {

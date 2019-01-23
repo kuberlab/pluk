@@ -1,7 +1,5 @@
 package db
 
-import "fmt"
-
 type DatasetMgr interface {
 	CreateDataset(dataset *Dataset) error
 	UpdateDataset(dataset *Dataset) (*Dataset, error)
@@ -31,8 +29,8 @@ func (mgr *DatabaseMgr) UpdateDataset(dataset *Dataset) (*Dataset, error) {
 }
 
 func (mgr *DatabaseMgr) RecoverDataset(dataset *Dataset) error {
-	sql := fmt.Sprintf("UPDATE datasets SET deleted=? where name='%v' AND workspace='%v'", dataset.Name, dataset.Workspace)
-	return mgr.db.Exec(sql, false).Error
+	sql := "UPDATE datasets SET deleted=? where name=? AND type=? AND workspace=?"
+	return mgr.db.Exec(sql, false, dataset.Name, dataset.Type, dataset.Workspace).Error
 }
 
 func (mgr *DatabaseMgr) GetDataset(dsType, workspace, name string) (*Dataset, error) {
