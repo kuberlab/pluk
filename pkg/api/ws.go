@@ -59,7 +59,7 @@ func (api *API) wsReader(client *types.WebsocketClient) {
 				logrus.Error(err)
 				break
 			}
-			logrus.Debugf("Received 'ping' signal from websocket id '%v'", client.ID)
+			logrus.Infof("Received 'ping' signal from websocket id '%v'", client.ID)
 		}
 		//message := libtypes.Message{}
 		//err := client.Ws.ReadJSON(&message)
