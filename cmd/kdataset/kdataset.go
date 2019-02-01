@@ -21,73 +21,78 @@ const (
 )
 
 var (
-	configPath string
-	baseURL    string
-	insecure   bool
-	logLevel   string
-	debug      bool
-	entityType = &EntityType{Value: defaultEntityType}
+	configPath      string
+	baseURL         string
+	logLevel        string
+	token           string
+	workspace       string
+	workspaceSecret string
+	entityType      = &EntityType{Value: defaultEntityType}
+	insecure        bool
+	debug           bool
 )
+
+func overridePlukURL() {
+	if config.Config.BaseURL != "" && config.Config.PlukURL == "" {
+		u, err := url.Parse(config.Config.BaseURL)
+		if err != nil {
+			config.Config.PlukURL = defaultBaseURL
+		} else {
+			config.Config.PlukURL = fmt.Sprintf("%v://%v/pluk/v1", u.Scheme, u.Host)
+		}
+	}
+	if baseURL == "" && config.Config.PlukURL == "" {
+		config.Config.PlukURL = defaultBaseURL
+	}
+}
 
 func initConfig(cmd *cobra.Command, args []string) error {
 	initLogging()
 	// Expand the path
 	path := configPath
-	if configPath == defaultConfigPath {
+	config.InitConfigField(&path, configPath, "KUBERLAB_CONFIG", defaultConfigPath)
+	if strings.Contains(path, "~") {
 		u, _ := user.Current()
 		path = strings.Replace(defaultConfigPath, "~", u.HomeDir, -1)
 	}
 
-	overridePlukURL := func() {
-		if baseURL != "" {
-			config.Config.PlukURL = baseURL
-		}
-		if config.Config.BaseURL != "" && config.Config.PlukURL == "" {
-			u, err := url.Parse(config.Config.BaseURL)
-			if err != nil {
-				config.Config.PlukURL = defaultBaseURL
-			} else {
-				config.Config.PlukURL = fmt.Sprintf("%v://%v/pluk/v1", u.Scheme, u.Host)
-			}
-		}
-		if baseURL == "" && config.Config.PlukURL == "" {
-			config.Config.PlukURL = defaultBaseURL
-		}
-
-	}
 	_, err := os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
 		logrus.Errorln(err)
+		// Initialize empty config
 		config.Config = &config.DealerConfig{}
-		overridePlukURL()
-		return nil
+	} else {
+		err = config.InitConfig(path)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = config.InitConfig(path)
-	if err != nil {
-		return err
-	}
+	config.InitConfigField(&config.Config.Token, token, "KUBERLAB_TOKEN", "")
 
 	// Override workspace & secret if needed.
-	ws := os.Getenv("WORKSPACE_NAME")
-	secret := os.Getenv("WORKSPACE_SECRET")
-	if ws != "" && secret != "" {
-		config.Config.Workspace = ws
-		config.Config.WorkspaceSecret = secret
+	// But only if token is not provided
+	if config.Config.Token == "" {
+		config.InitConfigField(&config.Config.Workspace, workspace, "WORKSPACE_NAME", "")
+		config.InitConfigField(
+			&config.Config.WorkspaceSecret,
+			workspaceSecret,
+			"WORKSPACE_SECRET",
+			"",
+		)
 	}
 
 	insecureEnv := os.Getenv("KUBERLAB_INSECURE")
-	if strings.ToLower(insecureEnv) == "true" {
-		config.Config.Insecure = true
-	}
-	if insecure {
+	if strings.ToLower(insecureEnv) == "true" || insecure {
 		config.Config.Insecure = true
 	}
 
+	// Special rule for base pluke url
+	config.InitConfigField(&config.Config.PlukURL, baseURL, "PLUKE_URL", "")
 	overridePlukURL()
 
 	// check new version
-	// curl https://api.github.com/repos/kuberlab/pluk/tags
+	// curl https://api.github.com/repos/kuberlab/pluk/tags | jq .[0].name
 
 	return nil
 }
@@ -131,7 +136,10 @@ func newRootCmd() *cobra.Command {
 	// Declare common arguments.
 	p.StringVar(&logLevel, "log-level", defaultLogLevel, "Logging level. One of (debug, info, warning, error)")
 	p.BoolVarP(&debug, "debug", "", false, "Enable debug level (shortcut for --log-level=debug).")
-	p.StringVarP(&configPath, "config", "", defaultConfigPath, "Path to config file")
+	p.StringVarP(&configPath, "config", "", "", fmt.Sprintf("Path to config file. (default %v)", defaultConfigPath))
+	p.StringVarP(&token, "token", "t", "", "Kibernetika AI user token")
+	p.StringVarP(&workspace, "workspace", "", "", "Kibernetika AI workspace name (auth method)")
+	p.StringVarP(&workspaceSecret, "secret", "", "", "Kibernetika AI workspace secret (auth method)")
 	p.StringVar(&baseURL, "url", "", "Base url to dataset storage.")
 	p.BoolVarP(&insecure, "insecure", "", false, "Enable insecure SSL/TLS connection (skip verify).")
 	p.Var(entityType, "type", fmt.Sprintf("Choose entityType type for request: %v", plukclient.AllowedTypesList()))

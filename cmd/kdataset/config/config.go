@@ -2,10 +2,10 @@ package config
 
 import (
 	"io/ioutil"
-
-	"gopkg.in/yaml.v2"
+	"os"
 
 	"github.com/Sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 var Config *DealerConfig
@@ -17,6 +17,24 @@ type DealerConfig struct {
 	Workspace       string `yaml:"workspace"`
 	WorkspaceSecret string `yaml:"workspace_secret"`
 	Insecure        bool   `yaml:"insecure"`
+}
+
+func InitConfigField(field *string, cliValue, envVarName, defaultValue string) {
+	// 1. CLI value
+	if cliValue != "" {
+		*field = cliValue
+		return
+	}
+	// 2. Env value
+	envValue := os.Getenv(envVarName)
+	if envValue != "" {
+		*field = envValue
+		return
+	}
+	// 3. Default value if not set
+	if *field == "" {
+		*field = defaultValue
+	}
 }
 
 // InitConfig loads Config from the given path.
@@ -35,7 +53,7 @@ func InitConfig(filepath string) error {
 	return nil
 }
 
-// Load reads data, deserializes it as KruegerConfig and assign as the global Config.
+// Load reads data, deserialize it as DealerConfig and assign as the global Config.
 func Load(data []byte) error {
 	cfg := DealerConfig{}
 	if err := yaml.Unmarshal(data, &cfg); err != nil {

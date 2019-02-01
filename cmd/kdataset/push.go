@@ -5,6 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/Sirupsen/logrus"
 	chunk_io "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
@@ -12,12 +19,6 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/semaphore"
 	"gopkg.in/cheggaaa/pb.v1"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 type pushCmd struct {

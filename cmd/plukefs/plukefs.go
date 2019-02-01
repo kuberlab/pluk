@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
@@ -14,7 +15,6 @@ import (
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
 	"github.com/spf13/cobra"
-	"os/signal"
 )
 
 const (
