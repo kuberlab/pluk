@@ -25,6 +25,7 @@ type API struct {
 	fsCache *utils.RequestCache
 	client  *http.Client
 	hub     *types.Hub
+	watcher *Watcher
 
 	lock      sync.RWMutex
 	saveLocks map[string]*sync.RWMutex
@@ -134,6 +135,7 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	// Websocket
 	ws.Route(ws.GET("/websocket").To(api.websocket))
 	ws.Route(ws.GET("/websocket/connections").To(api.wsConnections))
+	ws.Route(ws.GET("/websocket/messages").To(api.lastReceivedMessages))
 
 	// admin
 	ws.Route(ws.GET("/admin/gc").To(api.runGC))

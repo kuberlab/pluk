@@ -7,6 +7,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/gorilla/websocket"
+	libtypes "github.com/kuberlab/lib/pkg/types"
 	"github.com/kuberlab/pluk/pkg/types"
 )
 
@@ -40,6 +41,18 @@ func (api API) websocket(req *restful.Request, resp *restful.Response) {
 
 func (api *API) wsConnections(req *restful.Request, resp *restful.Response) {
 	resp.WriteEntity(api.hub.Connections())
+}
+
+func (api *API) lastReceivedMessages(req *restful.Request, resp *restful.Response) {
+	response := make(chan []libtypes.Message, 1)
+	if api.watcher == nil {
+		resp.WriteEntity([]string{})
+		return
+	}
+	api.watcher.getLast <- &Req{Messages: response}
+
+	messages := <-response
+	resp.WriteEntity(messages)
 }
 
 func (api *API) wsReader(client *types.WebsocketClient) {

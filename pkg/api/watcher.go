@@ -26,26 +26,33 @@ const (
 	sleepLimit = 10
 )
 
+type Req struct {
+	Messages chan []libtypes.Message
+}
+
 type Watcher struct {
-	attempt int
-	master  string
-	mode    string
-	api     *API
-	conn    *websocket.Conn
-	queue   chan *libtypes.Message
+	attempt      int
+	master       string
+	mode         string
+	api          *API
+	conn         *websocket.Conn
+	queue        chan *libtypes.Message
+	lastMessages []libtypes.Message
+	getLast      chan *Req
 }
 
 func (api *API) StartWatcher() {
 	// Start watcher for masters
 	if len(utils.Masters()) > 0 {
-		watcher := &Watcher{
-			master: utils.Masters()[0],
-			mode:   "connect",
-			queue:  make(chan *libtypes.Message, 10),
-			api:    api,
+		api.watcher = &Watcher{
+			master:  utils.Masters()[0],
+			mode:    "connect",
+			queue:   make(chan *libtypes.Message, 10),
+			api:     api,
+			getLast: make(chan *Req, 2),
 		}
-		go watcher.runWatcher()
-		go watcher.processQueue()
+		go api.watcher.runWatcher()
+		go api.watcher.processQueue()
 	}
 }
 
@@ -177,61 +184,71 @@ func (w *Watcher) receive() (*libtypes.Message, error) {
 }
 
 func (w *Watcher) processQueue() {
-	for m := range w.queue {
-		switch m.Type {
-		case "dataset":
-			ds := &types.Dataset{}
-			err := utils.LoadAsJson(m.Content.(map[string]interface{}), ds)
-			if err != nil {
-				logrus.Error(err)
-				break
-			}
-			acquireConcurrency()
 
-			// Delete dataset
-			logrus.Infof("[Watcher] Delete %v %v/%v", ds.DType, ds.Workspace, ds.Name)
-			_ = w.api.ds.DeleteDataset(ds.DType, ds.Workspace, ds.Name, nil, true)
-			w.api.invalidateCache(&datasets.Dataset{
-				Dataset: &db.Dataset{
-					Name:      ds.Name,
-					Type:      ds.DType,
-					Workspace: ds.Workspace,
-				},
-			})
-			releaseConcurrency()
-		case "dataset_version":
-			dsv := &types.Version{}
-			err := utils.LoadAsJson(m.Content.(map[string]interface{}), dsv)
-			if err != nil {
-				logrus.Error(err)
-				break
+	for {
+		select {
+		case req := <-w.getLast:
+			req.Messages <- w.lastMessages
+		case m := <-w.queue:
+			w.lastMessages = append(w.lastMessages, *m)
+			if len(w.lastMessages) > 5 {
+				w.lastMessages = w.lastMessages[1:]
 			}
-			acquireConcurrency()
+			switch m.Type {
+			case "dataset":
+				ds := &types.Dataset{}
+				err := utils.LoadAsJson(m.Content.(map[string]interface{}), ds)
+				if err != nil {
+					logrus.Error(err)
+					break
+				}
+				acquireConcurrency()
 
-			// Delete version
-			logrus.Infof("[Watcher] Delete %v version %v/%v:%v", dsv.DType, dsv.Workspace, dsv.Name, dsv.Version)
-			ds := &datasets.Dataset{
-				Dataset: &db.Dataset{
-					Name:      dsv.Name,
-					Type:      dsv.DType,
-					Workspace: dsv.Workspace,
-				},
-			}
-			w.api.invalidateVersionCache(ds, dsv.Version)
-			dataset, err := w.api.ds.GetDataset(dsv.DType, dsv.Workspace, dsv.Name, nil)
-			if err != nil {
+				// Delete dataset
+				logrus.Infof("[Watcher] Delete %v %v/%v", ds.DType, ds.Workspace, ds.Name)
+				_ = w.api.ds.DeleteDataset(ds.DType, ds.Workspace, ds.Name, nil, true)
+				w.api.invalidateCache(&datasets.Dataset{
+					Dataset: &db.Dataset{
+						Name:      ds.Name,
+						Type:      ds.DType,
+						Workspace: ds.Workspace,
+					},
+				})
 				releaseConcurrency()
-				logrus.Errorf("[Watcher] %v %v/%v not found: %v", dsv.DType, dsv.Workspace, dsv.Name, err)
-				return
-			}
+			case "dataset_version":
+				dsv := &types.Version{}
+				err := utils.LoadAsJson(m.Content.(map[string]interface{}), dsv)
+				if err != nil {
+					logrus.Error(err)
+					break
+				}
+				acquireConcurrency()
 
-			err = dataset.DeleteVersion(dsv.Version, true)
-			if err != nil {
+				// Delete version
+				logrus.Infof("[Watcher] Delete %v version %v/%v:%v", dsv.DType, dsv.Workspace, dsv.Name, dsv.Version)
+				ds := &datasets.Dataset{
+					Dataset: &db.Dataset{
+						Name:      dsv.Name,
+						Type:      dsv.DType,
+						Workspace: dsv.Workspace,
+					},
+				}
+				w.api.invalidateVersionCache(ds, dsv.Version)
+				dataset, err := w.api.ds.GetDataset(dsv.DType, dsv.Workspace, dsv.Name, nil)
+				if err != nil {
+					releaseConcurrency()
+					logrus.Errorf("[Watcher] %v %v/%v not found: %v", dsv.DType, dsv.Workspace, dsv.Name, err)
+					return
+				}
+
+				err = dataset.DeleteVersion(dsv.Version, true)
+				if err != nil {
+					releaseConcurrency()
+					logrus.Errorf("[Watcher] %v", err)
+					return
+				}
 				releaseConcurrency()
-				logrus.Errorf("[Watcher] %v", err)
-				return
 			}
-			releaseConcurrency()
 		}
 	}
 }
