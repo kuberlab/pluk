@@ -1,5 +1,5 @@
 hash: 3d0c9746292de42ba9e7d043bd5761e7b97d03f9bc7b12818462ff4f918b8109
-updated: 2018-12-21T00:04:17.683042117+04:00
+updated: 2019-02-05T19:18:46.629815867+04:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -49,7 +49,7 @@ imports:
 - name: github.com/konsorten/go-windows-terminal-sequences
   version: 5c8c8bd35d3832f5d134ae1e1e375b69a4d25242
 - name: github.com/kuberlab/lib
-  version: e1a3b65cdc809a31ce7e660fae3450a2b6e35110
+  version: 0c37fad259ebe1d8b53c27e4b1e6c70ce5825e37
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/dealerclient
@@ -69,6 +69,10 @@ imports:
   - jwriter
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
+- name: github.com/mattn/go-colorable
+  version: efa589957cd060542a26d2dd7832fd6a6c6c3ade
+- name: github.com/mattn/go-isatty
+  version: 3fb116b820352b7f0c281308a4d6250c22d94e27
 - name: github.com/mattn/go-runewidth
   version: c88d7e5f2e24de48a200a2655ac8a0910be9a0f7
 - name: github.com/mattn/go-sqlite3
@@ -94,10 +98,8 @@ imports:
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
-  - context
   - idna
   - webdav
-  - webdav/internal/xml
 - name: golang.org/x/sync
   version: 42b317875d0fa942474b76e1b46a6060d720ae6e
   subpackages:
@@ -129,10 +131,22 @@ imports:
   version: 007b75a044e968336a69a6c0c617251ab62ac14c
 - name: gopkg.in/cheggaaa/pb.v2
   version: c112833d014c77e8bde723fd0158e3156951639f
+  subpackages:
+  - termutil
+- name: gopkg.in/fatih/color.v1
+  version: 5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
+- name: gopkg.in/mattn/go-colorable.v0
+  version: efa589957cd060542a26d2dd7832fd6a6c6c3ade
+- name: gopkg.in/mattn/go-isatty.v0
+  version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
+- name: gopkg.in/mattn/go-runewidth.v0
+  version: 3ee7d812e62a0804a7d0a324e0249ca2db3476d3
 - name: gopkg.in/robfig/cron.v2
   version: be2e0b0deed5a68ffee390b4583a13aff8321535
+- name: gopkg.in/VividCortex/ewma.v1
+  version: b24eb346a94c3ba12c1da1e564dbac1b498a77ce
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/apimachinery

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	chunk_io "github.com/kuberlab/pluk/pkg/io"
@@ -200,6 +201,7 @@ func (cmd *pushCmd) run() error {
 
 	logrus.Debug("Run push...")
 	var totalSize int64 = 0
+	var fileCount int64 = 0
 
 	// Populate all files size.
 	err = filepath.Walk(cwd, func(path string, f os.FileInfo, err error) error {
@@ -218,15 +220,23 @@ func (cmd *pushCmd) run() error {
 			}
 		}
 		totalSize += f.Size()
+		fileCount++
 		return nil
 	})
 
-	bar := pb.New64(totalSize).SetUnits(pb.U_BYTES)
-	bar.SetMaxWidth(100)
+	// Bar bytes
+	bar := pb.New64(totalSize).SetUnits(pb.U_BYTES).SetMaxWidth(100)
 	bar.ShowSpeed = true
-	bar.Start()
 
-	structure, err := cmd.uploadChunks(bar, client, !cmd.skipUpload)
+	// Bar files
+	barFiles := pb.New64(fileCount).SetUnits(pb.U_NO).SetMaxWidth(100)
+	barFiles.ShowSpeed = true
+
+	pool, err := pb.StartPool(bar, barFiles)
+	pool.RefreshRate = 150 * time.Millisecond
+
+	structure, err := cmd.uploadChunks(bar, barFiles, client, !cmd.skipUpload)
+	_ = pool.Stop()
 	// finally, commit file structure.
 	logrus.Debugf("File structure: %v", structure)
 	logrus.Info("Committing FS structure...")
@@ -255,7 +265,7 @@ func (cmd *pushCmd) run() error {
 	return nil
 }
 
-func (cmd *pushCmd) uploadChunks(bar *pb.ProgressBar, client chunk_io.PlukClient, upload bool) (structure types.FileStructure, err error) {
+func (cmd *pushCmd) uploadChunks(bar, barFiles *pb.ProgressBar, client chunk_io.PlukClient, upload bool) (structure types.FileStructure, err error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		logrus.Fatal(err)
@@ -362,6 +372,7 @@ func (cmd *pushCmd) uploadChunks(bar *pb.ProgressBar, client chunk_io.PlukClient
 
 		}
 		file.Close()
+		barFiles.Increment()
 		logrus.Debugf("Whole file size = %v", hashed.Size)
 		structure.Files = append(structure.Files, hashed)
 		return nil
