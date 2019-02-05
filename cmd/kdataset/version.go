@@ -10,7 +10,7 @@ type Version struct {
 	goCompiler string
 }
 
-var VersionStr = "2.1.2"
+var VersionStr = "2.1.3"
 
 func (v Version) String() string {
 	return fmt.Sprintf("%v", v.version)
