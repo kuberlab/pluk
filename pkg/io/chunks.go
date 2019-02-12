@@ -44,7 +44,7 @@ func CheckChunk(hash string, version byte) (*types.ChunkCheck, error) {
 
 	// Check chunk on master
 	if utils.HasMasters() {
-		check, err := MasterClient.CheckChunk(hash, version, 0)
+		check, err := MasterClient.CheckChunk(hash, version)
 		if err != nil {
 			return nil, err
 		}
@@ -164,7 +164,7 @@ func SaveChunk(hash string, version byte, data io.ReadCloser, sendToMaster bool)
 
 	if utils.HasMasters() && sendToMaster {
 		// TODO: decide whether it can go in async
-		return MasterClient.SaveChunk(hash, buf.Bytes(), version, 0)
+		return MasterClient.SaveChunk(hash, buf.Bytes(), version)
 	}
 	//logrus.Debugf("Save complete! %v", time.Since(t))
 	return nil

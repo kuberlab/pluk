@@ -10,15 +10,26 @@ import (
 	plukio "github.com/kuberlab/pluk/pkg/io"
 )
 
-func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
-	hash := req.PathParameter("hash")
+func (api *API) chunkVersion(req *restful.Request) byte {
 	versionRaw := req.PathParameter("version")
+	// Faster
+	if versionRaw == "1" {
+		return 1
+	}
+	if versionRaw == "" {
+		return 0
+	}
 	var version int64 = 0
 	if versionRaw != "" {
 		version, _ = strconv.ParseInt(versionRaw, 10, 8)
 	}
+	return byte(version)
+}
 
-	chunkCheck, err := plukio.CheckChunk(hash, byte(version))
+func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
+	hash := req.PathParameter("hash")
+
+	chunkCheck, err := plukio.CheckChunk(hash, api.chunkVersion(req))
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -28,12 +39,7 @@ func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
 
 func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
-	versionRaw := req.PathParameter("version")
-	var version int64 = 0
-	if versionRaw != "" {
-		version, _ = strconv.ParseInt(versionRaw, 10, 8)
-	}
-	file, err := plukio.GetChunkByHash(hash, byte(version))
+	file, err := plukio.GetChunkByHash(hash, api.chunkVersion(req))
 	if err != nil {
 		WriteStatusError(resp, http.StatusNotFound, err)
 		return
@@ -49,13 +55,8 @@ func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
 
 func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
-	versionRaw := req.PathParameter("version")
-	var version int64 = 0
-	if versionRaw != "" {
-		version, _ = strconv.ParseInt(versionRaw, 10, 8)
-	}
 
-	if err := plukio.SaveChunk(hash, byte(version), req.Request.Body, true); err != nil {
+	if err := plukio.SaveChunk(hash, api.chunkVersion(req), req.Request.Body, true); err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}

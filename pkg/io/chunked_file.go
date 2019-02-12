@@ -17,7 +17,7 @@ import (
 )
 
 type PlukClient interface {
-	CheckChunk(hash string, version byte, pos uint) (*types.ChunkCheck, error)
+	CheckChunk(hash string, version byte) (*types.ChunkCheck, error)
 	CheckEntityPermission(entityType, workspace, name string, write bool) (*types.Dataset, error)
 	CheckEntityExists(entityType, workspace, name string) (*types.Dataset, error)
 	CheckWorkspace(workspace string) (*types.Workspace, error)
@@ -41,8 +41,8 @@ type PlukClient interface {
 	DownloadFile(entityType, workspace, entityName, version, fileName string) (io.ReadCloser, error)
 	DeleteFile(entityType, workspace, entityName, version, fileName string) error
 
-	SaveChunk(hash string, data []byte, version byte, pos uint) error
-	SaveChunkReader(hash string, reader io.Reader, version byte, pos uint) error
+	SaveChunk(hash string, data []byte, version byte) error
+	SaveChunkReader(hash string, reader io.Reader, version byte) error
 	SaveFileStructure(structure types.FileStructure,
 		entityType, workspace, name, version, comment string, create bool, publish bool) error
 	WebdavAuth(user, pass, path string) (bool, error)

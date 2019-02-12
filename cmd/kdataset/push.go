@@ -301,7 +301,7 @@ func (cmd *pushCmd) uploadChunks(bar, barFiles *pb.ProgressBar, client chunk_io.
 		//if cmd.websocket {
 		//	resp, err = client.CheckChunkWebsocket(hash)
 		//} else {
-		resp, err = client.CheckChunk(hash, 1, 0)
+		resp, err = client.CheckChunk(hash, 1)
 		//}
 		if err != nil {
 			logrus.Fatalf("Failed to check chunk: %v", err)
@@ -314,7 +314,7 @@ func (cmd *pushCmd) uploadChunks(bar, barFiles *pb.ProgressBar, client chunk_io.
 			//		os.Exit(1)
 			//	}
 			//} else {
-			if err = client.SaveChunkReader(hash, chReader, 1, 0); err != nil {
+			if err = client.SaveChunkReader(hash, chReader, 1); err != nil {
 				logrus.Fatalf("Failed to upload chunk: %v", err)
 			}
 			//}
@@ -324,6 +324,7 @@ func (cmd *pushCmd) uploadChunks(bar, barFiles *pb.ProgressBar, client chunk_io.
 		return
 	}
 
+	logrus.Infof("Computing files count and estimate directory space...")
 	err = filepath.Walk(cwd, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			return err

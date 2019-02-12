@@ -1,6 +1,8 @@
 package fuse
 
 import (
+	"io"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/hanwen/go-fuse/fuse/nodefs"
@@ -66,7 +68,9 @@ func newResultData(f *plukio.ChunkedFile, buf []byte, off int64) fuse.ReadResult
 	// READ 500
 	n, err := f.SeekAndRead(buf, off)
 	if err != nil {
-		logrus.Errorf("Read error: %v", err)
+		if err != io.EOF {
+			logrus.Errorf("Read error: %v", err)
+		}
 		return &ResultData{buf, n}
 	}
 	return &ResultData{buf, n}
