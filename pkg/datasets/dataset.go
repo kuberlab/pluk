@@ -175,6 +175,7 @@ func receiveFileToSave(tx db.DataMgr, dsv *db.DatasetVersion, fileChannel chan *
 					Hash:       h.Hash,
 					ChunkIndex: uint(i),
 					Path:       f.Path,
+					Version:    h.Version,
 				}
 				if _, ok := fileMap[f.Path]; !ok {
 					fileMap[f.Path] = []*db.RawFile{chunk}
@@ -421,8 +422,8 @@ func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error
 			ModeTime: f.ModTime,
 		}
 		for _, chunk := range f.Chunks {
-			hash := utils.GetHashFromPath(chunk.Path)
-			file.Hashes = append(file.Hashes, types.Hash{Hash: hash, Size: chunk.Size})
+			hash, version := utils.GetHashFromPath(chunk.Path)
+			file.Hashes = append(file.Hashes, types.Hash{Hash: hash, Size: chunk.Size, Version: version})
 		}
 		dest.Files = append(dest.Files, &file)
 		return nil
@@ -565,24 +566,6 @@ func (d *Dataset) CloneVersionTo(target *Dataset, version, targetVersion, messag
 		tx, target.Type, target.Workspace,
 		target.Name, targetVersion, "", false, false,
 	)
-
-	//tmpMgr := d.mgr
-	//d.mgr = tx
-	//fs, err := d.GetFSStructure(version)
-	//if err != nil {
-	//	d.mgr = tmpMgr
-	//	return nil, err
-	//}
-	//fmt.Println("get FS ok")
-	//endTx()
-	//err = target.SaveFSLocally(fs, targetVersion)
-	//if err != nil {
-	//	d.mgr = tmpMgr
-	//	return nil, err
-	//}
-	//fmt.Println("save FS ok")
-	//d.mgr = tmpMgr
-	//return d.mgr.GetDatasetVersion(target.Type, target.Workspace, target.Name, targetVersion)
 
 	files, err := tx.ListFiles(
 		db.File{

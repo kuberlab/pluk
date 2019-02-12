@@ -465,8 +465,8 @@ func (c *Client) DeleteFile(entityType, workspace, entityName, version, fileName
 	return err
 }
 
-func (c *Client) CheckChunk(hash string) (*types.ChunkCheck, error) {
-	u := fmt.Sprintf("/chunks/%v", hash)
+func (c *Client) CheckChunk(hash string, version byte, pos uint) (*types.ChunkCheck, error) {
+	u := fmt.Sprintf("/chunks/%v/%v/%v", hash, version, pos)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {
@@ -532,8 +532,8 @@ func (c *Client) GetFSStructure(entityType, workspace, name, version string) (*p
 	return fs, nil
 }
 
-func (c *Client) SaveChunk(hash string, data []byte) error {
-	u := fmt.Sprintf("/chunks/%v", hash)
+func (c *Client) SaveChunk(hash string, data []byte, version byte, pos uint) error {
+	u := fmt.Sprintf("/chunks/%v/%v/%v", hash, version, pos)
 
 	req, err := c.NewRequest("POST", u, nil)
 	if err != nil {
@@ -549,8 +549,8 @@ func (c *Client) SaveChunk(hash string, data []byte) error {
 	return err
 }
 
-func (c *Client) SaveChunkReader(hash string, reader io.Reader) error {
-	u := fmt.Sprintf("/chunks/%v", hash)
+func (c *Client) SaveChunkReader(hash string, reader io.Reader, version byte, pos uint) error {
+	u := fmt.Sprintf("/chunks/%v/%v/%v", hash, version, pos)
 
 	req, err := c.NewRequest("POST", u, nil)
 	if err != nil {

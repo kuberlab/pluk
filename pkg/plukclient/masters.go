@@ -258,12 +258,12 @@ func (c *MultiMasterClient) EntityTarSize(entityType, workspace, name, version s
 	return res, err
 }
 
-func (c *MultiMasterClient) SaveChunk(hash string, data []byte) (err error) {
+func (c *MultiMasterClient) SaveChunk(hash string, data []byte, version byte, pos uint) (err error) {
 	for i, cl := range c.baseClients {
 		if err != nil {
 			return err
 		}
-		err = cl.SaveChunk(hash, data)
+		err = cl.SaveChunk(hash, data, version, pos)
 		if err != nil {
 			logrus.Errorf("Failed save chunk to %v", c.Masters[i])
 			return
@@ -272,12 +272,12 @@ func (c *MultiMasterClient) SaveChunk(hash string, data []byte) (err error) {
 	return err
 }
 
-func (c *MultiMasterClient) SaveChunkReader(hash string, reader io.Reader) (err error) {
+func (c *MultiMasterClient) SaveChunkReader(hash string, reader io.Reader, version byte, pos uint) (err error) {
 	for i, cl := range c.baseClients {
 		if err != nil {
 			return err
 		}
-		err = cl.SaveChunkReader(hash, reader)
+		err = cl.SaveChunkReader(hash, reader, version, pos)
 		if err != nil {
 			logrus.Errorf("Failed save chunk to %v", c.Masters[i])
 			return
@@ -343,12 +343,12 @@ func (c *MultiMasterClient) SaveFileStructure(structure types.FileStructure,
 	return err
 }
 
-func (c *MultiMasterClient) CheckChunk(hash string) (res *types.ChunkCheck, err error) {
+func (c *MultiMasterClient) CheckChunk(hash string, version byte, pos uint) (res *types.ChunkCheck, err error) {
 	for _, cl := range c.baseClients {
 		if err != nil {
 			return nil, err
 		}
-		res, err = cl.CheckChunk(hash)
+		res, err = cl.CheckChunk(hash, version, pos)
 		if err != nil {
 			continue
 		}

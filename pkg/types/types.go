@@ -99,8 +99,9 @@ type HashedFile struct {
 }
 
 type Hash struct {
-	Hash string `json:"hash"`
-	Size int64  `json:"size"`
+	Hash    string `json:"hash"`
+	Size    int64  `json:"size"`
+	Version byte   `json:"version"`
 }
 
 type ChunkCheck struct {

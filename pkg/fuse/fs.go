@@ -113,16 +113,16 @@ func (fs *PlukeFS) OpenDir(name string, context *fuse.Context) (stream []fuse.Di
 	name = "/" + name
 
 	//t := time.Now()
-	infos, err := fs.innerFS.Readdir(name, 0)
+	files, err := fs.innerFS.ReaddirFiles(name, 0)
 	//fmt.Println("OPENDIR", name, time.Since(t))
 	if err != nil {
 		return nil, fuse.ENODATA
 	}
 	res := make([]fuse.DirEntry, 0)
-	for _, info := range infos {
+	for _, f := range files {
 		e := fuse.DirEntry{
-			Mode: uint32(info.Mode()),
-			Name: info.Name(),
+			Mode: uint32(f.Mode),
+			Name: f.Name,
 		}
 		res = append(res, e)
 	}

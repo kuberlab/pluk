@@ -137,7 +137,7 @@ func TestPushFewFiles(t *testing.T) {
 	utils.Assert(fileNum, len(fs), t)
 }
 
-func TestPushManyFiles(t *testing.T) {
+func TestPushManyFilesVersion1(t *testing.T) {
 	fname := getFname()
 	setup(fname)
 	dbPrepare(t)
@@ -145,12 +145,12 @@ func TestPushManyFiles(t *testing.T) {
 
 	// Build file structure
 	structure := &types.FileStructure{Files: make([]*types.HashedFile, 0)}
-	fileNum := 250
+	fileNum := 100
 	for i := 0; i < fileNum; i++ {
 		data := fmt.Sprintf("test%v test%v", i, i)
 		hash := utils.CalcHash([]byte(data))
 		// Upload chunk
-		url := buildURL(fmt.Sprintf("chunks/%v", hash))
+		url := buildURL(fmt.Sprintf("chunks/%v/1/0", hash))
 		resp, err := client.Post(url, "application/json", bytes.NewBufferString(data))
 		if err != nil {
 			t.Fatal(err)
@@ -161,7 +161,7 @@ func TestPushManyFiles(t *testing.T) {
 			Size:     int64(len(data)),
 			Path:     fmt.Sprintf("file%v.txt", i),
 			Mode:     0644,
-			Hashes:   []types.Hash{{Hash: hash, Size: int64(len(data))}},
+			Hashes:   []types.Hash{{Hash: hash, Size: int64(len(data)), Version: 1}},
 			ModeTime: time.Now().Add(-time.Hour),
 		}
 		structure.Files = append(structure.Files, hashed)

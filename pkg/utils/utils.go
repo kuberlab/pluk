@@ -177,16 +177,28 @@ func CalcHash(data []byte) string {
 	return fmt.Sprintf("%x", sum[:])
 }
 
-func GetHashedFilename(hash string) string {
-	hashDir := hash[:ChunkDirLength]
-	hashFile := hash[ChunkDirLength:]
-	return fmt.Sprintf("%v/%v/%v", DataDir(), hashDir, hashFile)
+func GetHashedFilename(hash string, version byte) string {
+	if version == 0 {
+		hashDir := hash[:ChunkDirLength]
+		hashFile := hash[ChunkDirLength:]
+		return fmt.Sprintf("%v/%v/%v", DataDir(), hashDir, hashFile)
+	} else if version == 1 {
+		return fmt.Sprintf("%v/%v/%v/%v/%v", DataDir(), hash[:2], hash[2:4], hash[4:6], hash[6:])
+	} else {
+		return ""
+	}
 }
 
-func GetHashFromPath(path string) string {
-	hash := strings.TrimPrefix(path, DataDir())
+func GetHashFromPath(path string) (hash string, version byte) {
+	hash = strings.TrimPrefix(path, DataDir())
+	cnt := strings.Count(hash, "/")
+	if cnt > 2 {
+		version = 1
+	} else {
+		version = 0
+	}
 	hash = strings.Replace(hash, "/", "", -1)
-	return hash
+	return
 }
 
 func PrintEnvInfo() {

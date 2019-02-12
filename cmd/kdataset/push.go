@@ -34,7 +34,7 @@ type pushCmd struct {
 	force       bool
 	publish     bool
 	skipUpload  bool
-	websocket   bool
+	//websocket   bool
 }
 
 func NewPushCmd() *cobra.Command {
@@ -119,13 +119,13 @@ func NewPushCmd() *cobra.Command {
 		false,
 		"Force uploading regardless warnings.",
 	)
-	f.BoolVarP(
-		&push.websocket,
-		"websocket",
-		"w",
-		false,
-		"Use websocket for connecting to server. Decreases the number of requests.",
-	)
+	//f.BoolVarP(
+	//	&push.websocket,
+	//	"websocket",
+	//	"w",
+	//	false,
+	//	"Use websocket for connecting to server. Decreases the number of requests.",
+	//)
 
 	return cmd
 }
@@ -192,11 +192,11 @@ func (cmd *pushCmd) run() error {
 		}
 	}
 
-	if cmd.websocket {
-		if err = client.PrepareWebsocket(); err != nil {
-			logrus.Fatal(err)
-		}
-	}
+	//if cmd.websocket {
+	//	if err = client.PrepareWebsocket(); err != nil {
+	//		logrus.Fatal(err)
+	//	}
+	//}
 	defer client.Close()
 
 	logrus.Debug("Run push...")
@@ -273,11 +273,11 @@ func (cmd *pushCmd) uploadChunks(bar, barFiles *pb.ProgressBar, client chunk_io.
 
 	structure = types.FileStructure{Files: make([]*types.HashedFile, 0)}
 	var sem *semaphore.Weighted
-	if cmd.websocket {
-		sem = semaphore.NewWeighted(1)
-	} else {
-		sem = semaphore.NewWeighted(cmd.concurrency)
-	}
+	//if cmd.websocket {
+	//	sem = semaphore.NewWeighted(1)
+	//} else {
+	sem = semaphore.NewWeighted(cmd.concurrency)
+	//}
 	//lock := &sync.RWMutex{}
 	ctx := context.TODO()
 
@@ -291,32 +291,33 @@ func (cmd *pushCmd) uploadChunks(bar, barFiles *pb.ProgressBar, client chunk_io.
 		}()
 
 		if !upload {
+			bar.Add(len(chunkData))
 			return
 		}
 
 		rd := bytes.NewReader(chunkData)
 		chReader := io.TeeReader(rd, bar)
 
-		if cmd.websocket {
-			resp, err = client.CheckChunkWebsocket(hash)
-		} else {
-			resp, err = client.CheckChunk(hash)
-		}
+		//if cmd.websocket {
+		//	resp, err = client.CheckChunkWebsocket(hash)
+		//} else {
+		resp, err = client.CheckChunk(hash, 1, 0)
+		//}
 		if err != nil {
 			logrus.Fatalf("Failed to check chunk: %v", err)
 		}
 		if !resp.Exists || resp.Size != int64(len(chunkData)) {
 			// Upload chunk.
-			if cmd.websocket {
-				if err = client.SaveChunkWebsocket(hash, chunkData); err != nil {
-					logrus.Errorf("Failed to upload chunk: %v", err)
-					os.Exit(1)
-				}
-			} else {
-				if err = client.SaveChunkReader(hash, chReader); err != nil {
-					logrus.Fatalf("Failed to upload chunk: %v", err)
-				}
+			//if cmd.websocket {
+			//	if err = client.SaveChunkWebsocket(hash, chunkData); err != nil {
+			//		logrus.Errorf("Failed to upload chunk: %v", err)
+			//		os.Exit(1)
+			//	}
+			//} else {
+			if err = client.SaveChunkReader(hash, chReader, 1, 0); err != nil {
+				logrus.Fatalf("Failed to upload chunk: %v", err)
 			}
+			//}
 		} else {
 			bar.Add(len(chunkData))
 		}
@@ -368,7 +369,7 @@ func (cmd *pushCmd) uploadChunks(bar, barFiles *pb.ProgressBar, client chunk_io.
 
 			length := int64(len(chunkData))
 			hashed.Size += length
-			hashed.Hashes = append(hashed.Hashes, types.Hash{Hash: hash, Size: length})
+			hashed.Hashes = append(hashed.Hashes, types.Hash{Hash: hash, Size: length, Version: 1})
 
 		}
 		file.Close()
@@ -379,11 +380,11 @@ func (cmd *pushCmd) uploadChunks(bar, barFiles *pb.ProgressBar, client chunk_io.
 	})
 
 	// Wait for all.
-	if cmd.websocket {
-		sem.Acquire(ctx, 1)
-	} else {
-		sem.Acquire(ctx, cmd.concurrency)
-	}
+	//if cmd.websocket {
+	//	sem.Acquire(ctx, 1)
+	//} else {
+	sem.Acquire(ctx, cmd.concurrency)
+	//}
 
 	if err != nil {
 		bar.Finish()

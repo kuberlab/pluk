@@ -17,8 +17,7 @@ import (
 )
 
 type PlukClient interface {
-	CheckChunk(hash string) (*types.ChunkCheck, error)
-	CheckChunkWebsocket(hash string) (res *types.ChunkCheck, err error)
+	CheckChunk(hash string, version byte, pos uint) (*types.ChunkCheck, error)
 	CheckEntityPermission(entityType, workspace, name string, write bool) (*types.Dataset, error)
 	CheckEntityExists(entityType, workspace, name string) (*types.Dataset, error)
 	CheckWorkspace(workspace string) (*types.Workspace, error)
@@ -37,15 +36,13 @@ type PlukClient interface {
 	CreateEntity(entityType, workspace, name string) (*types.Dataset, error)
 	CreateVersion(entityType, workspace, name, version string) (*types.Version, error)
 	ListVersions(entityType, workspace, datasetName string) (*types.VersionList, error)
-	PrepareWebsocket() error
 
 	UploadFile(entityType, workspace, entityName, version, fileName string, body io.ReadCloser) (*types.HashedFile, error)
 	DownloadFile(entityType, workspace, entityName, version, fileName string) (io.ReadCloser, error)
 	DeleteFile(entityType, workspace, entityName, version, fileName string) error
 
-	SaveChunk(hash string, data []byte) error
-	SaveChunkReader(hash string, reader io.Reader) error
-	SaveChunkWebsocket(hash string, data []byte) error
+	SaveChunk(hash string, data []byte, version byte, pos uint) error
+	SaveChunkReader(hash string, reader io.Reader, version byte, pos uint) error
 	SaveFileStructure(structure types.FileStructure,
 		entityType, workspace, name, version, comment string, create bool, publish bool) error
 	WebdavAuth(user, pass, path string) (bool, error)
@@ -62,8 +59,11 @@ type ChunkedFileFS struct {
 }
 
 func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
-
-	absname = strings.TrimPrefix(absname, "/")
+	// Inline function strings.TrimPrefix
+	//absname = strings.TrimPrefix(absname, "/")
+	if len(absname) >= 1 && absname[:1] == "/" {
+		absname = absname[1:]
+	}
 	dirname := filepath.Dir(absname)
 	filename := filepath.Base(absname)
 
@@ -101,7 +101,10 @@ func (fs *ChunkedFileFS) GetDir(dirname string) *ChunkedFileFS {
 		return fs
 	}
 
-	dirname = strings.TrimPrefix(dirname, "/")
+	//dirname = strings.TrimPrefix(dirname, "/")
+	if len(dirname) >= 1 && dirname[:1] == "/" {
+		dirname = dirname[1:]
+	}
 	splitted := strings.Split(dirname, "/")
 	curDir := fs
 	if dirname == "" {
@@ -184,8 +187,38 @@ func (fs *ChunkedFileFS) Clone() *ChunkedFileFS {
 	return cloned
 }
 
+func (fs *ChunkedFileFS) ReaddirFiles(prefix string, count int) ([]*ChunkedFile, error) {
+	//prefix = strings.TrimPrefix(prefix, "/")
+	if len(prefix) >= 1 && prefix[:1] == "/" {
+		prefix = prefix[1:]
+	}
+
+	dir := fs.GetDir(prefix)
+	if dir == nil {
+		return nil, fmt.Errorf("No such directory: %v", prefix)
+	}
+	res := make([]*ChunkedFile, 0)
+
+	// Add all files and dirs within current directory
+	for _, d := range dir.Dirs {
+		res = append(res, dir.dirObj(d.Root, d.ModTime))
+	}
+	for _, f := range dir.Files {
+		res = append(res, f)
+	}
+	if count == 0 {
+		count = len(res)
+	}
+	result := ChunkedFiles(res[:count])
+	sort.Sort(result)
+	return result, nil
+}
+
 func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error) {
-	prefix = strings.TrimPrefix(prefix, "/")
+	//prefix = strings.TrimPrefix(prefix, "/")
+	if len(prefix) >= 1 && prefix[:1] == "/" {
+		prefix = prefix[1:]
+	}
 
 	dir := fs.GetDir(prefix)
 	if dir == nil {
@@ -222,8 +255,26 @@ type ChunkedFile struct {
 	offset       int64 // absolute offset
 	chunkOffset  int64
 
-	//Fstat *ChunkedFileInfo `json:"stat"`
 	lock sync.RWMutex
+}
+
+type ChunkedFiles []*ChunkedFile
+
+func (cf ChunkedFiles) Len() int {
+	return len(cf)
+}
+func (cf ChunkedFiles) Less(i, j int) bool {
+	cfi := cf[i]
+	cfj := cf[j]
+	nameFirst := cfi.Name < cfj.Name
+	if cfi.Dir != cfj.Dir {
+		return cfi.Dir
+	} else {
+		return nameFirst
+	}
+}
+func (cf ChunkedFiles) Swap(i, j int) {
+	cf[i], cf[j] = cf[j], cf[i]
 }
 
 type FileInfos []os.FileInfo
@@ -275,8 +326,8 @@ func (f *ChunkedFile) Clone() *ChunkedFile {
 }
 
 func (f *ChunkedFile) getChunkReader(chunkPath string) (reader ReaderInterface, err error) {
-	hash := utils.GetHashFromPath(chunkPath)
-	return GetChunk(hash)
+	_, version := utils.GetHashFromPath(chunkPath)
+	return GetChunk(chunkPath, version)
 }
 
 func (f *ChunkedFile) Read(p []byte) (n int, err error) {

@@ -19,17 +19,19 @@ type ChunkMgr interface {
 
 type Chunk struct {
 	BaseModel
-	ID   uint   `sql:"AUTO_INCREMENT"`
-	Hash string `json:"hash" gorm:"primary_key"`
-	Size int64  `json:"size"`
+	ID      uint   `sql:"AUTO_INCREMENT"`
+	Hash    string `json:"hash" gorm:"primary_key"`
+	Size    int64  `json:"size"`
+	Version byte   `json:"version"`
+	Pos     uint   `json:"pos"`
 }
 
 func (mgr *DatabaseMgr) CreateChunk(chunk *Chunk) error {
 	if mgr.DBType() == "postgres" {
 		tpl := "INSERT INTO chunks " +
-			"(hash, size) VALUES (?, ?) ON CONFLICT (hash) DO UPDATE SET size=? RETURNING id"
+			"(hash, size, version) VALUES (?, ?, ?) ON CONFLICT (hash) DO UPDATE SET size=? RETURNING id"
 		var newC = &Chunk{}
-		err := mgr.db.Raw(tpl, chunk.Hash, chunk.Size, chunk.Size).Scan(newC).Error
+		err := mgr.db.Raw(tpl, chunk.Hash, chunk.Size, chunk.Version, chunk.Size).Scan(newC).Error
 		if err != nil {
 			return err
 		}
@@ -38,8 +40,8 @@ func (mgr *DatabaseMgr) CreateChunk(chunk *Chunk) error {
 
 	} else if mgr.DBType() == "sqlite3" {
 		tpl := "INSERT INTO chunks " +
-			"(hash, size) VALUES (?, ?) ON CONFLICT (hash) DO UPDATE SET size=?"
-		err := mgr.db.Exec(tpl, chunk.Hash, chunk.Size, chunk.Size).Error
+			"(hash, size, version) VALUES (?, ?, ?) ON CONFLICT (hash) DO UPDATE SET size=?"
+		err := mgr.db.Exec(tpl, chunk.Hash, chunk.Size, chunk.Version, chunk.Size).Error
 		if err != nil {
 			return err
 		}
@@ -115,10 +117,10 @@ func (mgr *DatabaseMgr) CreateChunks(raws []*RawFile) error {
 	}
 
 	if mgr.DBType() == "postgres" {
-		sql.WriteString("INSERT INTO chunks (hash, size) VALUES ")
+		sql.WriteString("INSERT INTO chunks (hash, size, version) VALUES ")
 		values := make([]string, 0)
 		for _, raw := range exclusives {
-			values = append(values, fmt.Sprintf(`('%v', %v)`, raw.Hash, raw.ChunkSize))
+			values = append(values, fmt.Sprintf(`('%v', %v, %v)`, raw.Hash, raw.ChunkSize, raw.Version))
 		}
 		sql.WriteString(strings.Join(values, ","))
 		sql.WriteString(" ON CONFLICT (hash) DO UPDATE SET size=excluded.size")
@@ -131,10 +133,10 @@ func (mgr *DatabaseMgr) CreateChunks(raws []*RawFile) error {
 			return err
 		}
 	} else if mgr.DBType() == "sqlite3" {
-		sql.WriteString("INSERT INTO chunks (hash, size) VALUES ")
+		sql.WriteString("INSERT INTO chunks (hash, size, version) VALUES ")
 		values := make([]string, 0)
 		for _, raw := range exclusives {
-			values = append(values, fmt.Sprintf(`('%v', %v)`, raw.Hash, raw.ChunkSize))
+			values = append(values, fmt.Sprintf(`('%v', %v, %v)`, raw.Hash, raw.ChunkSize, raw.Version))
 		}
 		sql.WriteString(strings.Join(values, ","))
 		sql.WriteString(" ON CONFLICT (hash) DO UPDATE SET size=excluded.size")

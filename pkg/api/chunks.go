@@ -3,6 +3,7 @@ package api
 import (
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
@@ -11,8 +12,13 @@ import (
 
 func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
+	versionRaw := req.PathParameter("version")
+	var version int64 = 0
+	if versionRaw != "" {
+		version, _ = strconv.ParseInt(versionRaw, 10, 8)
+	}
 
-	chunkCheck, err := plukio.CheckChunk(hash)
+	chunkCheck, err := plukio.CheckChunk(hash, byte(version))
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -22,7 +28,12 @@ func (api *API) checkChunk(req *restful.Request, resp *restful.Response) {
 
 func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
-	file, err := plukio.GetChunk(hash)
+	versionRaw := req.PathParameter("version")
+	var version int64 = 0
+	if versionRaw != "" {
+		version, _ = strconv.ParseInt(versionRaw, 10, 8)
+	}
+	file, err := plukio.GetChunkByHash(hash, byte(version))
 	if err != nil {
 		WriteStatusError(resp, http.StatusNotFound, err)
 		return
@@ -38,8 +49,13 @@ func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
 
 func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
+	versionRaw := req.PathParameter("version")
+	var version int64 = 0
+	if versionRaw != "" {
+		version, _ = strconv.ParseInt(versionRaw, 10, 8)
+	}
 
-	if err := plukio.SaveChunk(hash, req.Request.Body, true); err != nil {
+	if err := plukio.SaveChunk(hash, byte(version), req.Request.Body, true); err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}

@@ -116,7 +116,7 @@ func deleteChunks(mgr db.DataMgr, chunks []db.Chunk) int64 {
 	deleteChunks := make([]db.Chunk, 0)
 	for _, chunk := range chunkMap {
 		deleteChunks = append(deleteChunks, chunk)
-		path := utils.GetHashedFilename(chunk.Hash)
+		path := utils.GetHashedFilename(chunk.Hash, chunk.Version)
 
 		// Send to delete
 		deleteCh <- path

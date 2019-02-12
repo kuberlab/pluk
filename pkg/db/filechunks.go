@@ -216,12 +216,12 @@ type RawFile struct {
 	ChunkID    uint
 	Path       string
 	FileSize   int64
+	ChunkIndex uint
 	FileMode   uint32
 	ChunkSize  int64
-	Version    string
-	ChunkIndex uint
 	Hash       string
 	UpdatedAt  libtypes.Time
+	Version    byte
 }
 
 var columns = []string{
@@ -234,6 +234,7 @@ var columns = []string{
 	`chunk_index`,
 	"hash",
 	"f.updated_at",
+	"chunks.version",
 }
 
 /*
@@ -246,12 +247,13 @@ SELECT
   chunks.size as chunk_size,
   chunk_index,
   hash,
-  f.updated_at
+  f.updated_at,
+  chunks.version
 FROM "file_chunks"
   INNER JOIN files f
     ON f.id = file_chunks.file_id
        AND f.dataset_name = 'test'
-       AND version = '1.0.0'
+       AND f.version = '1.0.0'
        AND f.workspace = 'kuberlab-demo'
        AND f.dataset_type = 'dataset'
   INNER JOIN chunks ON file_chunks.chunk_id = chunks.id
@@ -267,7 +269,7 @@ func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, prefix 
 	)
 	values := []interface{}{dataset, workspace, dsType}
 	if version != "" {
-		join.WriteString(" AND version = ?")
+		join.WriteString(" AND f.version = ?")
 		values = append(values, version)
 	}
 	if prefix != "" {
@@ -316,12 +318,12 @@ func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.C
 		for i, partPath := range splitted {
 			if i == len(splitted)-1 {
 				if f, ok := curDir.Files[partPath]; ok {
-					f.Chunks = append(f.Chunks, io.Chunk{Path: utils.GetHashedFilename(raw.Hash), Size: raw.ChunkSize})
+					f.Chunks = append(f.Chunks, io.Chunk{Path: utils.GetHashedFilename(raw.Hash, raw.Version), Size: raw.ChunkSize})
 					continue
 				} else {
 					curDir.Files[partPath] = &io.ChunkedFile{
 						Name:    partPath,
-						Chunks:  []io.Chunk{{Path: utils.GetHashedFilename(raw.Hash), Size: raw.ChunkSize}},
+						Chunks:  []io.Chunk{{Path: utils.GetHashedFilename(raw.Hash, raw.Version), Size: raw.ChunkSize}},
 						Size:    raw.FileSize,
 						Dir:     false,
 						Mode:    os.FileMode(raw.FileMode),

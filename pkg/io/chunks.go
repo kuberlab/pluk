@@ -39,12 +39,12 @@ func (c *ChunkedReader) NextChunk() ([]byte, string, error) {
 	return nil, "", io.EOF
 }
 
-func CheckChunk(hash string) (*types.ChunkCheck, error) {
-	size, exists := CheckLocalChunk(hash)
+func CheckChunk(hash string, version byte) (*types.ChunkCheck, error) {
+	size, exists := CheckLocalChunk(hash, version)
 
 	// Check chunk on master
 	if utils.HasMasters() {
-		check, err := MasterClient.CheckChunk(hash)
+		check, err := MasterClient.CheckChunk(hash, version, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -62,8 +62,8 @@ func CheckChunk(hash string) (*types.ChunkCheck, error) {
 	return &types.ChunkCheck{Hash: hash, Exists: exists, Size: size}, nil
 }
 
-func CheckLocalChunk(hash string) (int64, bool) {
-	filePath := utils.GetHashedFilename(hash)
+func CheckLocalChunk(hash string, version byte) (int64, bool) {
+	filePath := utils.GetHashedFilename(hash, version)
 	stat, err := os.Stat(filePath)
 	if err != nil {
 		return 0, false
@@ -71,8 +71,13 @@ func CheckLocalChunk(hash string) (int64, bool) {
 	return stat.Size(), err == nil
 }
 
-func GetChunk(hash string) (reader ReaderInterface, err error) {
-	chunkPath := utils.GetHashedFilename(hash)
+func GetChunkByHash(hash string, version byte) (reader ReaderInterface, err error) {
+	chunkPath := utils.GetHashedFilename(hash, version)
+	return GetChunk(chunkPath, version)
+}
+
+func GetChunk(chunkPath string, version byte) (reader ReaderInterface, err error) {
+	hash, _ := utils.GetHashFromPath(chunkPath)
 	reader, err = os.Open(chunkPath)
 	if err != nil {
 		if reader != nil {
@@ -94,7 +99,7 @@ func GetChunk(hash string) (reader ReaderInterface, err error) {
 				}
 				//logrus.Debugf("download complete! %v", time.Since(t))
 				readerRaw.Close()
-				err = SaveChunk(hash, ioutil.NopCloser(bytes.NewBuffer(data)), false)
+				err = SaveChunk(hash, version, ioutil.NopCloser(bytes.NewBuffer(data)), false)
 				if err != nil {
 					logrus.Errorf("Could not save chunk: %v", err)
 				}
@@ -119,10 +124,10 @@ func GetChunk(hash string) (reader ReaderInterface, err error) {
 	return reader, err
 }
 
-func SaveChunk(hash string, data io.ReadCloser, sendToMaster bool) error {
+func SaveChunk(hash string, version byte, data io.ReadCloser, sendToMaster bool) error {
 	//logrus.Debugf("Save")
 	//t := time.Now()
-	filePath := utils.GetHashedFilename(hash)
+	filePath := utils.GetHashedFilename(hash, version)
 
 	splitted := strings.Split(filePath, "/")
 	baseDir := splitted[:len(splitted)-1]
@@ -159,7 +164,7 @@ func SaveChunk(hash string, data io.ReadCloser, sendToMaster bool) error {
 
 	if utils.HasMasters() && sendToMaster {
 		// TODO: decide whether it can go in async
-		return MasterClient.SaveChunk(hash, buf.Bytes())
+		return MasterClient.SaveChunk(hash, buf.Bytes(), version, 0)
 	}
 	//logrus.Debugf("Save complete! %v", time.Since(t))
 	return nil
