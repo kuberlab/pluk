@@ -71,7 +71,7 @@ func CheckLocalChunk(hash string, version byte) (int64, bool) {
 	return stat.Size(), err == nil
 }
 
-func GetChunkByHash(hash string, version byte) (reader ReaderInterface, err error) {
+func GetChunkByHash(hash string, version byte) (reader io.ReadCloser, err error) {
 	chunkPath := utils.GetHashedFilename(hash, version)
 	return GetChunk(chunkPath, version)
 }
