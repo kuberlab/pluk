@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
@@ -13,18 +12,25 @@ import (
 
 func WriteTar(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 	// Wrap in tar writer
-	twriter := tar.NewWriter(resp)
+	twriter := tar.NewWriter(resp.ResponseWriter)
 	defer func() {
 		twriter.Close()
 	}()
 
 	prevName := ""
 	err := fs.Walk("/", func(path string, f *plukio.ChunkedFile, err error) error {
-		name := strings.TrimPrefix(path, "/")
-		if strings.HasPrefix(name, ".") || path == "/" {
+		name := path
+		// Inline strings.TrimPrefix(): more performance
+		if len(path) >= len("/") && path[:1] == "/" {
+			name = path[1:]
+		}
+
+		// Inlining function: more performance
+		//if strings.HasPrefix(name, ".") || path == "/" {
+		if (len(name) >= len(".") && name[:1] == ".") || path == "/" {
 			return nil
 		}
-		if f.Fstat.IsDir() {
+		if f.Dir {
 			//h := &tar.Header{
 			//	Name:     name,
 			//	Mode:     0644,
@@ -40,13 +46,11 @@ func WriteTar(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 		}
 		logrus.Debugf("Processing file %v, size=%v", name, f.Size)
 
-		size := f.Size
-
 		h := &tar.Header{
 			Name:    name,
-			Mode:    int64(f.Fstat.Mode()),
-			Size:    size,
-			ModTime: f.Fstat.ModTime(),
+			Mode:    int64(f.Mode),
+			Size:    f.Size,
+			ModTime: f.ModTime,
 		}
 		if err := twriter.WriteHeader(h); err != nil {
 			return fmt.Errorf("Failed write file %v: %v", prevName, err)
@@ -56,7 +60,7 @@ func WriteTar(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 			return fmt.Errorf("Failed write file %v: %v", name, err)
 		}
 		prevName = name
-		resp.Flush()
+		//resp.Flush()
 		f.Close()
 		return nil
 	})

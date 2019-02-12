@@ -335,12 +335,19 @@ func (d *Dataset) Download(resp *restful.Response) error {
 func (d *Dataset) TarSize() (int64, error) {
 	var size int64 = 0
 	err := d.FS.Walk("/", func(path string, f *plukio.ChunkedFile, err error) error {
-		name := strings.TrimPrefix(path, "/")
-		if strings.HasPrefix(name, ".") || path == "/" {
+		name := path
+		// Inline strings.TrimPrefix(): more performance
+		if len(path) >= len("/") && path[:1] == "/" {
+			name = path[1:]
+		}
+
+		// Inlining function: more performance
+		//if strings.HasPrefix(name, ".") || path == "/" {
+		if (len(name) >= len(".") && name[:1] == ".") || path == "/" {
 			return nil
 		}
 
-		if f.Fstat.IsDir() {
+		if f.Dir {
 			// Directory size
 			// size += 4096
 			return nil
@@ -403,15 +410,15 @@ func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error
 		Files: make([]*types.HashedFile, 0),
 	}
 	err := src.Walk("/", func(path string, f *plukio.ChunkedFile, err error) error {
-		if f.Fstat.IsDir() {
+		if f.Dir {
 			return nil
 		}
 		file := types.HashedFile{
 			Path:     strings.TrimPrefix(path, "/"),
 			Size:     f.Size,
 			Hashes:   make([]types.Hash, 0),
-			Mode:     f.Fstat.Fmode,
-			ModeTime: f.Fstat.FmodTime,
+			Mode:     f.Mode,
+			ModeTime: f.ModTime,
 		}
 		for _, chunk := range f.Chunks {
 			hash := utils.GetHashFromPath(chunk.Path)

@@ -76,17 +76,17 @@ func (fs *PlukeFS) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fuse
 		return fs.serviceGetAttr(name)
 	}
 	var mode uint32
-	if f.Fstat.IsDir() {
-		mode = fuse.S_IFDIR | uint32(f.Fstat.Mode())
+	if f.Dir {
+		mode = fuse.S_IFDIR | uint32(f.Mode)
 	} else {
-		mode = fuse.S_IFREG | uint32(f.Fstat.Mode())
+		mode = fuse.S_IFREG | uint32(f.Mode)
 	}
 	return &fuse.Attr{
 		Size:    uint64(f.Size),
 		Mode:    mode,
-		Atime:   uint64(f.Fstat.ModTime().Unix()),
-		Ctime:   uint64(f.Fstat.ModTime().Unix()),
-		Mtime:   uint64(f.Fstat.ModTime().Unix()),
+		Atime:   uint64(f.ModTime.Unix()),
+		Ctime:   uint64(f.ModTime.Unix()),
+		Mtime:   uint64(f.ModTime.Unix()),
 		Blocks:  uint64(math.Ceil(float64(f.Size) / 512.0)),
 		Blksize: 1,
 	}, fuse.OK
@@ -150,7 +150,7 @@ func (fs *PlukeFS) StatFs(name string) *fuse.StatfsOut {
 	var files uint64
 	var size uint64
 	_ = fs.innerFS.Walk("/"+name, func(path string, f *io.ChunkedFile, err error) error {
-		if f.Fstat.IsDir() {
+		if f.Dir {
 			return nil
 		}
 		files++

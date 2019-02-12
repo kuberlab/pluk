@@ -62,6 +62,7 @@ type ChunkedFileFS struct {
 }
 
 func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
+
 	absname = strings.TrimPrefix(absname, "/")
 	dirname := filepath.Dir(absname)
 	filename := filepath.Base(absname)
@@ -87,15 +88,11 @@ func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
 
 func (fs *ChunkedFileFS) dirObj(absname string, modtime time.Time) *ChunkedFile {
 	return &ChunkedFile{
-		Fstat: &ChunkedFileInfo{
-			Fsize:    4096,
-			Dir:      true,
-			Fname:    filepath.Base(absname),
-			Fmode:    0775,
-			FmodTime: modtime,
-		},
-		Size: 4096,
-		Name: absname,
+		Size:    4096,
+		Name:    filepath.Base(absname),
+		ModTime: modtime,
+		Mode:    0775,
+		Dir:     true,
 	}
 }
 
@@ -174,11 +171,11 @@ func (fs *ChunkedFileFS) Clone() *ChunkedFileFS {
 			currentChunkReader: nil,
 			currentChunk:       0,
 			Chunks:             f.Chunks,
-			Fstat:              f.Fstat,
-			fs:                 cloned,
 			offset:             0,
-			Ref:                f.Ref,
 			Size:               f.Size,
+			Dir:                f.Dir,
+			Mode:               f.Mode,
+			ModTime:            f.ModTime,
 		}
 	}
 	for k, d := range fs.Dirs {
@@ -198,10 +195,10 @@ func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error
 
 	// Add all files and dirs within current directory
 	for _, d := range dir.Dirs {
-		res = append(res, dir.dirObj(d.Root, d.ModTime).Fstat)
+		res = append(res, dir.dirObj(d.Root, d.ModTime).Stat())
 	}
 	for _, f := range dir.Files {
-		res = append(res, f.Fstat)
+		res = append(res, f.Stat())
 	}
 
 	if count == 0 {
@@ -213,18 +210,20 @@ func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error
 }
 
 type ChunkedFile struct {
-	Ref                string  `json:"ref"`
-	Name               string  `json:"name"`
-	Size               int64   `json:"size"`
-	Chunks             []Chunk `json:"chunks"`
-	currentChunk       int
 	currentChunkReader ReaderInterface
-	offset             int64 // absolute offset
-	chunkOffset        int64
+	Chunks             []Chunk     `json:"chunks"`
+	Name               string      `json:"name"`
+	Size               int64       `json:"size"`
+	Mode               os.FileMode `json:"mode"`
+	Dir                bool        `json:"dir"`
+	ModTime            time.Time   `json:"modtime"`
 
-	Fstat *ChunkedFileInfo `json:"stat"`
-	fs    *ChunkedFileFS
-	lock  sync.RWMutex
+	currentChunk int
+	offset       int64 // absolute offset
+	chunkOffset  int64
+
+	//Fstat *ChunkedFileInfo `json:"stat"`
+	lock sync.RWMutex
 }
 
 type FileInfos []os.FileInfo
@@ -266,11 +265,12 @@ func (f *ChunkedFile) Clone() *ChunkedFile {
 		chunks = append(chunks, c)
 	}
 	return &ChunkedFile{
-		Size:   f.Size,
-		Fstat:  f.Fstat.Clone(),
-		Name:   f.Name,
-		Chunks: chunks,
-		Ref:    f.Ref,
+		Size:    f.Size,
+		Name:    f.Name,
+		Chunks:  chunks,
+		ModTime: f.ModTime,
+		Mode:    f.Mode,
+		Dir:     f.Dir,
 	}
 }
 
@@ -396,12 +396,14 @@ func (f *ChunkedFile) Seek(offset int64, whence int) (res int64, err error) {
 	return absoluteOffset, nil
 }
 
-func (f *ChunkedFile) Readdir(count int) ([]os.FileInfo, error) {
-	return f.fs.Readdir(f.Name, count)
-}
-
-func (f *ChunkedFile) Stat() (os.FileInfo, error) {
-	return f.Fstat, nil
+func (f *ChunkedFile) Stat() os.FileInfo {
+	return &ChunkedFileInfo{
+		Fsize:    f.Size,
+		Fname:    f.Name,
+		Dir:      f.Dir,
+		Fmode:    f.Mode,
+		FmodTime: f.ModTime,
+	}
 }
 
 func (*ChunkedFile) Write(p []byte) (int, error) {

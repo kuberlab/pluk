@@ -31,16 +31,16 @@ func (f *PlukFile) Flush() fuse.Status {
 
 func (f *PlukFile) GetAttr(a *fuse.Attr) fuse.Status {
 	var mode uint32
-	if f.chunked.Fstat.IsDir() {
-		mode = fuse.S_IFDIR | uint32(f.chunked.Fstat.Mode())
+	if f.chunked.Dir {
+		mode = fuse.S_IFDIR | uint32(f.chunked.Mode)
 	} else {
-		mode = fuse.S_IFREG | uint32(f.chunked.Fstat.Mode())
+		mode = fuse.S_IFREG | uint32(f.chunked.Mode)
 	}
 	a.Mode = mode
 	a.Size = uint64(f.chunked.Size)
-	a.Atime = uint64(f.chunked.Fstat.ModTime().Unix())
-	a.Ctime = uint64(f.chunked.Fstat.ModTime().Unix())
-	a.Mtime = uint64(f.chunked.Fstat.ModTime().Unix())
+	a.Atime = uint64(f.chunked.ModTime.Unix())
+	a.Ctime = uint64(f.chunked.ModTime.Unix())
+	a.Mtime = uint64(f.chunked.ModTime.Unix())
 	return fuse.OK
 }
 

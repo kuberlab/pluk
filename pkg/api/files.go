@@ -46,6 +46,7 @@ func (api *API) fsReadDir(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	resp.PrettyPrint(false)
 	resp.WriteEntity(result)
 }
 
@@ -68,7 +69,7 @@ func (api *API) fsReadFile(req *restful.Request, resp *restful.Response) {
 	}
 
 	file := fs.GetFile(filepath)
-	if file == nil || file.Fstat.IsDir() {
+	if file == nil || file.Dir {
 		WriteErrorString(resp, http.StatusNotFound, fmt.Sprintf("No such file: %v", filepath))
 		return
 	}

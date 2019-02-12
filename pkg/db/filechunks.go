@@ -315,23 +315,17 @@ func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.C
 		curDir := fs
 		for i, partPath := range splitted {
 			if i == len(splitted)-1 {
-				filePath := partPath
-				if f, ok := curDir.Files[filePath]; ok {
+				if f, ok := curDir.Files[partPath]; ok {
 					f.Chunks = append(f.Chunks, io.Chunk{Path: utils.GetHashedFilename(raw.Hash), Size: raw.ChunkSize})
 					continue
 				} else {
-					curDir.Files[filePath] = &io.ChunkedFile{
-						Name:   filePath,
-						Chunks: []io.Chunk{{Path: utils.GetHashedFilename(raw.Hash), Size: raw.ChunkSize}},
-						Size:   raw.FileSize,
-						Ref:    version,
-						Fstat: &io.ChunkedFileInfo{
-							Dir:      false,
-							Fmode:    os.FileMode(raw.FileMode),
-							FmodTime: raw.UpdatedAt.Time,
-							Fname:    partPath,
-							Fsize:    raw.FileSize,
-						},
+					curDir.Files[partPath] = &io.ChunkedFile{
+						Name:    partPath,
+						Chunks:  []io.Chunk{{Path: utils.GetHashedFilename(raw.Hash), Size: raw.ChunkSize}},
+						Size:    raw.FileSize,
+						Dir:     false,
+						Mode:    os.FileMode(raw.FileMode),
+						ModTime: raw.UpdatedAt.Time,
 					}
 				}
 			} else {

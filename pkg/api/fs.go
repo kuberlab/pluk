@@ -41,6 +41,7 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 
 	switch format {
 	case "json":
+		resp.PrettyPrint(false)
 		resp.WriteEntity(fs)
 	case "gob":
 		enc := gob.NewEncoder(resp.ResponseWriter)
