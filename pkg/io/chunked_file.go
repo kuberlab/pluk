@@ -51,7 +51,6 @@ type PlukClient interface {
 var MasterClient PlukClient
 
 type ChunkedFileFS struct {
-	lock    sync.RWMutex
 	Root    string                    `json:"root"`
 	Dirs    map[string]*ChunkedFileFS `json:"dirs"`  // Only dirs for current root
 	Files   map[string]*ChunkedFile   `json:"files"` // Only files for current root
@@ -142,10 +141,6 @@ func (fs *ChunkedFileFS) Walk(root string, walkFunc func(path string, f *Chunked
 }
 
 func (fs *ChunkedFileFS) Prepare() {
-	// For reflective calls
-	//for _, f := range fs.FS {
-	//	f.fs = fs
-	//}
 }
 
 func (fs *ChunkedFileFS) AddDir(path string, modtime time.Time) {
