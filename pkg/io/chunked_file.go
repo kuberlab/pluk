@@ -26,7 +26,7 @@ type PlukClient interface {
 	Close() error
 	DeleteEntity(entityType, workspace, name string, force bool) error
 	DeleteVersion(entityType, workspace, name, version string) error
-	DownloadChunk(hash string) (io.ReadCloser, error)
+	DownloadChunk(hash string, version byte) (io.ReadCloser, error)
 	DownloadEntity(entityType, workspace, name, version string, w io.Writer) error
 	EntityTarSize(entityType, workspace, name, version string) (int64, error)
 	GetFSStructure(entityType, workspace, name, version string) (*ChunkedFileFS, error)

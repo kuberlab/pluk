@@ -205,9 +205,9 @@ func (c *MultiMasterClient) ListVersions(entityType, workspace, datasetName stri
 	return nil, err
 }
 
-func (c *MultiMasterClient) DownloadChunk(hash string) (reader io.ReadCloser, err error) {
+func (c *MultiMasterClient) DownloadChunk(hash string, version byte) (reader io.ReadCloser, err error) {
 	for _, cl := range c.baseClients {
-		reader, err = cl.DownloadChunk(hash)
+		reader, err = cl.DownloadChunk(hash, version)
 		if err != nil {
 			continue
 		}

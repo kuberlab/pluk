@@ -485,8 +485,8 @@ func (c *Client) CheckChunk(hash string, version byte) (*types.ChunkCheck, error
 	return res, err
 }
 
-func (c *Client) DownloadChunk(hash string) (io.ReadCloser, error) {
-	u := fmt.Sprintf("/chunks/%v/download", hash)
+func (c *Client) DownloadChunk(hash string, version byte) (io.ReadCloser, error) {
+	u := fmt.Sprintf("/chunks/%v/download/%v", hash, version)
 
 	req, err := c.NewRequest("GET", u, nil)
 	if err != nil {

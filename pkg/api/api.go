@@ -130,7 +130,7 @@ func NewApiContainer(api *API, prefix string) *restful.Container {
 	ws.Route(ws.GET("/chunks/{hash}").To(api.checkChunk))
 	ws.Route(ws.GET("/chunks/{hash}/{version}").To(api.checkChunk))
 	ws.Route(ws.GET("/chunks/{hash}/download").To(api.downloadChunk))
-	ws.Route(ws.GET("/chunks/{hash}/download/{version}/{pos}").To(api.downloadChunk))
+	ws.Route(ws.GET("/chunks/{hash}/download/{version}").To(api.downloadChunk))
 	// Save hashed file chunk
 	ws.Route(ws.POST("/chunks/{hash}").To(api.saveChunk))
 	ws.Route(ws.POST("/chunks/{hash}/{version}").To(api.saveChunk))

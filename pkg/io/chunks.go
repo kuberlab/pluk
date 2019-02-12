@@ -87,7 +87,7 @@ func GetChunk(chunkPath string, version byte) (reader ReaderInterface, err error
 			// Read from master
 			//logrus.Debugf("download")
 			//t := time.Now()
-			readerRaw, err := MasterClient.DownloadChunk(hash)
+			readerRaw, err := MasterClient.DownloadChunk(hash, version)
 
 			if err != nil {
 				return nil, err
