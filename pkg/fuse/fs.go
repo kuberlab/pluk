@@ -73,6 +73,7 @@ func (fs *PlukeFS) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fuse
 	f := fs.innerFS.GetFile(name)
 	fs.lock.RUnlock()
 	if f == nil {
+		logrus.Errorf("File not found: %v", name)
 		return fs.serviceGetAttr(name)
 	}
 	var mode uint32
@@ -102,6 +103,7 @@ func (fs *PlukeFS) Open(name string, flags uint32, context *fuse.Context) (file 
 	f := fs.innerFS.GetFile(fullName)
 	fs.lock.RUnlock()
 	if f == nil {
+		logrus.Errorf("File not found: %v", name)
 		// Maybe service filename?
 		return fs.serviceFileRead(name)
 	}
