@@ -235,23 +235,69 @@ func (cmd *pushCmd) run() error {
 	pool, err := pb.StartPool(bar, barFiles)
 	pool.RefreshRate = 150 * time.Millisecond
 
-	structure, err := cmd.uploadChunks(bar, barFiles, client, !cmd.skipUpload)
-	_ = pool.Stop()
-	// finally, commit file structure.
-	logrus.Debugf("File structure: %v", structure)
-	logrus.Info("Committing FS structure...")
-	if err = client.SaveFileStructure(
-		structure,
-		entityType.Value,
-		cmd.workspace,
-		cmd.name,
-		cmd.version,
-		cmd.comment,
-		cmd.create,
-		cmd.publish,
-	); err != nil {
-		logrus.Fatal(err)
+	bufLimit := 5000
+	fileChan := make(chan *types.HashedFile, 10000)
+
+	fileBuf := make([]*types.HashedFile, 0)
+
+	flushBuf := func(last bool) {
+		structure := types.FileStructure{Files: fileBuf}
+		if err = client.SaveFileStructure(
+			structure,
+			entityType.Value,
+			cmd.workspace,
+			cmd.name,
+			cmd.version,
+			types.SaveOpts{
+				Comment: cmd.comment,
+				Publish: cmd.publish,
+				Create:  cmd.create,
+				Editing: !last,
+			},
+		); err != nil {
+			logrus.Fatal(err)
+		}
 	}
+
+	syncCh := make(chan bool, 0)
+	uploadFS := func() {
+		for f := range fileChan {
+			if f == nil {
+				break
+			}
+			if len(fileBuf) >= bufLimit {
+				flushBuf(false)
+				fileBuf = nil
+			}
+			fileBuf = append(fileBuf, f)
+		}
+		syncCh <- true
+	}
+
+	go uploadFS()
+	err = cmd.uploadChunks(bar, barFiles, client, !cmd.skipUpload, fileChan)
+	close(fileChan)
+	_ = pool.Stop()
+
+	// finally, commit file structure.
+	logrus.Info("Committing FS structure...")
+	// Wait for emptying fileChan
+	<-syncCh
+	flushBuf(true)
+	//logrus.Debugf("File structure: %v", structure)
+
+	//if err = client.SaveFileStructure(
+	//	structure,
+	//	entityType.Value,
+	//	cmd.workspace,
+	//	cmd.name,
+	//	cmd.version,
+	//	cmd.comment,
+	//	cmd.create,
+	//	cmd.publish,
+	//); err != nil {
+	//	logrus.Fatal(err)
+	//}
 
 	if cmd.specFile != "" {
 		err = client.PostEntitySpec(entityType.Value, cmd.workspace, cmd.name, specData)
@@ -265,13 +311,14 @@ func (cmd *pushCmd) run() error {
 	return nil
 }
 
-func (cmd *pushCmd) uploadChunks(bar, barFiles *pb.ProgressBar, client chunk_io.PlukClient, upload bool) (structure types.FileStructure, err error) {
+func (cmd *pushCmd) uploadChunks(
+	bar, barFiles *pb.ProgressBar, client chunk_io.PlukClient,
+	upload bool, fileChan chan *types.HashedFile) (err error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	structure = types.FileStructure{Files: make([]*types.HashedFile, 0)}
 	var sem *semaphore.Weighted
 	//if cmd.websocket {
 	//	sem = semaphore.NewWeighted(1)
@@ -349,8 +396,9 @@ func (cmd *pushCmd) uploadChunks(bar, barFiles *pb.ProgressBar, client chunk_io.
 		r := chunk_io.NewChunkedReader(cmd.chunkSize, file)
 		// Populate file structure.
 		hashed := &types.HashedFile{
-			Path: strings.TrimPrefix(path, cwd+"/"),
-			Mode: f.Mode(),
+			Path:     strings.TrimPrefix(path, cwd+"/"),
+			Mode:     f.Mode(),
+			ModeTime: f.ModTime(),
 		}
 		var chunkData []byte
 		var hash string
@@ -376,7 +424,8 @@ func (cmd *pushCmd) uploadChunks(bar, barFiles *pb.ProgressBar, client chunk_io.
 		file.Close()
 		barFiles.Increment()
 		logrus.Debugf("Whole file size = %v", hashed.Size)
-		structure.Files = append(structure.Files, hashed)
+		//files = append(files, hashed)
+		fileChan <- hashed
 		return nil
 	})
 
@@ -395,5 +444,5 @@ func (cmd *pushCmd) uploadChunks(bar, barFiles *pb.ProgressBar, client chunk_io.
 	if !bar.IsFinished() {
 		bar.Finish()
 	}
-	return structure, nil
+	return nil
 }

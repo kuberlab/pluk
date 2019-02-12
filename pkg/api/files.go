@@ -222,7 +222,7 @@ func (api *API) uploadDatasetFile(req *restful.Request, resp *restful.Response) 
 
 	api.lockForSave(workspace, name, version)
 	defer api.unlockForSave(workspace, name, version)
-	if err := dataset.Save(fs, version, "", false, false, true); err != nil {
+	if err := dataset.Save(fs, version, "", false, false, true, true); err != nil {
 		WriteError(resp, err)
 		return
 	}

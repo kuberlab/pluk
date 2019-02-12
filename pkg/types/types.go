@@ -86,6 +86,13 @@ func (dv *Version) Type() string {
 	return "dataset_version"
 }
 
+type SaveOpts struct {
+	Comment string
+	Create  bool
+	Publish bool
+	Editing bool
+}
+
 type FileStructure struct {
 	Files []*HashedFile `json:"files"`
 }

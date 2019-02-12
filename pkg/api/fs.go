@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
+	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
@@ -63,6 +64,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	comment := req.QueryParameter("comment")
 	create := getBoolQueryParam(req, "create")
 	publish := getBoolQueryParam(req, "publish")
+	editing := getBoolQueryParam(req, "editing")
 	version := req.PathParameter("version")
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
@@ -119,32 +121,45 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	}
 	logrus.Infof("Saving %v for %v/%v:%v...", dataset.Type, workspace, name, version)
 
-	err = dataset.Save(*structure, version, comment, create, publish, true)
+	err = dataset.Save(*structure, version, comment, create, publish, editing, true)
 	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
 
-	dsv, err := api.mgr.CommitVersion(currentType(req), workspace, name, version, comment)
-	if err != nil {
-		WriteStatusError(
-			resp,
-			http.StatusInternalServerError,
-			fmt.Errorf("Failed to commit version %v: %v", version, err.Error()),
-		)
-		return
-	}
-	logrus.Infof("Done saving %v/%v:%v.", workspace, name, version)
-
-	// Invalidate cache
-	api.invalidateVersionCache(dataset, version)
-
-	if create {
-		if err = api.createDatasetOnDealer(req, workspace, name, publish); err != nil {
-			WriteStatusError(resp, http.StatusInternalServerError, err)
+	if !editing {
+		dsv, err := api.mgr.CommitVersion(currentType(req), workspace, name, version, comment)
+		if err != nil {
+			WriteStatusError(
+				resp,
+				http.StatusInternalServerError,
+				fmt.Errorf("Failed to commit version %v: %v", version, err.Error()),
+			)
 			return
 		}
+		logrus.Infof("Done saving %v/%v:%v.", workspace, name, version)
+
+		// Invalidate cache
+		api.invalidateVersionCache(dataset, version)
+
+		if create {
+			if err = api.createDatasetOnDealer(req, workspace, name, publish); err != nil {
+				WriteStatusError(resp, http.StatusInternalServerError, err)
+				return
+			}
+		}
+		resp.WriteHeaderAndEntity(http.StatusCreated, dsv)
+		return
 	}
 
-	resp.WriteHeaderAndEntity(http.StatusCreated, dsv)
+	resp.WriteHeaderAndEntity(
+		http.StatusCreated,
+		&db.DatasetVersion{
+			Version:   version,
+			Name:      name,
+			Type:      currentType(req),
+			Workspace: workspace,
+			Editing:   true,
+		},
+	)
 }

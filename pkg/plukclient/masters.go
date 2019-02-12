@@ -329,12 +329,12 @@ func (c *MultiMasterClient) DeleteFile(entityType, workspace, entityName, versio
 }
 
 func (c *MultiMasterClient) SaveFileStructure(structure types.FileStructure,
-	entityType, workspace, name, version, comment string, create bool, publish bool) (err error) {
+	entityType, workspace, name, version string, opts types.SaveOpts) (err error) {
 	for i, cl := range c.baseClients {
 		if err != nil {
 			return err
 		}
-		err = cl.SaveFileStructure(structure, entityType, workspace, name, version, comment, create, publish)
+		err = cl.SaveFileStructure(structure, entityType, workspace, name, version, opts)
 		if err != nil {
 			logrus.Errorf("Failed save FS to %v", c.Masters[i])
 		}

@@ -150,7 +150,7 @@ func TestPushManyFilesVersion1(t *testing.T) {
 		data := fmt.Sprintf("test%v test%v", i, i)
 		hash := utils.CalcHash([]byte(data))
 		// Upload chunk
-		url := buildURL(fmt.Sprintf("chunks/%v/1/0", hash))
+		url := buildURL(fmt.Sprintf("chunks/%v/1", hash))
 		resp, err := client.Post(url, "application/json", bytes.NewBufferString(data))
 		if err != nil {
 			t.Fatal(err)

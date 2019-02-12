@@ -363,6 +363,8 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 }
 
 func setCurrentType(req *restful.Request, resp *restful.Response, filter *restful.FilterChain) {
+	resp.PrettyPrint(false)
+
 	eType, ok := req.PathParameters()["entityType"]
 	if !ok {
 		// Skip

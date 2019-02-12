@@ -44,7 +44,7 @@ type PlukClient interface {
 	SaveChunk(hash string, data []byte, version byte) error
 	SaveChunkReader(hash string, reader io.Reader, version byte) error
 	SaveFileStructure(structure types.FileStructure,
-		entityType, workspace, name, version, comment string, create bool, publish bool) error
+		entityType, workspace, name, version string, opts types.SaveOpts) error
 	WebdavAuth(user, pass, path string) (bool, error)
 }
 

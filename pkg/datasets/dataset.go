@@ -28,7 +28,8 @@ type Dataset struct {
 	MasterClient plukio.PlukClient     `json:"-"`
 }
 
-func (d *Dataset) Save(structure types.FileStructure, version string, comment string, create, publish, masterSave bool) error {
+func (d *Dataset) Save(structure types.FileStructure,
+	version string, comment string, create, publish, editing, masterSave bool) error {
 	if err := d.SaveFSToDB(structure, version); err != nil {
 		return err
 	}
@@ -36,7 +37,8 @@ func (d *Dataset) Save(structure types.FileStructure, version string, comment st
 	if utils.HasMasters() && masterSave {
 		// TODO: decide whether it can go in async
 		_ = d.MasterClient.SaveFileStructure(
-			structure, d.Type, d.Workspace, d.Name, version, comment, create, publish,
+			structure, d.Type, d.Workspace, d.Name, version,
+			types.SaveOpts{Comment: comment, Create: create, Publish: publish, Editing: editing},
 		)
 	}
 
@@ -432,7 +434,7 @@ func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error
 		return err
 	}
 
-	return d.Save(dest, version, "", false, false, false)
+	return d.Save(dest, version, "", false, false, false, false)
 }
 
 func (d *Dataset) GetFSFromDB(version string) (*plukio.ChunkedFileFS, error) {

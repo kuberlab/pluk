@@ -369,19 +369,22 @@ func (c *Client) ListVersions(entityType, workspace, datasetName string) (*types
 }
 
 func (c *Client) SaveFileStructure(structure types.FileStructure,
-	entityType, workspace, name, version, comment string, create bool, publish bool) error {
+	entityType, workspace, name, version string, opts types.SaveOpts) error {
 	u := fmt.Sprintf("/%v/%v/%v/%v", entityType, workspace, name, version)
 	q := url.Values{}
 	q.Set("format", "gobgz")
 
-	if create {
+	if opts.Create {
 		q.Set("create", "true")
 	}
-	if publish {
+	if opts.Publish {
 		q.Set("publish", "true")
 	}
-	if comment != "" {
-		q.Set("comment", comment)
+	if opts.Comment != "" {
+		q.Set("comment", opts.Comment)
+	}
+	if opts.Editing {
+		q.Set("editing", "true")
 	}
 
 	if len(q) > 0 {
