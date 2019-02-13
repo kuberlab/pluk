@@ -248,7 +248,10 @@ func (w *Watcher) processQueue() {
 					return
 				}
 				releaseConcurrency()
+			default:
+				logrus.Errorf("Unrecognized message type: %v", m.Type)
 			}
+
 		}
 	}
 }
