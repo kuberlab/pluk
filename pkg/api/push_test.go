@@ -135,6 +135,18 @@ func TestPushFewFiles(t *testing.T) {
 	}
 
 	utils.Assert(fileNum, len(fs), t)
+
+	// Check file content 1.0.0
+	for i := 0; i < fileNum; i++ {
+		url = buildURL(fmt.Sprintf("dataset/workspace/new/versions/1.0.0/raw/file%v.txt", i))
+		resp, err = client.Get(url)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data := mustRead(resp.Body)
+		want := fmt.Sprintf("test%v test%v", i, i)
+		utils.Assert(want, data, t)
+	}
 }
 
 func TestPushManyFilesVersion1(t *testing.T) {
@@ -187,6 +199,18 @@ func TestPushManyFilesVersion1(t *testing.T) {
 	}
 
 	utils.Assert(fileNum, len(fs), t)
+
+	// Check file content 1.0.0
+	for i := 0; i < fileNum; i++ {
+		url = buildURL(fmt.Sprintf("dataset/workspace/new/versions/1.0.0/raw/file%v.txt", i))
+		resp, err = client.Get(url)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data := mustRead(resp.Body)
+		want := fmt.Sprintf("test%v test%v", i, i)
+		utils.Assert(want, data, t)
+	}
 }
 
 func TestPushManyFiles2(t *testing.T) {
