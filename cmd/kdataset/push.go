@@ -236,7 +236,7 @@ func (cmd *pushCmd) run() error {
 	pool.RefreshRate = 150 * time.Millisecond
 
 	bufLimit := 5000
-	fileChan := make(chan *types.HashedFile, 10000)
+	fileChan := make(chan *types.HashedFile, 20000)
 
 	fileBuf := make([]*types.HashedFile, 0)
 

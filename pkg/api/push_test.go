@@ -149,6 +149,198 @@ func TestPushFewFiles(t *testing.T) {
 	}
 }
 
+func TestPushSameChunksOldNewAccessible(t *testing.T) {
+	fname := getFname()
+	setup(fname)
+	dbPrepare(t)
+	defer teardown(fname)
+
+	// Build file structure
+	structure := &types.FileStructure{Files: make([]*types.HashedFile, 0)}
+	fileNum := 5
+	for i := 0; i < fileNum; i++ {
+		data := fmt.Sprintf("test%v test%v", i, i)
+		hash := utils.CalcHash([]byte(data))
+		// Upload chunk
+		url := buildURL(fmt.Sprintf("chunks/%v", hash))
+		resp, err := client.Post(url, "application/json", bytes.NewBufferString(data))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		utils.Assert(http.StatusCreated, resp.StatusCode, t)
+		hashed := &types.HashedFile{
+			Size:     int64(len(data)),
+			Path:     fmt.Sprintf("file%v.txt", i),
+			Mode:     0644,
+			Hashes:   []types.Hash{{Hash: hash, Size: int64(len(data))}},
+			ModeTime: time.Now().Add(-time.Hour),
+		}
+		structure.Files = append(structure.Files, hashed)
+	}
+
+	data, _ := json.Marshal(structure)
+	url := buildURL("dataset/workspace/new/1.0.0")
+	resp, err := client.Post(url, "application/json", bytes.NewBuffer(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	// Build file structure for new chunks version
+	structure = &types.FileStructure{Files: make([]*types.HashedFile, 0)}
+	for i := 0; i < fileNum; i++ {
+		data := fmt.Sprintf("test%v test%v", i, i)
+		hash := utils.CalcHash([]byte(data))
+		// Upload chunk
+		url := buildURL(fmt.Sprintf("chunks/%v/1", hash))
+		resp, err := client.Post(url, "application/json", bytes.NewBufferString(data))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		utils.Assert(http.StatusCreated, resp.StatusCode, t)
+		hashed := &types.HashedFile{
+			Size:     int64(len(data)),
+			Path:     fmt.Sprintf("file%v.txt", i),
+			Mode:     0644,
+			Hashes:   []types.Hash{{Hash: hash, Size: int64(len(data))}},
+			ModeTime: time.Now().Add(-time.Hour),
+		}
+		structure.Files = append(structure.Files, hashed)
+	}
+
+	data, _ = json.Marshal(structure)
+	url = buildURL("dataset/workspace/new/1.0.0")
+	resp, err = client.Post(url, "application/json", bytes.NewBuffer(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("dataset/workspace/new/versions/1.0.0/tree")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fs []plukio.ChunkedFileInfo
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(fileNum, len(fs), t)
+
+	// Check file content 1.0.0
+	for i := 0; i < fileNum; i++ {
+		url = buildURL(fmt.Sprintf("dataset/workspace/new/versions/1.0.0/raw/file%v.txt", i))
+		resp, err = client.Get(url)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data := mustRead(resp.Body)
+		want := fmt.Sprintf("test%v test%v", i, i)
+		utils.Assert(want, data, t)
+	}
+}
+
+func TestPushSameChunksNewOldAccessible(t *testing.T) {
+	fname := getFname()
+	setup(fname)
+	dbPrepare(t)
+	defer teardown(fname)
+
+	// Build file structure for new chunks version
+	structure := &types.FileStructure{Files: make([]*types.HashedFile, 0)}
+	fileNum := 5
+	for i := 0; i < fileNum; i++ {
+		data := fmt.Sprintf("test%v test%v", i, i)
+		hash := utils.CalcHash([]byte(data))
+		// Upload chunk
+		url := buildURL(fmt.Sprintf("chunks/%v/1", hash))
+		resp, err := client.Post(url, "application/json", bytes.NewBufferString(data))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		utils.Assert(http.StatusCreated, resp.StatusCode, t)
+		hashed := &types.HashedFile{
+			Size:     int64(len(data)),
+			Path:     fmt.Sprintf("file%v.txt", i),
+			Mode:     0644,
+			Hashes:   []types.Hash{{Hash: hash, Size: int64(len(data))}},
+			ModeTime: time.Now().Add(-time.Hour),
+		}
+		structure.Files = append(structure.Files, hashed)
+	}
+
+	data, _ := json.Marshal(structure)
+	url := buildURL("dataset/workspace/new/1.0.0")
+	resp, err := client.Post(url, "application/json", bytes.NewBuffer(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	// Build file structure
+	structure = &types.FileStructure{Files: make([]*types.HashedFile, 0)}
+	for i := 0; i < fileNum; i++ {
+		data := fmt.Sprintf("test%v test%v", i, i)
+		hash := utils.CalcHash([]byte(data))
+		// Upload chunk
+		url := buildURL(fmt.Sprintf("chunks/%v", hash))
+		resp, err := client.Post(url, "application/json", bytes.NewBufferString(data))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		utils.Assert(http.StatusCreated, resp.StatusCode, t)
+		hashed := &types.HashedFile{
+			Size:     int64(len(data)),
+			Path:     fmt.Sprintf("file%v.txt", i),
+			Mode:     0644,
+			Hashes:   []types.Hash{{Hash: hash, Size: int64(len(data))}},
+			ModeTime: time.Now().Add(-time.Hour),
+		}
+		structure.Files = append(structure.Files, hashed)
+	}
+
+	data, _ = json.Marshal(structure)
+	url = buildURL("dataset/workspace/new/1.0.0")
+	resp, err = client.Post(url, "application/json", bytes.NewBuffer(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("dataset/workspace/new/versions/1.0.0/tree")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fs []plukio.ChunkedFileInfo
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(fileNum, len(fs), t)
+
+	// Check file content 1.0.0
+	for i := 0; i < fileNum; i++ {
+		url = buildURL(fmt.Sprintf("dataset/workspace/new/versions/1.0.0/raw/file%v.txt", i))
+		resp, err = client.Get(url)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data := mustRead(resp.Body)
+		want := fmt.Sprintf("test%v test%v", i, i)
+		utils.Assert(want, data, t)
+	}
+}
+
 func TestPushManyFilesVersion1(t *testing.T) {
 	fname := getFname()
 	setup(fname)

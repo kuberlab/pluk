@@ -23,7 +23,7 @@ type Chunk struct {
 	Hash    string `json:"hash" gorm:"primary_key"`
 	Size    int64  `json:"size"`
 	Version byte   `json:"version"`
-	Pos     uint   `json:"pos"`
+	//Pos     uint   `json:"pos"`
 }
 
 func (mgr *DatabaseMgr) CreateChunk(chunk *Chunk) error {
@@ -123,7 +123,7 @@ func (mgr *DatabaseMgr) CreateChunks(raws []*RawFile) error {
 			values = append(values, fmt.Sprintf(`('%v', %v, %v)`, raw.Hash, raw.ChunkSize, raw.Version))
 		}
 		sql.WriteString(strings.Join(values, ","))
-		sql.WriteString(" ON CONFLICT (hash) DO UPDATE SET size=excluded.size")
+		sql.WriteString(" ON CONFLICT (hash) DO UPDATE SET size=excluded.size, version=excluded.version")
 		err := mgr.db.Exec(sql.String()).Error
 		if err != nil {
 			return err
@@ -139,7 +139,7 @@ func (mgr *DatabaseMgr) CreateChunks(raws []*RawFile) error {
 			values = append(values, fmt.Sprintf(`('%v', %v, %v)`, raw.Hash, raw.ChunkSize, raw.Version))
 		}
 		sql.WriteString(strings.Join(values, ","))
-		sql.WriteString(" ON CONFLICT (hash) DO UPDATE SET size=excluded.size")
+		sql.WriteString(" ON CONFLICT (hash) DO UPDATE SET size=excluded.size, version=excluded.version")
 
 		err := mgr.db.Exec(sql.String()).Error
 		if err != nil {
