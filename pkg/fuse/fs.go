@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"regexp"
-	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -27,8 +26,8 @@ type PlukeFS struct {
 	secretWorkspace string
 	dsType          string
 	client          io.PlukClient
-	lock            sync.RWMutex
-	innerFS         *io.ChunkedFileFS
+	//lock            sync.RWMutex
+	innerFS *io.ChunkedFileFS
 }
 
 func NewPlukFS(dsType, workspace, dataset, version, server, secret, secretWorkspace string) (pathfs.FileSystem, error) {
@@ -67,24 +66,28 @@ func (fs *PlukeFS) String() string {
 }
 
 func (fs *PlukeFS) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fuse.Status) {
+	//t := time.Now()
 	//fmt.Println("GETATTR", name)
 
-	fs.lock.RLock()
+	//fs.lock.RLock()
 	f := fs.innerFS.GetFile(name)
-	fs.lock.RUnlock()
+	//fs.lock.RUnlock()
+	//fmt.Printf("GetFile: %v\n", time.Since(t))
 	if f == nil {
 		logrus.Errorf("File not found: %v", name)
-		return fs.serviceGetAttr(name)
+		return nil, fuse.ENOENT
+		//return fs.serviceGetAttr(name)
 	}
-	var mode uint32
+	var mode int
 	if f.Dir {
-		mode = fuse.S_IFDIR | uint32(f.Mode)
+		mode = fuse.S_IFDIR | int(f.Mode)
 	} else {
-		mode = fuse.S_IFREG | uint32(f.Mode)
+		mode = fuse.S_IFREG | int(f.Mode)
 	}
+	//fmt.Printf("GetAttr: %v\n", time.Since(t))
 	return &fuse.Attr{
 		Size:    uint64(f.Size),
-		Mode:    mode,
+		Mode:    uint32(mode),
 		Atime:   uint64(f.ModTime.Unix()),
 		Ctime:   uint64(f.ModTime.Unix()),
 		Mtime:   uint64(f.ModTime.Unix()),
@@ -98,14 +101,15 @@ func (fs *PlukeFS) Open(name string, flags uint32, context *fuse.Context) (file 
 		return nil, fuse.EPERM
 	}
 	//fmt.Println("OPEN", name)
-	fullName := "/" + name
-	fs.lock.RLock()
-	f := fs.innerFS.GetFile(fullName)
-	fs.lock.RUnlock()
+	//fullName := "/" + name
+	//fs.lock.RLock()
+	f := fs.innerFS.GetFile(name)
+	//fs.lock.RUnlock()
 	if f == nil {
 		logrus.Errorf("File not found: %v", name)
 		// Maybe service filename?
-		return fs.serviceFileRead(name)
+		return nil, fuse.ENOENT
+		//return fs.serviceFileRead(name)
 	}
 
 	return NewPlukFile(f), fuse.OK
@@ -240,8 +244,8 @@ func (fs *PlukeFS) tryChangeDataset(filename string) (file nodefs.File, code fus
 			logrus.Error(msg)
 			return nodefs.NewDataFile([]byte(msg + "\n")), fuse.OK
 		}
-		fs.lock.Lock()
-		defer fs.lock.Unlock()
+		//fs.lock.Lock()
+		//defer fs.lock.Unlock()
 
 		logrus.Infof("Changing dataset to %v:%v", dataset, version)
 		fs.innerFS = newFS

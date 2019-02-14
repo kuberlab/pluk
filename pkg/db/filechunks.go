@@ -331,7 +331,7 @@ func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.C
 					}
 				}
 			} else {
-				dirname := "/" + strings.Join(splitted[:i+1], "/")
+				dirname := strings.Join(splitted[:i+1], "/")
 				if dirname != "/" {
 					curDir.AddDir(dirname, raw.UpdatedAt.Time)
 					curDir = curDir.Dirs[filepath.Base(dirname)]

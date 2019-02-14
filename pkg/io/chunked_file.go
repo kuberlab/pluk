@@ -60,25 +60,28 @@ type ChunkedFileFS struct {
 func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
 	// Inline function strings.TrimPrefix
 	//absname = strings.TrimPrefix(absname, "/")
-	if len(absname) >= 1 && absname[:1] == "/" {
-		absname = absname[1:]
-	}
-	dirname := filepath.Dir(absname)
-	filename := filepath.Base(absname)
+	//if len(absname) >= 1 && absname[:1] == "/" {
+	//	absname = absname[1:]
+	//}
+	splitted := strings.Split(absname, "/")
+	dirname := strings.Join(splitted[:len(splitted)-1], "/")
+	filename := splitted[len(splitted)-1]
+	//dirname := filepath.Dir(absname)
+	//filename := filepath.Base(absname)
 
 	if absname == "" {
-		return fs.dirObj("/"+absname, fs.ModTime)
+		return fs.dirObj(absname, fs.ModTime)
 	}
 	curDir := fs.GetDir(dirname)
 	if curDir == nil {
 		return nil
 	}
-	if f, ok := curDir.Files[filename]; ok {
-		return f
+	if d, ok := curDir.Dirs[filename]; ok {
+		// Return file-dir object
+		return fs.dirObj(absname, d.ModTime)
 	} else {
-		if d, ok := curDir.Dirs[filename]; ok {
-			// Return file-dir object
-			return fs.dirObj(absname, d.ModTime)
+		if f, ok := curDir.Files[filename]; ok {
+			return f
 		} else {
 			return nil
 		}
@@ -101,9 +104,9 @@ func (fs *ChunkedFileFS) GetDir(dirname string) *ChunkedFileFS {
 	}
 
 	//dirname = strings.TrimPrefix(dirname, "/")
-	if len(dirname) >= 1 && dirname[:1] == "/" {
-		dirname = dirname[1:]
-	}
+	//if len(dirname) >= 1 && dirname[:1] == "/" {
+	//	dirname = dirname[1:]
+	//}
 	splitted := strings.Split(dirname, "/")
 	curDir := fs
 	if dirname == "" {
