@@ -348,7 +348,7 @@ func (cmd *pushCmd) uploadChunks(
 		//if cmd.websocket {
 		//	resp, err = client.CheckChunkWebsocket(hash)
 		//} else {
-		resp, err = client.CheckChunk(hash, 1)
+		resp, err = client.CheckChunk(hash, types.ChunkVersion)
 		//}
 		if err != nil {
 			logrus.Fatalf("Failed to check chunk: %v", err)
@@ -361,7 +361,7 @@ func (cmd *pushCmd) uploadChunks(
 			//		os.Exit(1)
 			//	}
 			//} else {
-			if err = client.SaveChunkReader(hash, chReader, 1); err != nil {
+			if err = client.SaveChunkReader(hash, chReader, types.ChunkVersion); err != nil {
 				logrus.Fatalf("Failed to upload chunk: %v", err)
 			}
 			//}
@@ -418,7 +418,7 @@ func (cmd *pushCmd) uploadChunks(
 
 			length := int64(len(chunkData))
 			hashed.Size += length
-			hashed.Hashes = append(hashed.Hashes, types.Hash{Hash: hash, Size: length, Version: 1})
+			hashed.Hashes = append(hashed.Hashes, types.Hash{Hash: hash, Size: length, Version: types.ChunkVersion})
 
 		}
 		file.Close()

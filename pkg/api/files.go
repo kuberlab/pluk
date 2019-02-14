@@ -305,11 +305,11 @@ func (api *API) readAndSaveFile(req *restful.Request, resp *restful.Response) (f
 		// Calc hash
 		hash := utils.CalcHash(buf)
 		// Check and save
-		check, err = plukio.CheckChunk(hash, 1)
+		check, err = plukio.CheckChunk(hash, types.ChunkVersion)
 		if err != nil {
 			return nil, err
 		}
-		f.Hashes = append(f.Hashes, types.Hash{Hash: hash, Size: int64(read), Version: 1})
+		f.Hashes = append(f.Hashes, types.Hash{Hash: hash, Size: int64(read), Version: types.ChunkVersion})
 
 		if check.Exists && int(check.Size) == read {
 			if errRead == io.EOF {
@@ -320,7 +320,7 @@ func (api *API) readAndSaveFile(req *restful.Request, resp *restful.Response) (f
 			continue
 		}
 
-		if err = plukio.SaveChunk(hash, 1, ioutil.NopCloser(bytes.NewBuffer(buf[:read])), true); err != nil {
+		if err = plukio.SaveChunk(hash, types.ChunkVersion, ioutil.NopCloser(bytes.NewBuffer(buf[:read])), true); err != nil {
 			return nil, err
 		}
 

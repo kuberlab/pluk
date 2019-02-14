@@ -186,12 +186,14 @@ func CalcHash(data []byte) string {
 }
 
 func GetHashedFilename(hash string, version byte) string {
-	if version == 0 {
+	if version == 2 {
+		return fmt.Sprintf("%v/%v/%v/%v", DataDir(), hash[:2], hash[2:4], hash[4:])
+	} else if version == 1 {
+		return fmt.Sprintf("%v/%v/%v/%v/%v", DataDir(), hash[:2], hash[2:4], hash[4:6], hash[6:])
+	} else if version == 0 {
 		hashDir := hash[:ChunkDirLength]
 		hashFile := hash[ChunkDirLength:]
 		return fmt.Sprintf("%v/%v/%v", DataDir(), hashDir, hashFile)
-	} else if version == 1 {
-		return fmt.Sprintf("%v/%v/%v/%v/%v", DataDir(), hash[:2], hash[2:4], hash[4:6], hash[6:])
 	} else {
 		return ""
 	}
@@ -200,7 +202,9 @@ func GetHashedFilename(hash string, version byte) string {
 func GetHashFromPath(path string) (hash string, version byte) {
 	hash = strings.TrimPrefix(path, DataDir())
 	cnt := strings.Count(hash, "/")
-	if cnt > 2 {
+	if cnt == 3 {
+		version = 2
+	} else if cnt == 4 {
 		version = 1
 	} else {
 		version = 0

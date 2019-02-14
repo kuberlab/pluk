@@ -12,6 +12,10 @@ import (
 	"github.com/kuberlab/pluk/pkg/utils"
 )
 
+const (
+	ChunkVersion = 2
+)
+
 type Workspace dealerclient.Workspace
 
 type DataSetList struct {

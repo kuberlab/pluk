@@ -85,12 +85,13 @@ func (fs *PlukeFS) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fuse
 		mode = fuse.S_IFREG | int(f.Mode)
 	}
 	//fmt.Printf("GetAttr: %v\n", time.Since(t))
+	unix := uint64(f.ModTime.Unix())
 	return &fuse.Attr{
 		Size:    uint64(f.Size),
 		Mode:    uint32(mode),
-		Atime:   uint64(f.ModTime.Unix()),
-		Ctime:   uint64(f.ModTime.Unix()),
-		Mtime:   uint64(f.ModTime.Unix()),
+		Atime:   unix,
+		Ctime:   unix,
+		Mtime:   unix,
 		Blocks:  uint64(math.Ceil(float64(f.Size) / 512.0)),
 		Blksize: 1,
 	}, fuse.OK
