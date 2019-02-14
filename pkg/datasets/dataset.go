@@ -3,6 +3,7 @@ package datasets
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -420,7 +421,7 @@ func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error
 			Path:     strings.TrimPrefix(path, "/"),
 			Size:     f.Size,
 			Hashes:   make([]types.Hash, 0),
-			Mode:     f.Mode,
+			Mode:     os.FileMode(f.Mode),
 			ModeTime: f.ModTime,
 		}
 		for _, chunk := range f.Chunks {

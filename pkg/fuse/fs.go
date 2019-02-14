@@ -3,13 +3,16 @@ package fuse
 import (
 	"fmt"
 	"math"
+	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/hanwen/go-fuse/fuse/nodefs"
 	"github.com/hanwen/go-fuse/fuse/pathfs"
+	"github.com/kuberlab/pluk/pkg/grpc"
 	"github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 )
@@ -26,6 +29,7 @@ type PlukeFS struct {
 	secretWorkspace string
 	dsType          string
 	client          io.PlukClient
+	//grpc            *grpc.Client
 	//lock            sync.RWMutex
 	innerFS *io.ChunkedFileFS
 }
@@ -46,10 +50,28 @@ func NewPlukFS(dsType, workspace, dataset, version, server, secret, secretWorksp
 		dsType:          dsType,
 	}
 
-	client, err := plukclient.NewClient(server, &plukclient.AuthOpts{Workspace: secretWorkspace, Secret: secret})
+	opts := &plukclient.AuthOpts{Workspace: secretWorkspace, Secret: secret}
+
+	client, err := plukclient.NewClient(server, opts)
 	if err != nil {
 		return nil, err
 	}
+
+	u, _ := url.Parse(server)
+	host := strings.Split(u.Host, ":")[0]
+	// Initialize grpc client
+	gClient, err := grpc.NewClient(host+":30805", opts)
+	if err != nil {
+		gClient, err = grpc.NewClient(host+":8085", opts)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	io.GrpcClient = gClient
+
+	//fs.grpc = gClient
+
 	fs.client = client
 	innerFS, err := client.GetFSStructure(dsType, workspace, dataset, version)
 	if err != nil {
@@ -117,21 +139,16 @@ func (fs *PlukeFS) Open(name string, flags uint32, context *fuse.Context) (file 
 }
 
 func (fs *PlukeFS) OpenDir(name string, context *fuse.Context) (stream []fuse.DirEntry, status fuse.Status) {
-	name = "/" + name
-
-	//t := time.Now()
 	files, err := fs.innerFS.ReaddirFiles(name, 0)
-	//fmt.Println("OPENDIR", name, time.Since(t))
 	if err != nil {
 		return nil, fuse.ENODATA
 	}
-	res := make([]fuse.DirEntry, 0)
-	for _, f := range files {
-		e := fuse.DirEntry{
-			Mode: uint32(f.Mode),
+	res := make([]fuse.DirEntry, len(files))
+	for i, f := range files {
+		res[i] = fuse.DirEntry{
+			Mode: f.Mode,
 			Name: f.Name,
 		}
-		res = append(res, e)
 	}
 	return res, fuse.OK
 }

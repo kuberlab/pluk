@@ -16,6 +16,7 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/kuberlab/lib/pkg/dealerclient"
 	"github.com/kuberlab/lib/pkg/errors"
+	"github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
@@ -186,6 +187,137 @@ func (api *API) InternalHook(req *restful.Request, resp *restful.Response, filte
 
 const checkWorkspace = "check-for-auth-workspace"
 
+func (api *API) checkAuth(method, entityType, authHeader,
+	requestWorkspace, cookie, ws, secret string, masterClient io.PlukClient) (bool, error) {
+	key := authHeader + requestWorkspace + cookie + ws + secret
+
+	authURL := utils.AuthValidationURL()
+	if authURL == "" && !utils.HasMasters() {
+		return true, nil
+	}
+
+	if api.cache.Get(key) {
+		return true, nil
+	} else {
+		if utils.HasMasters() {
+			// Talk to master.
+			logrus.Debugf("Auth request to master %v", utils.Masters()[0])
+			ws := requestWorkspace
+			if ws == "" {
+				ws = "kuberlab"
+			}
+			_, err := masterClient.ListEntities(entityType, ws)
+			if err != nil {
+				return false, errors.NewStatus(http.StatusUnauthorized, err.Error())
+			}
+		} else if ws != "" && secret != "" {
+			// workspace is empty if we request chunks
+			//allow := requestWorkspace == "kuberlab" || requestWorkspace == ""
+			//deny := requestWorkspace != ws
+			if requestWorkspace != "" {
+				if requestWorkspace != ws && requestWorkspace != "kuberlab" {
+					if method != http.MethodGet {
+						return false, errors.NewStatus(http.StatusForbidden, "Forbidden access to another workspace.")
+					}
+					// Try request workspace (in case if it is public)
+					u, err := url.Parse(authURL)
+					if err != nil {
+						return false, err
+					}
+					validationURL := fmt.Sprintf("%v://%v/api/v0.2/workspace/%v", u.Scheme, u.Host, requestWorkspace)
+					request, _ := http.NewRequest("GET", validationURL, nil)
+					request.Header.Add("Cookie", cookie)
+					request.Header.Add("Authorization", authHeader)
+					logrus.Debugf("GET %v", request.URL)
+					r, err := api.client.Do(request)
+					if err != nil {
+						return false, err
+					}
+					logrus.Debugf("Got %v", r.StatusCode)
+					if r.StatusCode >= 400 {
+						return false, errors.NewStatus(r.StatusCode, fmt.Sprintf("Cannot authenticate to %v", authURL))
+					} else {
+						wspace := &dealerclient.Workspace{}
+						err = json.NewDecoder(r.Body).Decode(wspace)
+						if err != nil {
+							return false, errors.NewStatus(http.StatusUnauthorized, fmt.Sprintf("Cannot authenticate to %v: %v", authURL, err))
+						}
+						if len(wspace.Can) == 0 && wspace.Type != "public" {
+							return false, errors.NewStatus(http.StatusForbidden, fmt.Sprintf("Cannot authenticate to %v", authURL))
+						}
+					}
+				}
+				//logrus.Error(fmt.Sprintf("Invalid auth to %v: workspace and secret don't match.", authURL))
+				//WriteErrorString(resp, http.StatusUnauthorized, "Unauthorized.")
+				//return
+			}
+			u, err := url.Parse(authURL)
+			if err != nil {
+				return false, err
+			}
+			validationURL := fmt.Sprintf("%v://%v/api/v0.2/secret/%v", u.Scheme, u.Host, secret)
+			request, _ := http.NewRequest("GET", validationURL, nil)
+			logrus.Debugf("GET %v://%v/[redacted]", request.URL.Scheme, request.URL.Host)
+			r, err := api.client.Do(request)
+			if err != nil {
+				return false, err
+			}
+			logrus.Debugf("Got %v", r.StatusCode)
+			if r.StatusCode >= 400 {
+				logrus.Error(fmt.Sprintf("Invalid auth to %v://%v/[redacted]", request.URL.Scheme, request.URL.Host))
+				return false, errors.NewStatus(http.StatusUnauthorized, "Unauthorized.")
+			}
+		} else {
+			if requestWorkspace != "" {
+				u, err := url.Parse(authURL)
+				if err != nil {
+					return false, err
+				}
+				validationURL := fmt.Sprintf("%v://%v/api/v0.2/workspace/%v", u.Scheme, u.Host, requestWorkspace)
+				request, _ := http.NewRequest("GET", validationURL, nil)
+				request.Header.Add("Cookie", cookie)
+				request.Header.Add("Authorization", authHeader)
+				logrus.Debugf("GET %v", request.URL)
+				r, err := api.client.Do(request)
+				if err != nil {
+					return false, err
+				}
+				logrus.Debugf("Got %v", r.StatusCode)
+				if r.StatusCode >= 400 {
+					return false, errors.NewStatus(r.StatusCode, fmt.Sprintf("Cannot authenticate to %v", authURL))
+				} else {
+					wspace := &dealerclient.Workspace{}
+					err = json.NewDecoder(r.Body).Decode(wspace)
+					if err != nil {
+						return false, errors.NewStatus(http.StatusUnauthorized, fmt.Sprintf("Cannot authenticate to %v: %v", authURL, err))
+					}
+					if len(wspace.Can) == 0 {
+						return false, errors.NewStatus(http.StatusForbidden, fmt.Sprintf("Cannot authenticate to %v", authURL))
+					}
+				}
+
+			} else {
+				request, _ := http.NewRequest("GET", authURL, nil)
+				request.Header.Add("Cookie", cookie)
+				request.Header.Add("Authorization", authHeader)
+
+				logrus.Debugf("GET %v", request.URL)
+
+				r, err := api.client.Do(request)
+				if err != nil {
+					return false, err
+				}
+				logrus.Debugf("Got %v", r.StatusCode)
+				if r.StatusCode >= 400 {
+					return false, errors.NewStatus(r.StatusCode, fmt.Sprintf("Cannot authenticate to %v", authURL))
+				}
+			}
+		}
+		api.cache.Set(key, true)
+	}
+	return true, nil
+}
+
 func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *restful.FilterChain) {
 	internal := req.HeaderParameter("Internal")
 	if internal != "" && utils.InternalKey() == internal {
@@ -215,150 +347,23 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 		}
 	}
 
-	key := authHeader + requestWorkspace + cookie + ws + secret
-
 	masterClient := plukclient.NewMasterClientFromHeaders(req.Request.Header)
 	req.SetAttribute("masterclient", masterClient)
 
-	if api.cache.Get(key) {
-		filter.ProcessFilter(req, resp)
+	_, err := api.checkAuth(
+		req.Request.Method,
+		currentType(req),
+		authHeader,
+		requestWorkspace,
+		cookie,
+		ws,
+		secret,
+		masterClient,
+	)
+	if err != nil {
+		WriteError(resp, err)
 		return
-	} else {
-		if utils.HasMasters() {
-			// Talk to master.
-			logrus.Debugf("Auth request to master %v", utils.Masters()[0])
-			ws := requestWorkspace
-			if ws == "" {
-				ws = "kuberlab"
-			}
-			_, err := masterClient.ListEntities(currentType(req), ws)
-			if err != nil {
-				WriteErrorString(resp, http.StatusUnauthorized, err.Error())
-				return
-			}
-		} else if ws != "" && secret != "" {
-			// workspace is empty if we request chunks
-			//allow := requestWorkspace == "kuberlab" || requestWorkspace == ""
-			//deny := requestWorkspace != ws
-			if requestWorkspace != "" {
-				if requestWorkspace != ws && requestWorkspace != "kuberlab" {
-					if req.Request.Method != http.MethodGet {
-						WriteStatusError(resp, http.StatusForbidden, fmt.Errorf("Forbidden access to another workspace."))
-						return
-					}
-					// Try request workspace (in case if it is public)
-					u, err := url.Parse(authURL)
-					if err != nil {
-						WriteError(resp, err)
-						return
-					}
-					validationURL := fmt.Sprintf("%v://%v/api/v0.2/workspace/%v", u.Scheme, u.Host, requestWorkspace)
-					request, _ := http.NewRequest("GET", validationURL, nil)
-					request.Header.Add("Cookie", cookie)
-					request.Header.Add("Authorization", authHeader)
-					logrus.Debugf("GET %v", request.URL)
-					r, err := api.client.Do(request)
-					if err != nil {
-						WriteStatusError(resp, http.StatusInternalServerError, err)
-						return
-					}
-					logrus.Debugf("Got %v", r.StatusCode)
-					if r.StatusCode >= 400 {
-						WriteStatusError(resp, r.StatusCode, fmt.Errorf("Cannot authenticate to %v", authURL))
-						return
-					} else {
-						wspace := &dealerclient.Workspace{}
-						err = json.NewDecoder(r.Body).Decode(wspace)
-						if err != nil {
-							WriteStatusError(resp, http.StatusUnauthorized, fmt.Errorf("Cannot authenticate to %v: %v", authURL, err))
-							return
-						}
-						if len(wspace.Can) == 0 && wspace.Type != "public" {
-							WriteStatusError(resp, http.StatusForbidden, fmt.Errorf("Cannot authenticate to %v", authURL))
-							return
-						}
-					}
-				}
-				//logrus.Error(fmt.Sprintf("Invalid auth to %v: workspace and secret don't match.", authURL))
-				//WriteErrorString(resp, http.StatusUnauthorized, "Unauthorized.")
-				//return
-			}
-			u, err := url.Parse(authURL)
-			if err != nil {
-				WriteError(resp, err)
-				return
-			}
-			validationURL := fmt.Sprintf("%v://%v/api/v0.2/secret/%v", u.Scheme, u.Host, secret)
-			request, _ := http.NewRequest("GET", validationURL, nil)
-			logrus.Debugf("GET %v://%v/[redacted]", request.URL.Scheme, request.URL.Host)
-			r, err := api.client.Do(request)
-			if err != nil {
-				http.Error(resp, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			logrus.Debugf("Got %v", r.StatusCode)
-			if r.StatusCode >= 400 {
-				logrus.Error(fmt.Sprintf("Invalid auth to %v://%v/[redacted]", request.URL.Scheme, request.URL.Host))
-				WriteErrorString(resp, http.StatusUnauthorized, "Unauthorized.")
-				return
-			}
-		} else {
-			if requestWorkspace != "" {
-				u, err := url.Parse(authURL)
-				if err != nil {
-					WriteError(resp, err)
-					return
-				}
-				validationURL := fmt.Sprintf("%v://%v/api/v0.2/workspace/%v", u.Scheme, u.Host, requestWorkspace)
-				request, _ := http.NewRequest("GET", validationURL, nil)
-				request.Header.Add("Cookie", cookie)
-				request.Header.Add("Authorization", authHeader)
-				logrus.Debugf("GET %v", request.URL)
-				r, err := api.client.Do(request)
-				if err != nil {
-					WriteStatusError(resp, http.StatusInternalServerError, err)
-					return
-				}
-				logrus.Debugf("Got %v", r.StatusCode)
-				if r.StatusCode >= 400 {
-					WriteStatusError(resp, r.StatusCode, fmt.Errorf("Cannot authenticate to %v", authURL))
-					return
-				} else {
-					wspace := &dealerclient.Workspace{}
-					err = json.NewDecoder(r.Body).Decode(wspace)
-					if err != nil {
-						WriteStatusError(resp, http.StatusUnauthorized, fmt.Errorf("Cannot authenticate to %v: %v", authURL, err))
-						return
-					}
-					if len(wspace.Can) == 0 {
-						WriteStatusError(resp, http.StatusForbidden, fmt.Errorf("Cannot authenticate to %v", authURL))
-						return
-					}
-				}
-
-			} else {
-				request, _ := http.NewRequest("GET", authURL, nil)
-				request.Header.Add("Cookie", cookie)
-				request.Header.Add("Authorization", authHeader)
-
-				logrus.Debugf("GET %v", request.URL)
-
-				r, err := api.client.Do(request)
-				if err != nil {
-					WriteStatusError(resp, http.StatusInternalServerError, err)
-					return
-				}
-				logrus.Debugf("Got %v", r.StatusCode)
-				if r.StatusCode >= 400 {
-					WriteStatusError(resp, r.StatusCode, fmt.Errorf("Cannot authenticate to %v", authURL))
-					return
-				}
-			}
-		}
-
-		api.cache.Set(key, true)
 	}
-
 	filter.ProcessFilter(req, resp)
 }
 

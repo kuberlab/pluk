@@ -77,9 +77,9 @@ func GetChunkByHash(hash string, version byte) (reader io.ReadCloser, err error)
 }
 
 func GetChunk(chunkPath string, version byte) (reader ReaderInterface, err error) {
-	hash, _ := utils.GetHashFromPath(chunkPath)
 	reader, err = os.Open(chunkPath)
 	if err != nil {
+		hash, _ := utils.GetHashFromPath(chunkPath)
 		if reader != nil {
 			reader.Close()
 		}

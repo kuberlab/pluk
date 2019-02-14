@@ -255,6 +255,7 @@ func (cmd *pushCmd) run() error {
 				Editing: !last,
 			},
 		); err != nil {
+			_ = pool.Stop()
 			logrus.Fatal(err)
 		}
 	}
@@ -275,7 +276,7 @@ func (cmd *pushCmd) run() error {
 	}
 
 	go uploadFS()
-	err = cmd.uploadChunks(bar, barFiles, client, !cmd.skipUpload, fileChan)
+	err = cmd.uploadChunks(bar, barFiles, pool, client, !cmd.skipUpload, fileChan)
 	close(fileChan)
 	_ = pool.Stop()
 
@@ -312,10 +313,11 @@ func (cmd *pushCmd) run() error {
 }
 
 func (cmd *pushCmd) uploadChunks(
-	bar, barFiles *pb.ProgressBar, client chunk_io.PlukClient,
+	bar, barFiles *pb.ProgressBar, pool *pb.Pool, client chunk_io.PlukClient,
 	upload bool, fileChan chan *types.HashedFile) (err error) {
 	cwd, err := os.Getwd()
 	if err != nil {
+		_ = pool.Stop()
 		logrus.Fatal(err)
 	}
 
@@ -351,6 +353,7 @@ func (cmd *pushCmd) uploadChunks(
 		resp, err = client.CheckChunk(hash, types.ChunkVersion)
 		//}
 		if err != nil {
+			_ = pool.Stop()
 			logrus.Fatalf("Failed to check chunk: %v", err)
 		}
 		if !resp.Exists || resp.Size != int64(len(chunkData)) {
@@ -362,6 +365,7 @@ func (cmd *pushCmd) uploadChunks(
 			//	}
 			//} else {
 			if err = client.SaveChunkReader(hash, chReader, types.ChunkVersion); err != nil {
+				_ = pool.Stop()
 				logrus.Fatalf("Failed to upload chunk: %v", err)
 			}
 			//}

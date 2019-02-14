@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -318,15 +317,28 @@ func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.C
 		for i, partPath := range splitted {
 			if i == len(splitted)-1 {
 				if f, ok := curDir.Files[partPath]; ok {
-					f.Chunks = append(f.Chunks, io.Chunk{Path: utils.GetHashedFilename(raw.Hash, raw.Version), Size: raw.ChunkSize})
+					f.Chunks = append(
+						f.Chunks,
+						io.Chunk{
+							Path:    utils.GetHashedFilename(raw.Hash, raw.Version),
+							Size:    raw.ChunkSize,
+							Version: raw.Version,
+						},
+					)
 					continue
 				} else {
 					curDir.Files[partPath] = &io.ChunkedFile{
-						Name:    partPath,
-						Chunks:  []io.Chunk{{Path: utils.GetHashedFilename(raw.Hash, raw.Version), Size: raw.ChunkSize}},
+						Name: partPath,
+						Chunks: []io.Chunk{
+							{
+								Path:    utils.GetHashedFilename(raw.Hash, raw.Version),
+								Size:    raw.ChunkSize,
+								Version: raw.Version,
+							},
+						},
 						Size:    raw.FileSize,
 						Dir:     false,
-						Mode:    os.FileMode(raw.FileMode),
+						Mode:    raw.FileMode,
 						ModTime: raw.UpdatedAt.Time,
 					}
 				}

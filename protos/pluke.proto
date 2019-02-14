@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.kuberlab.pluk";
+option java_outer_classname = "ServerProto";
+
+package grpc;
+
+service Pluke {
+    // Obtains the chunk at given path.
+    rpc GetChunk(ChunkRequest) returns (ChunkResponse) {}
+}
+
+// The request message containing chunk request path and auth.
+message ChunkRequest {
+    string path = 1;
+    int32 version = 2;
+    Auth auth = 3;
+}
+
+// The response message containing the chunk data
+message ChunkResponse {
+    bytes data = 1;
+}
+
+message Auth {
+    string token = 1;
+    string workspace = 2;
+    string secret = 3;
+}

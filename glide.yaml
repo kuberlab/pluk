@@ -7,6 +7,12 @@ import:
   - dialects/mysql
   - dialects/postgres
   - dialects/sqlite
+- package: google.golang.org/grpc
+  version: 1dbad57dad5876dcc72d3757df14b4276d660ca3
+- package: github.com/golang/protobuf
+  version: c823c79ea1570fb5ff454033735a8e68575d1d0f
+- package: google.golang.org/genproto
+  version: c66870c02cf823ceb633bcd05be3c7cda29976f4
 - package: github.com/mattn/go-sqlite3
   version: 87ac1cb49789a0ef6b0d7be6b7aa458a9b90d7ae
 - package: github.com/spf13/cobra
@@ -27,7 +33,7 @@ import:
   - webdav
 - package: gopkg.in/cheggaaa/pb.v2
 - package: golang.org/x/sys
-  version: 1792d66dc88e503d3cb2400578221cdf1f7fe26f
+  version: 983097b1a8a340cd1cc7df17d735154d89e10b1a
   subpackages:
   - unix
 - package: github.com/Masterminds/semver

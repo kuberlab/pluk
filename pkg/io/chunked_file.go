@@ -48,21 +48,24 @@ type PlukClient interface {
 	WebdavAuth(user, pass, path string) (bool, error)
 }
 
-var MasterClient PlukClient
+type PlukGRPCClient interface {
+	GetChunk(path string, version byte) ([]byte, error)
+}
+
+var (
+	MasterClient PlukClient
+	GrpcClient   PlukGRPCClient
+)
 
 type ChunkedFileFS struct {
 	Root    string                    `json:"root"`
+	AsFile  *ChunkedFile              `json:"-"`     // Precomputed dirObj
 	Dirs    map[string]*ChunkedFileFS `json:"dirs"`  // Only dirs for current root
 	Files   map[string]*ChunkedFile   `json:"files"` // Only files for current root
 	ModTime time.Time                 `json:"mod_time"`
 }
 
 func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
-	// Inline function strings.TrimPrefix
-	//absname = strings.TrimPrefix(absname, "/")
-	//if len(absname) >= 1 && absname[:1] == "/" {
-	//	absname = absname[1:]
-	//}
 	splitted := strings.Split(absname, "/")
 	dirname := strings.Join(splitted[:len(splitted)-1], "/")
 	filename := splitted[len(splitted)-1]
@@ -70,7 +73,7 @@ func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
 	//filename := filepath.Base(absname)
 
 	if absname == "" {
-		return fs.dirObj(absname, fs.ModTime)
+		return fs.AsFile
 	}
 	curDir := fs.GetDir(dirname)
 	if curDir == nil {
@@ -78,7 +81,7 @@ func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
 	}
 	if d, ok := curDir.Dirs[filename]; ok {
 		// Return file-dir object
-		return fs.dirObj(absname, d.ModTime)
+		return d.AsFile
 	} else {
 		if f, ok := curDir.Files[filename]; ok {
 			return f
@@ -88,10 +91,10 @@ func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
 	}
 }
 
-func (fs *ChunkedFileFS) dirObj(absname string, modtime time.Time) *ChunkedFile {
+func (fs *ChunkedFileFS) dirObj(basename string, modtime time.Time) *ChunkedFile {
 	return &ChunkedFile{
 		Size:    4096,
-		Name:    filepath.Base(absname),
+		Name:    basename,
 		ModTime: modtime,
 		Mode:    0775,
 		Dir:     true,
@@ -103,10 +106,6 @@ func (fs *ChunkedFileFS) GetDir(dirname string) *ChunkedFileFS {
 		return fs
 	}
 
-	//dirname = strings.TrimPrefix(dirname, "/")
-	//if len(dirname) >= 1 && dirname[:1] == "/" {
-	//	dirname = dirname[1:]
-	//}
 	splitted := strings.Split(dirname, "/")
 	curDir := fs
 	if dirname == "" {
@@ -144,6 +143,13 @@ func (fs *ChunkedFileFS) Walk(root string, walkFunc func(path string, f *Chunked
 }
 
 func (fs *ChunkedFileFS) Prepare() {
+	if fs.Root == "/" {
+		fs.AsFile = fs.dirObj("", fs.ModTime)
+	}
+	for k, d := range fs.Dirs {
+		d.AsFile = fs.dirObj(k, d.ModTime)
+		d.Prepare()
+	}
 }
 
 func (fs *ChunkedFileFS) AddDir(path string, modtime time.Time) {
@@ -186,23 +192,22 @@ func (fs *ChunkedFileFS) Clone() *ChunkedFileFS {
 }
 
 func (fs *ChunkedFileFS) ReaddirFiles(prefix string, count int) ([]*ChunkedFile, error) {
-	//prefix = strings.TrimPrefix(prefix, "/")
-	if len(prefix) >= 1 && prefix[:1] == "/" {
-		prefix = prefix[1:]
-	}
-
 	dir := fs.GetDir(prefix)
 	if dir == nil {
 		return nil, fmt.Errorf("No such directory: %v", prefix)
 	}
-	res := make([]*ChunkedFile, 0)
+	res := make([]*ChunkedFile, len(dir.Dirs)+len(dir.Files))
 
 	// Add all files and dirs within current directory
+	i := 0
 	for _, d := range dir.Dirs {
-		res = append(res, dir.dirObj(d.Root, d.ModTime))
+		//res[i] = dir.dirObj(k, d.ModTime)
+		res[i] = d.AsFile
+		i++
 	}
 	for _, f := range dir.Files {
-		res = append(res, f)
+		res[i] = f
+		i++
 	}
 	if count == 0 {
 		count = len(res)
@@ -213,11 +218,6 @@ func (fs *ChunkedFileFS) ReaddirFiles(prefix string, count int) ([]*ChunkedFile,
 }
 
 func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error) {
-	//prefix = strings.TrimPrefix(prefix, "/")
-	if len(prefix) >= 1 && prefix[:1] == "/" {
-		prefix = prefix[1:]
-	}
-
 	dir := fs.GetDir(prefix)
 	if dir == nil {
 		return nil, fmt.Errorf("No such directory: %v", prefix)
@@ -236,18 +236,18 @@ func (fs *ChunkedFileFS) Readdir(prefix string, count int) ([]os.FileInfo, error
 		count = len(res)
 	}
 	result := FileInfos(res[:count])
-	sort.Sort(result)
+	//sort.Sort(result)
 	return result, nil
 }
 
 type ChunkedFile struct {
 	currentChunkReader ReaderInterface
-	Chunks             []Chunk     `json:"chunks"`
-	Name               string      `json:"name"`
-	Size               int64       `json:"size"`
-	Mode               os.FileMode `json:"mode"`
-	Dir                bool        `json:"dir"`
-	ModTime            time.Time   `json:"modtime"`
+	Chunks             []Chunk   `json:"chunks,omitempty"`
+	Name               string    `json:"name"`
+	Size               int64     `json:"size"`
+	Mode               uint32    `json:"mode"`
+	Dir                bool      `json:"dir"`
+	ModTime            time.Time `json:"modtime"`
 
 	currentChunk int
 	offset       int64 // absolute offset
@@ -264,11 +264,10 @@ func (cf ChunkedFiles) Len() int {
 func (cf ChunkedFiles) Less(i, j int) bool {
 	cfi := cf[i]
 	cfj := cf[j]
-	nameFirst := cfi.Name < cfj.Name
 	if cfi.Dir != cfj.Dir {
 		return cfi.Dir
 	} else {
-		return nameFirst
+		return cfi.Name < cfj.Name
 	}
 }
 func (cf ChunkedFiles) Swap(i, j int) {
@@ -284,11 +283,10 @@ func (cf FileInfos) Len() int {
 func (cf FileInfos) Less(i, j int) bool {
 	cfi := cf[i]
 	cfj := cf[j]
-	nameFirst := cfi.Name() < cfj.Name()
 	if cfi.IsDir() != cfj.IsDir() {
 		return cfi.IsDir()
 	} else {
-		return nameFirst
+		return cfi.Name() < cfj.Name()
 	}
 }
 
@@ -297,8 +295,9 @@ func (cf FileInfos) Swap(i, j int) {
 }
 
 type Chunk struct {
-	Path string `json:"path"`
-	Size int64  `json:"size"`
+	Path    string `json:"path"`
+	Size    int64  `json:"size"`
+	Version byte   `json:"version"`
 }
 
 func (f *ChunkedFile) Close() error {
@@ -323,9 +322,17 @@ func (f *ChunkedFile) Clone() *ChunkedFile {
 	}
 }
 
-func (f *ChunkedFile) getChunkReader(chunkPath string) (reader ReaderInterface, err error) {
-	_, version := utils.GetHashFromPath(chunkPath)
-	return GetChunk(chunkPath, version)
+func (f *ChunkedFile) getChunkReader(chunkPath string, version byte) (reader ReaderInterface, err error) {
+	//_, version := utils.GetHashFromPath(chunkPath)
+	if !utils.UseGrpc {
+		return GetChunk(chunkPath, version)
+	} else {
+		bts, err := GrpcClient.GetChunk(chunkPath, version)
+		if err != nil {
+			return nil, err
+		}
+		return NewChunkReaderFromData(bts), nil
+	}
 }
 
 func (f *ChunkedFile) Read(p []byte) (n int, err error) {
@@ -337,7 +344,7 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 		if len(f.Chunks) == 0 {
 			return 0, io.EOF
 		}
-		reader, err = f.getChunkReader(f.Chunks[f.currentChunk].Path)
+		reader, err = f.getChunkReader(f.Chunks[f.currentChunk].Path, f.Chunks[f.currentChunk].Version)
 		if err != nil {
 			logrus.Error(err)
 			return read, io.EOF
@@ -367,7 +374,7 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 			f.currentChunk++
 			chunk = f.currentChunk
 			f.chunkOffset = 0
-			reader, err = f.getChunkReader(f.Chunks[f.currentChunk].Path)
+			reader, err = f.getChunkReader(f.Chunks[f.currentChunk].Path, f.Chunks[f.currentChunk].Version)
 			if err != nil {
 				logrus.Error(err)
 				f.currentChunkReader = nil
@@ -461,17 +468,17 @@ func (*ChunkedFile) Write(p []byte) (int, error) {
 
 // A ChunkedFileInfo is the implementation of FileInfo returned by Stat and Lstat.
 type ChunkedFileInfo struct {
-	Dir      bool        `json:"dir"`
-	Fname    string      `json:"name"`
-	Fsize    int64       `json:"size"`
-	Fmode    os.FileMode `json:"mode"`
-	FmodTime time.Time   `json:"modtime"`
+	Dir      bool      `json:"dir"`
+	Fname    string    `json:"name"`
+	Fsize    int64     `json:"size"`
+	Fmode    uint32    `json:"mode"`
+	FmodTime time.Time `json:"modtime"`
 }
 
 func (fs *ChunkedFileInfo) Clone() *ChunkedFileInfo {
 	return &ChunkedFileInfo{
 		FmodTime: fs.FmodTime,
-		Fmode:    os.FileMode(uint32(fs.Fmode)),
+		Fmode:    fs.Fmode,
 		Dir:      fs.Dir,
 		Fname:    fs.Fname,
 		Fsize:    fs.Fsize,
@@ -481,6 +488,6 @@ func (fs *ChunkedFileInfo) Clone() *ChunkedFileInfo {
 func (fs *ChunkedFileInfo) Name() string       { return fs.Fname }
 func (fs *ChunkedFileInfo) IsDir() bool        { return fs.Dir }
 func (fs *ChunkedFileInfo) Size() int64        { return fs.Fsize }
-func (fs *ChunkedFileInfo) Mode() os.FileMode  { return fs.Fmode }
+func (fs *ChunkedFileInfo) Mode() os.FileMode  { return os.FileMode(fs.Fmode) }
 func (fs *ChunkedFileInfo) ModTime() time.Time { return fs.FmodTime }
 func (fs *ChunkedFileInfo) Sys() interface{}   { return nil }

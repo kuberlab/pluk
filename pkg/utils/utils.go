@@ -36,13 +36,19 @@ const (
 	dbPortVar            = "DB_PORT"
 	MastersVar           = "MASTERS"
 	portVar              = "PLUK_HTTP_PORT"
+	portGrpcVar          = "PLUK_GRPC_PORT"
 	defaultPort          = "8082"
+	defaultGrpcPort      = "8085"
 	defaultDataDir       = "/data"
 	defaultDBName        = "/pluk/pluke.db"
 	ChunkDirLength       = 8
 )
 
-var DataDirValue = ""
+var (
+	DataDirValue = ""
+	AuthURL      = "unset"
+	UseGrpc      = false
+)
 
 func MustParse(date string) time.Time {
 	t, err := time.ParseInLocation("2006-01-02 15:04:05", date, time.FixedZone("UTC", 0))
@@ -90,6 +96,22 @@ func HttpPort() string {
 	return port
 }
 
+func GrpcPort() string {
+	port := os.Getenv(portGrpcVar)
+	if port == "" {
+		return defaultGrpcPort
+	}
+	return port
+}
+
+//func UseGrpc() bool {
+//	debug := os.Getenv(debug)
+//	if strings.ToLower(debug) == "true" {
+//		return true
+//	}
+//	return false
+//}
+
 func DBName() string {
 	return FromEnv(dbNameVar, defaultDBName)
 }
@@ -119,7 +141,11 @@ func FromEnv(varName, defaultVal string) string {
 }
 
 func AuthValidationURL() string {
-	return os.Getenv(authValidationVar)
+	if AuthURL != "unset" {
+		return AuthURL
+	}
+	AuthURL = os.Getenv(authValidationVar)
+	return AuthURL
 }
 
 func InternalKey() string {

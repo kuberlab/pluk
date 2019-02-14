@@ -153,6 +153,8 @@ func (cmd *plukeFSCmd) run() int {
 
 	_ = os.Setenv(utils.DoNotSaveChunks, "true")
 	_ = os.Setenv(utils.MastersVar, cmd.server)
+	utils.UseGrpc = true
+	_ = os.Setenv("USE_GRPC", "true")
 
 	io.MasterClient = plukclient.NewMasterClientWithSecret(cmd.secretWorkspace, cmd.secret)
 	if logrus.GetLevel() == logrus.DebugLevel {
