@@ -42,6 +42,8 @@ const (
 	ChunkDirLength       = 8
 )
 
+var DataDirValue = ""
+
 func MustParse(date string) time.Time {
 	t, err := time.ParseInLocation("2006-01-02 15:04:05", date, time.FixedZone("UTC", 0))
 	if err != nil {
@@ -67,10 +69,16 @@ func LogLevel() string {
 }
 
 func DataDir() string {
+	if DataDirValue != "" {
+		return DataDirValue
+	}
+
 	dataDir := os.Getenv(dataVar)
 	if dataDir == "" {
+		DataDirValue = defaultDataDir
 		return defaultDataDir
 	}
+	DataDirValue = dataDir
 	return dataDir
 }
 
