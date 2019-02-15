@@ -6,12 +6,14 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/api"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/utils"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 // server is used to implement PlukeServer.
@@ -28,8 +30,9 @@ func (s *Server) GetChunk(ctx context.Context, in *ChunkRequest) (*ChunkResponse
 		logrus.Error(err)
 		return nil, err
 	}
-	bt := bytes.NewBuffer([]byte{})
+	bt := bytes.NewBuffer(make([]byte, 0, 16384))
 	io.Copy(bt, reader)
+	reader.Close()
 	return &ChunkResponse{Data: bt.Bytes()}, nil
 }
 
@@ -52,7 +55,12 @@ func Start() {
 	if err != nil {
 		logrus.Errorf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer()
+	s := grpc.NewServer(
+		grpc.WriteBufferSize(1024*32),
+		grpc.ReadBufferSize(1024*32),
+		grpc.MaxConcurrentStreams(64),
+		grpc.KeepaliveParams(keepalive.ServerParameters{Time: time.Duration(0)}),
+	)
 	RegisterPlukeServer(s, &Server{})
 	if err := s.Serve(lis); err != nil {
 		logrus.Fatalf("failed to serve: %v", err)

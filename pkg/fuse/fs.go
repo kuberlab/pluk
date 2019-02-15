@@ -131,7 +131,6 @@ func (fs *PlukeFS) Open(name string, flags uint32, context *fuse.Context) (file 
 		return nil, fuse.ENOENT
 		//return fs.serviceFileRead(name)
 	}
-
 	return NewPlukFile(f), fuse.OK
 }
 

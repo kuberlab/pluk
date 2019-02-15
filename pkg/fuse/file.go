@@ -12,18 +12,22 @@ import (
 type PlukFile struct {
 	nodefs.File
 	chunked *plukio.ChunkedFile
+	data    []byte
+	size    int
 }
+
+var defFile = nodefs.NewDefaultFile()
 
 func NewPlukFile(chunked *plukio.ChunkedFile) *PlukFile {
 	return &PlukFile{
-		File:    nodefs.NewDefaultFile(),
+		File:    defFile,
 		chunked: chunked,
 	}
 }
 
 func (f *PlukFile) Read(dest []byte, off int64) (fuse.ReadResult, fuse.Status) {
 	logrus.Debugf("READ %v, SIZE %v, OFFSET %v", f.chunked.Name, len(dest), off)
-	return newResultData(f.chunked, dest, off), fuse.OK
+	return f.resultData(dest, off), fuse.OK
 }
 
 func (f *PlukFile) Flush() fuse.Status {
@@ -51,7 +55,7 @@ type ResultData struct {
 	size int
 }
 
-func newResultData(f *plukio.ChunkedFile, buf []byte, off int64) fuse.ReadResult {
+func (f *PlukFile) resultData(buf []byte, off int64) fuse.ReadResult {
 	//f.Seek(off, io.SeekStart)
 	//n, err := f.Read(buf)
 	// Squash seek & read into 1 operation since we can get
@@ -66,22 +70,24 @@ func newResultData(f *plukio.ChunkedFile, buf []byte, off int64) fuse.ReadResult
 	// READ 300
 	// SEEK 0
 	// READ 500
-	n, err := f.SeekAndRead(buf, off)
+	n, err := f.chunked.SeekAndRead(buf, off)
+	f.size = n
+	f.data = buf[:n]
 	if err != nil {
 		if err != io.EOF {
 			logrus.Errorf("Read error: %v", err)
 		}
-		return &ResultData{buf, n}
+		return f
 	}
-	return &ResultData{buf, n}
+	return f
 }
 
-func (r *ResultData) Bytes(buf []byte) ([]byte, fuse.Status) {
-	return r.data, fuse.OK
+func (f *PlukFile) Bytes(buf []byte) ([]byte, fuse.Status) {
+	return f.data, fuse.OK
 }
 
-func (r *ResultData) Size() int {
-	return r.size
+func (f *PlukFile) Size() int {
+	return f.size
 }
 
-func (r *ResultData) Done() {}
+func (f *PlukFile) Done() {}

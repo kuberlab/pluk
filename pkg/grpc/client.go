@@ -23,13 +23,16 @@ type Client struct {
 
 func NewClient(address string, opts *plukclient.AuthOpts) (*Client, error) {
 	// Set up a connection to the server.
+
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	//grpc.WithReadBufferSize(65536), grpc.WithWriteBufferSize(65536))
 	if err != nil {
 		return nil, fmt.Errorf("did not connect: %v", err)
 	} else {
 		// Check port
 		cn, err := net.Dial("tcp", address)
 		if err != nil {
+			_ = conn.Close()
 			return nil, err
 		}
 		_ = cn.Close()
@@ -44,9 +47,14 @@ func NewClient(address string, opts *plukclient.AuthOpts) (*Client, error) {
 	}, nil
 }
 
+var ctx = context.TODO()
+
 func (c *Client) GetChunk(path string, version byte) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
+	t := time.Now()
+	//defer func() {
+	//	fmt.Printf("GetChunkEnd: %v\n", time.Since(t))
+	//}()
+
 	resp, err := c.internal.GetChunk(
 		ctx,
 		&ChunkRequest{
@@ -55,6 +63,7 @@ func (c *Client) GetChunk(path string, version byte) ([]byte, error) {
 			Auth:    c.auth,
 		},
 	)
+	fmt.Printf("GetChunk: %v\n", time.Since(t))
 	if err != nil {
 		return nil, err
 	}
