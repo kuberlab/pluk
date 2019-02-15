@@ -50,11 +50,6 @@ func NewClient(address string, opts *plukclient.AuthOpts) (*Client, error) {
 var ctx = context.TODO()
 
 func (c *Client) GetChunk(path string, version byte) ([]byte, error) {
-	t := time.Now()
-	//defer func() {
-	//	fmt.Printf("GetChunkEnd: %v\n", time.Since(t))
-	//}()
-
 	resp, err := c.internal.GetChunk(
 		ctx,
 		&ChunkRequest{
@@ -63,7 +58,6 @@ func (c *Client) GetChunk(path string, version byte) ([]byte, error) {
 			Auth:    c.auth,
 		},
 	)
-	fmt.Printf("GetChunk: %v\n", time.Since(t))
 	if err != nil {
 		return nil, err
 	}
