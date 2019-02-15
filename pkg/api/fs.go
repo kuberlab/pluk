@@ -23,11 +23,11 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 	}
 	master := api.masterClient(req)
 
-	err := api.checkEntityExists(req, workspace, name)
-	if err != nil {
-		WriteError(resp, err)
-		return
-	}
+	//err := api.checkEntityExists(req, workspace, name)
+	//if err != nil {
+	//	WriteError(resp, err)
+	//	return
+	//}
 
 	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
 	if err != nil {

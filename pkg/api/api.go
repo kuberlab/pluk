@@ -31,21 +31,13 @@ type API struct {
 	saveLocks map[string]*sync.RWMutex
 }
 
-func Start() {
-	logrus.Info("Starting pluk...")
-	utils.PrintEnvInfo()
+var (
+	GlobalAPI *API
+)
 
-	port := utils.HttpPort()
-	if err := http.ListenAndServe(fmt.Sprintf(":%v", port), GlobalHandler()); err != nil {
-		logrus.Error(err)
-		os.Exit(1)
-	}
-}
-
-func GlobalHandler() http.Handler {
-	plukio.MasterClient = plukclient.NewInternalMasterClient()
+func Build() *API {
 	hub := types.NewHub()
-	api := &API{
+	GlobalAPI = &API{
 		cache:     utils.NewRequestCache(),
 		fsCache:   utils.NewRequestCache(),
 		client:    &http.Client{Timeout: time.Minute},
@@ -54,6 +46,22 @@ func GlobalHandler() http.Handler {
 		hub:       hub,
 		saveLocks: make(map[string]*sync.RWMutex),
 	}
+	return GlobalAPI
+}
+
+func Start(api *API) {
+	logrus.Info("Starting pluk...")
+	utils.PrintEnvInfo()
+
+	port := utils.HttpPort()
+	if err := http.ListenAndServe(fmt.Sprintf(":%v", port), GlobalHandler(api)); err != nil {
+		logrus.Error(err)
+		os.Exit(1)
+	}
+}
+
+func GlobalHandler(api *API) http.Handler {
+	plukio.MasterClient = plukclient.NewInternalMasterClient()
 
 	r := mux.NewRouter()
 	r.NotFoundHandler = NotFoundHandler()

@@ -17,5 +17,5 @@ func main() {
 	db.DbMgr = db.NewMainDatabaseMgr()
 	go gc.Start()
 	go grpc.Start()
-	api.Start()
+	api.Start(api.Build())
 }

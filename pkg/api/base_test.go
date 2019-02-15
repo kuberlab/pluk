@@ -40,7 +40,7 @@ func setup(fname string) {
 	// test server
 	db.DbMgr = db.NewFakeDatabaseMgr(fname)
 	logrus.SetLevel(logrus.DebugLevel)
-	server = httptest.NewServer(GlobalHandler())
+	server = httptest.NewServer(GlobalHandler(Build()))
 	client = &http.Client{Timeout: time.Second * 10}
 	os.Setenv("DATA_DIR", "/tmp/tmp_pluk")
 	runGC()

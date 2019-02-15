@@ -5,8 +5,10 @@ import (
 	"context"
 	"io"
 	"net"
+	"net/http"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/kuberlab/pluk/pkg/api"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/utils"
 	"google.golang.org/grpc"
@@ -15,8 +17,12 @@ import (
 // server is used to implement PlukeServer.
 type Server struct{}
 
-// GetChunk implements helloworld.GreeterServer
+// GetChunk implements PlukeServer
 func (s *Server) GetChunk(ctx context.Context, in *ChunkRequest) (*ChunkResponse, error) {
+	if ok, err := s.checkAuth(in.Auth); !ok {
+		logrus.Error(err)
+		return nil, err
+	}
 	reader, err := plukio.GetChunk(in.Path, byte(in.Version))
 	if err != nil {
 		logrus.Error(err)
@@ -25,6 +31,19 @@ func (s *Server) GetChunk(ctx context.Context, in *ChunkRequest) (*ChunkResponse
 	bt := bytes.NewBuffer([]byte{})
 	io.Copy(bt, reader)
 	return &ChunkResponse{Data: bt.Bytes()}, nil
+}
+
+func (s *Server) checkAuth(auth *Auth) (bool, error) {
+	return api.GlobalAPI.CheckAuth(
+		http.MethodGet,
+		"",
+		"",
+		"",
+		"",
+		auth.Workspace,
+		auth.Secret,
+		nil,
+	)
 }
 
 func Start() {

@@ -29,9 +29,7 @@ type PlukeFS struct {
 	secretWorkspace string
 	dsType          string
 	client          io.PlukClient
-	//grpc            *grpc.Client
-	//lock            sync.RWMutex
-	innerFS *io.ChunkedFileFS
+	innerFS         *io.ChunkedFileFS
 }
 
 func NewPlukFS(dsType, workspace, dataset, version, server, secret, secretWorkspace string) (pathfs.FileSystem, error) {
@@ -57,9 +55,18 @@ func NewPlukFS(dsType, workspace, dataset, version, server, secret, secretWorksp
 		return nil, err
 	}
 
+	fs.client = client
+	innerFS, err := client.GetFSStructure(dsType, workspace, dataset, version)
+	if err != nil {
+		return nil, err
+	}
+	innerFS.Prepare()
+	fs.innerFS = innerFS
+
+	// Connect to gRPC
 	u, _ := url.Parse(server)
 	host := strings.Split(u.Host, ":")[0]
-	// Initialize grpc client
+	// Initialize grpc client for standard ports
 	gClient, err := grpc.NewClient(host+":30805", opts)
 	if err != nil {
 		gClient, err = grpc.NewClient(host+":8085", opts)
@@ -69,16 +76,6 @@ func NewPlukFS(dsType, workspace, dataset, version, server, secret, secretWorksp
 	}
 
 	io.GrpcClient = gClient
-
-	//fs.grpc = gClient
-
-	fs.client = client
-	innerFS, err := client.GetFSStructure(dsType, workspace, dataset, version)
-	if err != nil {
-		return nil, err
-	}
-	innerFS.Prepare()
-	fs.innerFS = innerFS
 
 	return fs, nil
 }

@@ -52,7 +52,7 @@ func (c *Client) GetChunk(path string, version byte) ([]byte, error) {
 		&ChunkRequest{
 			Path:    path,
 			Version: int32(version),
-			Auth:    &Auth{},
+			Auth:    c.auth,
 		},
 	)
 	if err != nil {

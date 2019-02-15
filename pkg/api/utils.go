@@ -155,7 +155,7 @@ func WriteError(resp *restful.Response, err error) {
 	}
 }
 
-func NotFoundHandler() http.Handler {
+func NotFoundHandler() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 
@@ -187,7 +187,7 @@ func (api *API) InternalHook(req *restful.Request, resp *restful.Response, filte
 
 const checkWorkspace = "check-for-auth-workspace"
 
-func (api *API) checkAuth(method, entityType, authHeader,
+func (api *API) CheckAuth(method, entityType, authHeader,
 	requestWorkspace, cookie, ws, secret string, masterClient io.PlukClient) (bool, error) {
 	key := authHeader + requestWorkspace + cookie + ws + secret
 
@@ -205,6 +205,9 @@ func (api *API) checkAuth(method, entityType, authHeader,
 			ws := requestWorkspace
 			if ws == "" {
 				ws = "kuberlab"
+			}
+			if masterClient == nil && ws != "" && secret != "" {
+				masterClient = plukclient.NewMasterClientWithSecret(ws, secret)
 			}
 			_, err := masterClient.ListEntities(entityType, ws)
 			if err != nil {
@@ -350,7 +353,7 @@ func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *r
 	masterClient := plukclient.NewMasterClientFromHeaders(req.Request.Header)
 	req.SetAttribute("masterclient", masterClient)
 
-	_, err := api.checkAuth(
+	_, err := api.CheckAuth(
 		req.Request.Method,
 		currentType(req),
 		authHeader,
