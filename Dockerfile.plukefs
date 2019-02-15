@@ -9,7 +9,6 @@ RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && go build -ldflags="-s -w" ./cmd
 
 FROM ubuntu:18.10
 
-RUN apt-get update
-RUN apt-get install -y libfuse-dev fuse
+RUN apt-get update && apt-get install -y libfuse-dev fuse
 COPY --from=0 /go/src/github.com/kuberlab/pluk/plukefs /usr/bin/plukefs
 VOLUME "/fs"
