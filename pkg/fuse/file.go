@@ -34,9 +34,9 @@ func (f *PlukFile) Flush() fuse.Status {
 func (f *PlukFile) GetAttr(a *fuse.Attr) fuse.Status {
 	var mode uint32
 	if f.chunked.Dir {
-		mode = fuse.S_IFDIR | uint32(f.chunked.Mode)
+		mode = fuse.S_IFDIR | f.chunked.Mode
 	} else {
-		mode = fuse.S_IFREG | uint32(f.chunked.Mode)
+		mode = fuse.S_IFREG | f.chunked.Mode
 	}
 	a.Mode = mode
 	a.Size = uint64(f.chunked.Size)

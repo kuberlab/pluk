@@ -170,7 +170,7 @@ func (fs *PlukeFS) StatFs(name string) *fuse.StatfsOut {
 	var chunks uint64
 	var files uint64
 	var size uint64
-	_ = fs.innerFS.Walk("/"+name, func(path string, f *io.ChunkedFile, err error) error {
+	_ = fs.innerFS.Walk(name, func(path string, f *io.ChunkedFile, err error) error {
 		if f.Dir {
 			return nil
 		}
