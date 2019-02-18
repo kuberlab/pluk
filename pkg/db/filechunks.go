@@ -256,7 +256,7 @@ FROM "file_chunks"
        AND f.workspace = 'kuberlab-demo'
        AND f.dataset_type = 'dataset'
   INNER JOIN chunks ON file_chunks.chunk_id = chunks.id
-ORDER BY path, chunk_index;
+ORDER BY chunk_index;
 */
 func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, prefix string, precise bool) ([]RawFile, error) {
 	join := strings.Builder{}
@@ -286,7 +286,7 @@ func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, prefix 
 		Select(strings.Join(columns, ",")).
 		Joins(join.String(), values...).
 		Joins("INNER JOIN chunks ON file_chunks.chunk_id = chunks.id").
-		Order(`path, chunk_index`).
+		Order(`chunk_index`).
 		Scan(&rawFiles).Error
 	return rawFiles, err
 }

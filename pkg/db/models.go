@@ -45,6 +45,14 @@ func CreateAll(db *gorm.DB) error {
 		logrus.Error(err)
 	}
 
+	// CREATE INDEX idx_ws_name_version_type ON "files"(dataset_name, dataset_type, "workspace", "version");
+	if err := db.Debug().Model(&File{}).AddIndex(
+		"idx_ws_name_version_type",
+		"dataset_name", "dataset_type", "workspace", "version",
+	).Error; err != nil {
+		logrus.Error(err)
+	}
+
 	if db.Dialect().GetName() == "sqlite3" {
 		if err := db.Debug().Model(&Chunk{}).AddUniqueIndex(
 			"idx_hash",
