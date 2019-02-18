@@ -36,7 +36,7 @@ const (
 	dbPortVar            = "DB_PORT"
 	MastersVar           = "MASTERS"
 	portVar              = "PLUK_HTTP_PORT"
-	portGrpcVar          = "PLUK_GRPC_PORT"
+	PortGrpcVar          = "PLUK_GRPC_PORT"
 	defaultPort          = "8082"
 	defaultGrpcPort      = "8085"
 	defaultDataDir       = "/data"
@@ -97,7 +97,7 @@ func HttpPort() string {
 }
 
 func GrpcPort() string {
-	port := os.Getenv(portGrpcVar)
+	port := os.Getenv(PortGrpcVar)
 	if port == "" {
 		return defaultGrpcPort
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/grpc"
 	"github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/plukclient"
+	"github.com/kuberlab/pluk/pkg/utils"
 )
 
 var ChangeDatasetRegex = regexp.MustCompile("\\.([-.a-z0-9_A-Z]+)__([-a-z0-9.]+)")
@@ -32,7 +33,7 @@ type PlukeFS struct {
 	innerFS         *io.ChunkedFileFS
 }
 
-func NewPlukFS(dsType, workspace, dataset, version, server, secret, secretWorkspace string) (pathfs.FileSystem, error) {
+func NewPlukeFS(dsType, workspace, dataset, version, server, secret, secretWorkspace string) (pathfs.FileSystem, error) {
 	if dsType == "" {
 		dsType = "dataset"
 	}
@@ -69,7 +70,7 @@ func NewPlukFS(dsType, workspace, dataset, version, server, secret, secretWorksp
 	// Initialize grpc client for standard ports
 	gClient, err := grpc.NewClient(host+":30805", opts)
 	if err != nil {
-		gClient, err = grpc.NewClient(host+":8085", opts)
+		gClient, err = grpc.NewClient(fmt.Sprintf("%v:%v", host, utils.GrpcPort()), opts)
 		if err != nil {
 			return nil, err
 		}

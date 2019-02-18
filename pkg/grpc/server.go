@@ -39,7 +39,7 @@ func (s *Server) GetChunk(ctx context.Context, in *ChunkRequest) (*ChunkResponse
 func (s *Server) checkAuth(auth *Auth) (bool, error) {
 	return api.GlobalAPI.CheckAuth(
 		http.MethodGet,
-		"",
+		"dataset",
 		"",
 		"",
 		"",

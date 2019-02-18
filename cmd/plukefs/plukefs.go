@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
@@ -87,6 +88,13 @@ func newPlukeFSCmd() *cobra.Command {
 					plukeFS.version = value
 				case "server":
 					plukeFS.server = value
+				case "grpc_port":
+					_, err := strconv.ParseUint(value, 10, 32)
+					if err != nil {
+						logrus.Error(err)
+						return
+					}
+					_ = os.Setenv(utils.PortGrpcVar, value)
 				case "secret":
 					plukeFS.secret = value
 				case "mountPoint":
@@ -161,7 +169,7 @@ func (cmd *plukeFSCmd) run() int {
 		utils.PrintEnvInfo()
 	}
 
-	plukfs, err := fuse.NewPlukFS(
+	plukefs, err := fuse.NewPlukeFS(
 		cmd.dsType,
 		cmd.objectWorkspace,
 		cmd.name,
@@ -174,9 +182,8 @@ func (cmd *plukeFSCmd) run() int {
 		fmt.Println(err)
 		return 1
 	}
-
-	fs := pathfs.NewPathNodeFs(pathfs.NewReadonlyFileSystem(plukfs), &pathfs.PathNodeFsOptions{Debug: debugFS})
-	server, _, err := MountRoot(cmd.mountPoint, fs.Root(), &nodefs.Options{Debug: debugFS})
+	fs := pathfs.NewPathNodeFs(pathfs.NewReadonlyFileSystem(plukefs), &pathfs.PathNodeFsOptions{Debug: debugFS})
+	server, _, err := MountRoot(cmd.mountPoint, fs, &nodefs.Options{Debug: debugFS})
 	if err != nil {
 		fmt.Println(err)
 		return 1
@@ -199,16 +206,16 @@ func (cmd *plukeFSCmd) run() int {
 }
 
 // Mounts a filesystem with the given root node on the given directory.
-// Convenience wrapper around fuse.NewServer
-func MountRoot(mountpoint string, root nodefs.Node, opts *nodefs.Options) (*gofuse.Server, *nodefs.FileSystemConnector, error) {
-	conn := nodefs.NewFileSystemConnector(root, opts)
+// Convenient wrapper around fuse.NewServer
+func MountRoot(mountpoint string, fs *pathfs.PathNodeFs, opts *nodefs.Options) (*gofuse.Server, *nodefs.FileSystemConnector, error) {
+	conn := nodefs.NewFileSystemConnector(fs.Root(), opts)
 
 	mountOpts := gofuse.MountOptions{}
 	if opts != nil && opts.Debug {
 		mountOpts.Debug = opts.Debug
 	}
-	mountOpts.Name = "plukefs"
-	mountOpts.FsName = "plukefs"
+	mountOpts.Name = fs.String()
+	mountOpts.FsName = fs.String()
 	s, err := gofuse.NewServer(conn.RawFS(), mountpoint, &mountOpts)
 	if err != nil {
 		return nil, nil, err

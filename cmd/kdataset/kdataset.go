@@ -23,6 +23,8 @@ const (
 var (
 	configPath      string
 	baseURL         string
+	oldPlukURL      string
+	plukURL         string
 	logLevel        string
 	token           string
 	workspace       string
@@ -88,7 +90,8 @@ func initConfig(cmd *cobra.Command, args []string) error {
 	}
 
 	// Special rule for base pluke url
-	config.InitConfigField(&config.Config.PlukURL, baseURL, "PLUKE_URL", "")
+	config.InitConfigField(&config.Config.PlukURL, plukURL, "PLUKE_URL", "")
+	config.InitConfigField(&config.Config.PlukURL, oldPlukURL, "PLUKE_URL", "")
 	overridePlukURL()
 
 	// check new version
@@ -140,7 +143,9 @@ func newRootCmd() *cobra.Command {
 	p.StringVarP(&token, "token", "t", "", "Kibernetika AI user token")
 	p.StringVarP(&workspace, "workspace", "", "", "Kibernetika AI workspace name (auth method)")
 	p.StringVarP(&workspaceSecret, "secret", "", "", "Kibernetika AI workspace secret (auth method)")
-	p.StringVar(&baseURL, "url", "", "Base url to dataset storage.")
+	p.StringVar(&oldPlukURL, "url", "", "Base url to dataset service (pluke). Deprecated.")
+	p.StringVar(&baseURL, "base-url", "", "Base url to Kibernetika API.")
+	p.StringVar(&plukURL, "pluk-url", "", "Base url to dataset service.")
 	p.BoolVarP(&insecure, "insecure", "", false, "Enable insecure SSL/TLS connection (skip verify).")
 	p.Var(entityType, "type", fmt.Sprintf("Choose entityType type for request: %v", plukclient.AllowedTypesList()))
 
