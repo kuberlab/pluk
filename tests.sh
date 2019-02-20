@@ -12,10 +12,13 @@ then
   ulimit -n 8192
 fi
 
-out=$(go test -v github.com/kuberlab/pluk/...)
-exit_code=$(echo $?)
-echo "$out"
-num=$(echo "$out" | grep RUN | wc -l)
+tmp=$(mktemp)
+go test -v github.com/kuberlab/pluk/... | tee $tmp
+exit_code=${PIPESTATUS[0]}
+
+# echo "$out"
+num=$(cat $tmp | grep RUN | wc -l)
+rm $tmp
 
 if [ $exit_code -eq 0 ]; then
   echo -e "${GREEN}Run $num tests\nTests passed${NC}"
