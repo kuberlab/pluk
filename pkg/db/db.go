@@ -19,7 +19,7 @@ type DataMgr interface {
 	FileMgr
 	FileChunkMgr
 	DatasetMgr
-	DatasetVersionVersionMgr
+	DatasetVersionMgr
 	DB() *gorm.DB
 	DBType() string
 	Begin() *DatabaseMgr

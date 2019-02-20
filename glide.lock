@@ -57,7 +57,7 @@ imports:
 - name: github.com/konsorten/go-windows-terminal-sequences
   version: 5c8c8bd35d3832f5d134ae1e1e375b69a4d25242
 - name: github.com/kuberlab/lib
-  version: 82210c12048dc7eec9a64c28f5647d5e74c89f58
+  version: 35141ace12947dea67430b160dcd33fef34ae6d0
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/dealerclient

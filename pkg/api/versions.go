@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/emicklei/go-restful"
+	"github.com/kuberlab/lib/pkg/dealerclient"
 	"github.com/kuberlab/pluk/pkg/datasets"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/gc"
@@ -225,6 +226,7 @@ func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {
 		WriteError(resp, err)
 		return
 	}
+	api.reportNewVersion(req, dealerclient.NewVersion{Workspace: workspace, Version: version, Type: currentType(req), Name: name})
 
 	resp.WriteEntity(dsv)
 }

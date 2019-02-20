@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type DatasetVersionVersionMgr interface {
+type DatasetVersionMgr interface {
 	CreateDatasetVersion(datasetVersionVersion *DatasetVersion) error
 	UpdateDatasetVersion(datasetVersion *DatasetVersion) (*DatasetVersion, error)
 	GetDatasetVersion(dsType, workspace, name, version string) (*DatasetVersion, error)

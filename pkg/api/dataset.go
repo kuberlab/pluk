@@ -318,6 +318,22 @@ func (api *API) dealerClient(req *restful.Request) (*dealerclient.Client, error)
 	return dealerclient.NewClient(utils.AuthValidationURL(), &dealerclient.AuthOpts{Headers: req.Request.Header})
 }
 
+func (api *API) reportNewVersion(req *restful.Request, version dealerclient.NewVersion) {
+	if utils.AuthValidationURL() == "" {
+		return
+	}
+
+	dealer, err := api.dealerClient(req)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+	err = dealer.ReportNewVersion(version)
+	if err != nil {
+		logrus.Error(err)
+	}
+}
+
 func (api *API) createDatasetOnDealer(req *restful.Request, ws, name string, public bool) error {
 	if utils.AuthValidationURL() == "" {
 		return nil

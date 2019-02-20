@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
+	"github.com/kuberlab/lib/pkg/dealerclient"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
@@ -128,7 +129,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 	}
 
 	if !editing {
-		dsv, err := api.mgr.CommitVersion(currentType(req), workspace, name, version, comment)
+		dsv, err := dataset.CommitVersion(version, comment)
 		if err != nil {
 			WriteStatusError(
 				resp,
@@ -148,6 +149,7 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 				return
 			}
 		}
+		api.reportNewVersion(req, dealerclient.NewVersion{Workspace: workspace, Version: version, Type: currentType(req), Name: name})
 		resp.WriteHeaderAndEntity(http.StatusCreated, dsv)
 		return
 	}
