@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -24,9 +25,22 @@ const (
 )
 
 var (
-	active *bool
-	lock   = sync.RWMutex{}
+	active           *bool
+	clearChunkActive uint32
+	lock             = sync.RWMutex{}
 )
+
+func setClearChunkActive() {
+	atomic.StoreUint32(&clearChunkActive, 1)
+}
+
+func setClearChunkInactive() {
+	atomic.StoreUint32(&clearChunkActive, 0)
+}
+
+func isClearChunkActive() bool {
+	return atomic.LoadUint32(&clearChunkActive) == 1
+}
 
 func setActive() {
 	if active == nil {
@@ -77,9 +91,9 @@ func Start() {
 			GoGC()
 		case msg := <-utils.GCClearChunks:
 			logrus.Infof("[ClearChunks] %v", msg)
-			ClearChunks(db.DbMgr)
+			go ClearChunks(db.DbMgr)
 		case <-tickerChunks.C:
-			ClearChunks(db.DbMgr)
+			go ClearChunks(db.DbMgr)
 		}
 	}
 }
@@ -290,7 +304,14 @@ type Answer struct {
 }
 
 func ClearChunks(db db.DataMgr) {
+	if isClearChunkActive() {
+		return
+	}
+	setClearChunkActive()
+	defer setClearChunkInactive()
+
 	var err error
+
 	//tx := db.DB().Begin()
 	//defer func() {
 	//	if err != nil {
@@ -300,21 +321,21 @@ func ClearChunks(db db.DataMgr) {
 	//	}
 	//}()
 
+	sql := "SELECT size from chunks WHERE hash=?"
 	err = filepath.Walk(utils.DataDir(), func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
-		hash := strings.TrimPrefix(path, "/data/")
-		hash = strings.Replace(hash, "/", "", -1)
+		hash, _ := utils.GetHashFromPath(path)
 
 		size := info.Size()
 		answer := Answer{}
-		sql := fmt.Sprintf(`SELECT size from chunks WHERE hash='%v'`, hash)
-		err = db.DB().Raw(sql).Scan(&answer).Error
+
+		err = db.DB().Raw(sql, hash).Scan(&answer).Error
 		if err == gorm.ErrRecordNotFound {
 			// Extra chunk / unneeded.
 			os.Remove(path)
-			logrus.Infof("[ClearChunks] Delete wrong chunk at %v", path)
+			logrus.Infof("[ClearChunks] Delete absent in DB chunk at %v", path)
 			return nil
 		}
 		if err != nil {
@@ -323,7 +344,7 @@ func ClearChunks(db db.DataMgr) {
 		}
 		if answer.Size != 0 && answer.Size != size {
 			os.Remove(path)
-			logrus.Infof("[ClearChunks] Delete wrong chunk at %v", path)
+			logrus.Infof("[ClearChunks] Delete incorrect size chunk at %v", path)
 		}
 
 		return nil
