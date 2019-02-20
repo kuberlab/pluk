@@ -17,7 +17,7 @@ import (
 var (
 	active   = false
 	lock     sync.RWMutex
-	deleteCh = make(chan string, 500)
+	deleteCh = make(chan string, 5000)
 
 	ChunkActive   = false
 	ChunkLock     sync.RWMutex
