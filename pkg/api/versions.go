@@ -226,7 +226,21 @@ func (api *API) commitVersion(req *restful.Request, resp *restful.Response) {
 		WriteError(resp, err)
 		return
 	}
-	api.reportNewVersion(req, dealerclient.NewVersion{Workspace: workspace, Version: version, Type: currentType(req), Name: name})
+	vers, err := dataset.Versions()
+	if err != nil {
+		WriteError(resp, err)
+		return
+	}
+	api.reportNewVersion(
+		req,
+		dealerclient.NewVersion{
+			Workspace: workspace,
+			Version:   version,
+			Type:      currentType(req),
+			Name:      name,
+			Latest:    len(vers) > 0 && vers[0].Version == version,
+		},
+	)
 
 	resp.WriteEntity(dsv)
 }
