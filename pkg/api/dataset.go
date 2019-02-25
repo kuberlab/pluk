@@ -351,7 +351,7 @@ func (api *API) createDatasetOnDealer(req *restful.Request, ws, name string, pub
 	}
 
 	var listMethod func(string) ([]dealerclient.Dataset, error)
-	var createMethod func(string, string, bool) error
+	var createMethod func(ws, name string, public, skipPluke bool) error
 
 	switch currentType(req) {
 	case "dataset":
@@ -373,7 +373,7 @@ func (api *API) createDatasetOnDealer(req *restful.Request, ws, name string, pub
 		}
 	}
 
-	return createMethod(ws, name, public)
+	return createMethod(ws, name, public, true)
 }
 
 func (api *API) deleteDatasetOnDealer(req *restful.Request, ws, name string) error {
