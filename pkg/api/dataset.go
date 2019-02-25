@@ -156,6 +156,7 @@ func (api *API) datasetTarSize(req *restful.Request, resp *restful.Response) {
 func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
+	skipDealer := getBoolQueryParam(req, "skip_dealer")
 	master := api.masterClient(req)
 
 	acquireConcurrency()
@@ -169,13 +170,13 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	if utils.AuthValidationURL() != "" {
+	if utils.AuthValidationURL() != "" && !skipDealer {
 		// The below causes kind of "recursive" deleting
-		//err = api.deleteDatasetOnDealer(req, workspace, name)
-		//if err != nil {
-		//	WriteError(resp, err)
-		//	return
-		//}
+		err = api.deleteDatasetOnDealer(req, workspace, name)
+		if err != nil {
+			WriteError(resp, err)
+			return
+		}
 	}
 
 	resp.WriteHeader(http.StatusNoContent)
