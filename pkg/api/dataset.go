@@ -170,11 +170,12 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	}
 
 	if utils.AuthValidationURL() != "" {
-		err = api.deleteDatasetOnDealer(req, workspace, name)
-		if err != nil {
-			WriteError(resp, err)
-			return
-		}
+		// The below causes kind of "recursive" deleting
+		//err = api.deleteDatasetOnDealer(req, workspace, name)
+		//if err != nil {
+		//	WriteError(resp, err)
+		//	return
+		//}
 	}
 
 	resp.WriteHeader(http.StatusNoContent)
