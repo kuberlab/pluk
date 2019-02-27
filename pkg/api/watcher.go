@@ -2,7 +2,7 @@ package api
 
 import (
 	"crypto/tls"
-	"encoding/json"
+	jsonStd "encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -155,7 +155,7 @@ func (w *Watcher) continuousReceive() {
 	for {
 		msg, err := w.receive()
 		if err != nil {
-			if _, ok := err.(*json.SyntaxError); ok {
+			if _, ok := err.(*jsonStd.SyntaxError); ok {
 				// Probably "pong" sent, receive again
 				continue
 			}

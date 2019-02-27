@@ -3,7 +3,6 @@ package api
 import (
 	"archive/tar"
 	"bytes"
-	"encoding/json"
 	"io"
 	"net/http"
 	"testing"

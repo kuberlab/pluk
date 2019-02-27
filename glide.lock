@@ -1,5 +1,5 @@
 hash: f8f1dd54de3f7fbb219055d7d8596a210892249ef60428dcbbdb2f2790f42d56
-updated: 2019-02-14T17:34:23.649772716+04:00
+updated: 2019-02-27T22:33:36.746080292+04:00
 imports:
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
@@ -54,10 +54,12 @@ imports:
   - dialects/sqlite
 - name: github.com/jinzhu/inflection
   version: 04140366298a54a039076d798123ffa108fff46c
+- name: github.com/json-iterator/go
+  version: 36b14963da70d11297d313183d7e6388c8510e1e
 - name: github.com/konsorten/go-windows-terminal-sequences
   version: 5c8c8bd35d3832f5d134ae1e1e375b69a4d25242
 - name: github.com/kuberlab/lib
-  version: 35bf588bcbdd3bfd5145e103281003f5db65e6bd
+  version: 1c741019f780ab373a98cd171396de30b0a0a27e
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/dealerclient

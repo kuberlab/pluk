@@ -3,7 +3,6 @@ package api
 import (
 	"bufio"
 	"crypto/sha1"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -14,12 +13,15 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
+	"github.com/json-iterator/go"
 	"github.com/kuberlab/lib/pkg/dealerclient"
 	"github.com/kuberlab/lib/pkg/errors"
 	"github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type LogRecordHandler struct {
 	http.ResponseWriter

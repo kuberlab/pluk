@@ -50,7 +50,7 @@ func Build() *API {
 }
 
 func Start(api *API) {
-	logrus.Info("Starting pluk...")
+	logrus.Info("Starting pluke...")
 	utils.PrintEnvInfo()
 
 	port := utils.HttpPort()

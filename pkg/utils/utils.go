@@ -2,7 +2,6 @@ package utils
 
 import (
 	"crypto/sha512"
-	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
@@ -14,8 +13,11 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/gorilla/websocket"
+	"github.com/json-iterator/go"
 	"github.com/kuberlab/lib/pkg/types"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const (
 	ApiVersion           = "v1"
