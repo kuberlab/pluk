@@ -1,8 +1,8 @@
-hash: f8f1dd54de3f7fbb219055d7d8596a210892249ef60428dcbbdb2f2790f42d56
-updated: 2019-02-27T22:33:36.746080292+04:00
+hash: 53062f3049d84b57dfbad8885702657a30decd09ded590bf5816727494723291
+updated: 2019-02-28T22:03:42.090712915+04:00
 imports:
 - name: github.com/emicklei/go-restful
-  version: ff4f55a206334ef123e4f79bbf348980da81ca46
+  version: cac44bf12ecf627c1cc74a69ebda014fcb029890
   subpackages:
   - log
 - name: github.com/go-openapi/jsonpointer

@@ -101,5 +101,5 @@ type mainDBLogger struct {
 }
 
 func (l mainDBLogger) Println(v ...interface{}) {
-	logrus.Infoln(v)
+	logrus.Infoln(v...)
 }

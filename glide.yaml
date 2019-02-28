@@ -21,6 +21,7 @@ import:
   version: v1.0.1
 - package: github.com/gogits/git-module
 - package: github.com/emicklei/go-restful
+  version: cac44bf12ecf627c1cc74a69ebda014fcb029890
 - package: github.com/gorilla/mux
 - package: github.com/pborman/uuid
 - package: gopkg.in/robfig/cron.v2
