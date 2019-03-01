@@ -2,19 +2,21 @@ package: github.com/kuberlab/pluk
 import:
 - package: github.com/Sirupsen/logrus
 - package: github.com/jinzhu/gorm
-  version: 472c70caa40267cb89fd8facb07fe6454b578626
+  version: 906799fef2f895116d915e1793314ab9053b400d
   subpackages:
   - dialects/mysql
   - dialects/postgres
   - dialects/sqlite
+- package: github.com/lib/pq
+  version: 9eb73efc1fcc404148b56765b0d3f61d9a5ef8ee
+- package: github.com/mattn/go-sqlite3
+  version: ad30583d8387ce8118f8605eaeb3b4f7b4ae0ee1
 - package: google.golang.org/grpc
   version: 1dbad57dad5876dcc72d3757df14b4276d660ca3
 - package: github.com/golang/protobuf
   version: c823c79ea1570fb5ff454033735a8e68575d1d0f
 - package: google.golang.org/genproto
   version: c66870c02cf823ceb633bcd05be3c7cda29976f4
-- package: github.com/mattn/go-sqlite3
-  version: 87ac1cb49789a0ef6b0d7be6b7aa458a9b90d7ae
 - package: github.com/spf13/cobra
   version: v0.0.3
 - package: github.com/spf13/pflag
