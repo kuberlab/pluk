@@ -13,7 +13,7 @@ then
 fi
 
 tmp=$(mktemp)
-go test -v github.com/kuberlab/pluk/... | tee $tmp
+go test -tags=jsoniter -v github.com/kuberlab/pluk/... | tee $tmp
 exit_code=${PIPESTATUS[0]}
 
 # echo "$out"
