@@ -135,7 +135,7 @@ func (c *ChunkData) Type() string {
 }
 
 type WebsocketClient struct {
-	lock        *sync.RWMutex
+	lock        *sync.RWMutex   `json:"-"`
 	Ws          *websocket.Conn `json:"-"`
 	ID          string          `json:"id"`
 	IP          string          `json:"ip"`
