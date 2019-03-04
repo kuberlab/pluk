@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/jinzhu/gorm"
 	"github.com/kuberlab/pluk/pkg/datasets"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/io"
@@ -303,7 +302,12 @@ type Answer struct {
 	Size int64 `json:"size"`
 }
 
-func ClearChunks(db db.DataMgr) {
+type ClearChunk struct {
+	ActualSize int64
+	DBSize     int64
+}
+
+func ClearChunks(mgr db.DataMgr) {
 	if isClearChunkActive() {
 		return
 	}
@@ -320,32 +324,58 @@ func ClearChunks(db db.DataMgr) {
 	//		tx.Commit()
 	//	}
 	//}()
+	hashMap := make(map[string]*db.RawFile)
+	limit := 500
+	deleted := 0
 
-	sql := "SELECT size from chunks WHERE hash=?"
+	checkAndDelete := func() error {
+		raws := make([]*db.RawFile, 0)
+		for _, v := range hashMap {
+			raws = append(raws, v)
+		}
+
+		chunks, err := mgr.ListChunksByUniqueHash(raws)
+		if err != nil {
+			return err
+		}
+		for _, ch := range chunks {
+			if ch == nil {
+				continue
+			}
+			if fromHash, ok := hashMap[ch.Hash]; ok {
+				if fromHash.ChunkSize == ch.Size {
+					// Don't delete
+					delete(hashMap, ch.Hash)
+				}
+			}
+		}
+
+		for _, v := range hashMap {
+			logrus.Debugf("Delete unused/wrong chunk at %v", v.Path)
+			datasets.SendDeletePath(v.Path)
+			deleted++
+		}
+		return nil
+	}
+
 	err = filepath.Walk(utils.DataDir(), func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
 		hash, _ := utils.GetHashFromPath(path)
+		hashMap[hash] = &db.RawFile{ChunkSize: info.Size(), Hash: hash, Path: path}
 
-		size := info.Size()
-		answer := Answer{}
-
-		err = db.DB().Raw(sql, hash).Scan(&answer).Error
-		if err == gorm.ErrRecordNotFound {
-			// Extra chunk / unneeded.
-			os.Remove(path)
-			logrus.Infof("[ClearChunks] Delete absent in DB chunk at %v", path)
+		if len(hashMap) < limit {
 			return nil
 		}
-		if err != nil {
-			log.Println(err)
+		// >= limit
+
+		if err := checkAndDelete(); err != nil {
+			logrus.Errorf("[ClearChunks] Failed get from DB: %v", err)
 			return err
 		}
-		if answer.Size != 0 && answer.Size != size {
-			os.Remove(path)
-			logrus.Infof("[ClearChunks] Delete incorrect size chunk at %v", path)
-		}
+		hashMap = nil
+		hashMap = make(map[string]*db.RawFile)
 
 		return nil
 	})
@@ -353,5 +383,10 @@ func ClearChunks(db db.DataMgr) {
 		log.Println(err)
 		return
 	}
+	if err := checkAndDelete(); err != nil {
+		logrus.Errorf("[ClearChunks] Failed get from DB: %v", err)
+		return
+	}
+	logrus.Infof("[ClearChunks] Deleted %v chunks.", deleted)
 	logrus.Info("[ClearChunks] Done.")
 }

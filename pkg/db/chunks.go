@@ -13,6 +13,8 @@ type ChunkMgr interface {
 	GetChunk(hash string) (*Chunk, error)
 	GetChunkByID(chunkID uint) (*Chunk, error)
 	ListChunks(filter Chunk) ([]*Chunk, error)
+	ListChunksByHash(hashes []*RawFile) ([]*Chunk, error)
+	ListChunksByUniqueHash(hashes []*RawFile) ([]*Chunk, error)
 	DeleteChunk(id uint) error
 	DeleteChunks(chunks []Chunk) error
 }
@@ -54,6 +56,28 @@ func (mgr *DatabaseMgr) CreateChunk(chunk *Chunk) error {
 	} else {
 		return mgr.db.Create(chunk).Error
 	}
+}
+
+func (mgr *DatabaseMgr) ListChunksByUniqueHash(hashes []*RawFile) ([]*Chunk, error) {
+	where := strings.Builder{}
+	where.WriteString("hash IN (")
+
+	values := make([]interface{}, 0)
+	placeholders := strings.Repeat("?,", len(hashes))[:len(hashes)*2-1]
+
+	for _, h := range hashes {
+		values = append(values, h.Hash)
+	}
+
+	where.WriteString(placeholders)
+	where.WriteString(")")
+
+	chunks := make([]*Chunk, 0)
+	err := mgr.db.
+		Where(where.String(), values...).
+		Find(&chunks).Error
+
+	return chunks, err
 }
 
 func (mgr *DatabaseMgr) ListChunksByHash(hashes []*RawFile) ([]*Chunk, error) {

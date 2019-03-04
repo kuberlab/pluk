@@ -28,6 +28,10 @@ var (
 	deleteBatch   = 250
 )
 
+func SendDeletePath(path string) {
+	deleteCh <- path
+}
+
 func RunDeleteLoop() {
 	lock.Lock()
 	if active {
