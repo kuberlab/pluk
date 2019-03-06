@@ -1,5 +1,7 @@
 package: github.com/kuberlab/pluk
 import:
+- package: github.com/json-iterator/go
+  version: 0ff49de124c6f76f8494e194af75bde0f1a49a29
 - package: github.com/Sirupsen/logrus
 - package: github.com/jinzhu/gorm
   version: 906799fef2f895116d915e1793314ab9053b400d
