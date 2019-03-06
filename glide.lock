@@ -1,5 +1,5 @@
-hash: 171052ff0c4bb76987a0b60b799a79a21bd83be58b48b7a77751e1aba68f7cc7
-updated: 2019-03-06T21:38:33.84312166+04:00
+hash: ac20b28540c357b75d33f9eea6cf4330f8d015238ce6de17590697214c737cda
+updated: 2019-03-06T22:09:21.311880417+04:00
 imports:
 - name: github.com/emicklei/go-restful
   version: cac44bf12ecf627c1cc74a69ebda014fcb029890
@@ -59,7 +59,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 0ff49de124c6f76f8494e194af75bde0f1a49a29
 - name: github.com/kuberlab/lib
-  version: 1c741019f780ab373a98cd171396de30b0a0a27e
+  version: 678936d7b9b6dcbf7d1c8b4a88f2ed698bf8be6d
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/dealerclient

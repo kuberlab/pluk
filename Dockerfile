@@ -15,11 +15,10 @@ RUN apt-get update && apt-get install git curl sqlite3 -y && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
 
+VOLUME "/pluk"
+EXPOSE 8082
+
 COPY --from=0 /go/src/github.com/kuberlab/pluk/pluksrv /usr/bin/pluksrv
 COPY --from=0 /go/src/github.com/kuberlab/pluk/kdataset /usr/bin/kdataset
 
-VOLUME "/pluk"
-
 CMD [ "pluksrv" ]
-
-EXPOSE 8082

@@ -1,6 +1,5 @@
 FROM golang:1.10
 
-COPY ./pluksrv.go "$GOPATH/src/github.com/kuberlab/pluk/pluksrv.go"
 COPY ./pkg "$GOPATH/src/github.com/kuberlab/pluk/pkg"
 COPY ./cmd "$GOPATH/src/github.com/kuberlab/pluk/cmd"
 COPY ./vendor "$GOPATH/src/github.com/kuberlab/pluk/vendor"
