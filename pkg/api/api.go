@@ -62,6 +62,7 @@ func Start(api *API) {
 
 func GlobalHandler(api *API) http.Handler {
 	plukio.MasterClient = plukclient.NewInternalMasterClient()
+	restful.PrettyPrintResponses = utils.PrettyPrintEnabled()
 
 	r := mux.NewRouter()
 	r.NotFoundHandler = NotFoundHandler()

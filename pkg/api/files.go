@@ -46,7 +46,6 @@ func (api *API) fsReadDir(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	resp.PrettyPrint(false)
 	resp.WriteEntity(result)
 }
 

@@ -39,6 +39,7 @@ const (
 	MastersVar           = "MASTERS"
 	portVar              = "PLUK_HTTP_PORT"
 	PortGrpcVar          = "PLUK_GRPC_PORT"
+	prettyPrintVar       = "PRETTY_PRINT"
 	defaultPort          = "8082"
 	defaultGrpcPort      = "8085"
 	defaultDataDir       = "/data"
@@ -70,6 +71,11 @@ func DebugEnabled() bool {
 		return true
 	}
 	return false
+}
+
+func PrettyPrintEnabled() bool {
+	pp := os.Getenv(prettyPrintVar)
+	return strings.ToLower(pp) == "true"
 }
 
 func LogLevel() string {
