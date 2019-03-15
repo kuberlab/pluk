@@ -59,7 +59,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 0ff49de124c6f76f8494e194af75bde0f1a49a29
 - name: github.com/kuberlab/lib
-  version: 678936d7b9b6dcbf7d1c8b4a88f2ed698bf8be6d
+  version: 035e1986132f19fc16fdffcf47eb2b6d37f9e6b2
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/dealerclient
