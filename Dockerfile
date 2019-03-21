@@ -11,7 +11,7 @@ RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && \
 
 FROM ubuntu:18.10
 
-RUN apt-get update && apt-get install git curl sqlite3 -y && \
+RUN apt-get update && apt-get install curl sqlite3 -y && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
 
