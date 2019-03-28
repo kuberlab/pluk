@@ -71,17 +71,18 @@ func (cmd *pullCmd) run() (err error) {
 	}
 
 	logrus.Debug("Run pull...")
-	f, err := os.Create(cmd.output)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-	defer f.Close()
 
 	size, err := client.EntityTarSize(entityType.Value, cmd.workspace, cmd.name, cmd.version)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 	logrus.Debugf("Tar archive size = %v", size)
+
+	f, err := os.Create(cmd.output)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	defer f.Close()
 
 	bar := pb.New64(size).SetUnits(pb.U_BYTES)
 	w := io.MultiWriter(f, bar)
@@ -92,6 +93,9 @@ func (cmd *pullCmd) run() (err error) {
 
 	err = client.DownloadEntity(entityType.Value, cmd.workspace, cmd.name, cmd.version, w)
 	if err != nil {
+		if bar.Get() == 0 {
+			os.Remove(cmd.output)
+		}
 		bar.Finish()
 		logrus.Fatal(err)
 	}

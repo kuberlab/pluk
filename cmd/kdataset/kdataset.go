@@ -90,6 +90,7 @@ func initConfig(cmd *cobra.Command, args []string) error {
 	}
 
 	// Special rule for base pluke url
+	config.InitConfigField(&config.Config.BaseURL, baseURL, "KUBERLAB_URL", "")
 	config.InitConfigField(&config.Config.PlukURL, plukURL, "PLUKE_URL", "")
 	config.InitConfigField(&config.Config.PlukURL, oldPlukURL, "PLUKE_URL", "")
 	overridePlukURL()
@@ -143,7 +144,7 @@ func newRootCmd() *cobra.Command {
 	p.StringVarP(&token, "token", "t", "", "Kibernetika AI user token")
 	p.StringVarP(&workspace, "workspace", "", "", "Kibernetika AI workspace name (auth method)")
 	p.StringVarP(&workspaceSecret, "secret", "", "", "Kibernetika AI workspace secret (auth method)")
-	p.StringVar(&oldPlukURL, "url", "", "Base url to dataset service (pluke). Deprecated.")
+	p.StringVar(&oldPlukURL, "url", "", "Base url to dataset service (pluke). Deprecated. Use --pluk-url instead")
 	p.StringVar(&baseURL, "base-url", "", "Base url to Kibernetika API.")
 	p.StringVar(&plukURL, "pluk-url", "", "Base url to dataset service.")
 	p.BoolVarP(&insecure, "insecure", "", false, "Enable insecure SSL/TLS connection (skip verify).")
