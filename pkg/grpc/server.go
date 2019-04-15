@@ -33,6 +33,9 @@ func (s *Server) GetChunk(ctx context.Context, in *ChunkRequest) (*ChunkResponse
 	bt := bytes.NewBuffer(make([]byte, 0, 16384))
 	io.Copy(bt, reader)
 	reader.Close()
+	if bt.Len() == 0 {
+		logrus.Warningf("Zero chunk response for %v", in.Path)
+	}
 	return &ChunkResponse{Data: bt.Bytes()}, nil
 }
 
