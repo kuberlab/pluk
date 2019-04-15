@@ -362,6 +362,12 @@ func ClearChunks(mgr db.DataMgr) {
 		if info.IsDir() {
 			return nil
 		}
+
+		// Take only chunks which age more than 24 hours
+		if time.Since(info.ModTime()) < gcChunks {
+			return nil
+		}
+
 		hash, _ := utils.GetHashFromPath(path)
 		hashMap[hash] = &db.RawFile{ChunkSize: info.Size(), Hash: hash, Path: path}
 
