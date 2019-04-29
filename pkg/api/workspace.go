@@ -163,6 +163,10 @@ func (api *API) checkEntityExists(req *restful.Request, ws, name string) error {
 		return nil
 	}
 
+	if req.Attribute("internal") != nil && req.Attribute("internal") == "true" {
+		return nil
+	}
+
 	if u == "" && utils.HasMasters() {
 		// Request master.
 		masters := plukclient.NewMasterClientFromHeaders(req.Request.Header)

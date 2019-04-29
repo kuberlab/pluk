@@ -326,6 +326,7 @@ func (api *API) CheckAuth(method, entityType, authHeader,
 func (api *API) AuthHook(req *restful.Request, resp *restful.Response, filter *restful.FilterChain) {
 	internal := req.HeaderParameter("Internal")
 	if internal != "" && utils.InternalKey() == internal {
+		req.SetAttribute("internal", "true")
 		filter.ProcessFilter(req, resp)
 		return
 	}
