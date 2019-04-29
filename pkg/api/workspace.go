@@ -21,7 +21,7 @@ func (api *API) checkWorkspace(req *restful.Request, resp *restful.Response) {
 	workspace := req.PathParameter("workspace")
 
 	u := utils.AuthValidationURL()
-	if u == "" && !utils.HasMasters() {
+	if (u == "" && !utils.HasMasters()) || req.Attribute("internal") == "true" {
 		resp.WriteEntity(&types.Workspace{Name: workspace})
 		return
 	}
@@ -60,7 +60,7 @@ func (api *API) checkEntityAccess(req *restful.Request, write bool) (*types.Data
 	}
 
 	u := utils.AuthValidationURL()
-	if u == "" && !utils.HasMasters() {
+	if (u == "" && !utils.HasMasters()) || req.Attribute("internal") == "true" {
 		return &types.Dataset{
 			Name:      name,
 			Workspace: workspace,
@@ -163,7 +163,7 @@ func (api *API) checkEntityExists(req *restful.Request, ws, name string) error {
 		return nil
 	}
 
-	if req.Attribute("internal") != nil && req.Attribute("internal") == "true" {
+	if req.Attribute("internal") == "true" {
 		return nil
 	}
 

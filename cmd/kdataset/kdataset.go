@@ -29,6 +29,7 @@ var (
 	token           string
 	workspace       string
 	workspaceSecret string
+	internalKey     string
 	entityType      = &EntityType{Value: defaultEntityType}
 	insecure        bool
 	debug           bool
@@ -93,6 +94,7 @@ func initConfig(cmd *cobra.Command, args []string) error {
 	config.InitConfigField(&config.Config.BaseURL, baseURL, "KUBERLAB_URL", "")
 	config.InitConfigField(&config.Config.PlukURL, plukURL, "PLUKE_URL", "")
 	config.InitConfigField(&config.Config.PlukURL, oldPlukURL, "PLUKE_URL", "")
+	config.InitConfigField(&config.Config.InternalKey, internalKey, "INTERNAL_KEY", "")
 	overridePlukURL()
 
 	// check new version
@@ -102,15 +104,21 @@ func initConfig(cmd *cobra.Command, args []string) error {
 }
 
 func initClient() (io.PlukClient, error) {
-	return plukclient.NewClient(
-		config.Config.PlukURL,
-		&plukclient.AuthOpts{
+	var opts *plukclient.AuthOpts
+	if config.Config.InternalKey != "" {
+		opts = &plukclient.AuthOpts{
+			InternalKey:        config.Config.InternalKey,
+			InsecureSkipVerify: config.Config.Insecure,
+		}
+	} else {
+		opts = &plukclient.AuthOpts{
 			Token:              config.Config.Token,
 			Workspace:          config.Config.Workspace,
 			Secret:             config.Config.WorkspaceSecret,
 			InsecureSkipVerify: config.Config.Insecure,
-		},
-	)
+		}
+	}
+	return plukclient.NewClient(config.Config.PlukURL, opts)
 }
 
 func initLogging() {

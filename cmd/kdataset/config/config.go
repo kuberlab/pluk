@@ -16,6 +16,7 @@ type DealerConfig struct {
 	Token           string `yaml:"token"`
 	Workspace       string `yaml:"workspace"`
 	WorkspaceSecret string `yaml:"workspace_secret"`
+	InternalKey     string `yaml:"internal_key"`
 	Insecure        bool   `yaml:"insecure"`
 }
 
