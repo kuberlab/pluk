@@ -801,4 +801,20 @@ func TestFilter(t *testing.T) {
 	utils.Assert("file2.txt", f.Fname, t)
 	utils.Assert(int64(30), f.Fsize, t)
 	utils.Assert(uint32(0644), uint32(f.Fmode), t)
+
+	// case insensitive
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/tree/folder?filter=File2")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(1, len(fs), t)
+	f = fs[0]
+	utils.Assert("file2.txt", f.Fname, t)
+	utils.Assert(int64(30), f.Fsize, t)
+	utils.Assert(uint32(0644), uint32(f.Fmode), t)
 }

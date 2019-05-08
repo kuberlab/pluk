@@ -281,7 +281,7 @@ func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, prefix,
 		}
 	}
 	if filter != "" {
-		join.WriteString(" AND f.path LIKE '%' || ? || '%'")
+		join.WriteString(" AND LOWER(f.path) LIKE LOWER('%' || ? || '%')")
 		values = append(values, filter)
 	}
 	rawFiles := make([]RawFile, 0)
