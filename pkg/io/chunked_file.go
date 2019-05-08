@@ -29,7 +29,7 @@ type PlukClient interface {
 	DownloadChunk(hash string, version byte) (io.ReadCloser, error)
 	DownloadEntity(entityType, workspace, name, version string, w io.Writer) error
 	EntityTarSize(entityType, workspace, name, version string) (int64, error)
-	GetFSStructure(entityType, workspace, name, version string) (*ChunkedFileFS, error)
+	GetFSStructure(entityType, workspace, name, version, filter string) (*ChunkedFileFS, error)
 	ListEntities(entityType, workspace string) (*types.DataSetList, error)
 	GetEntity(entityType, workspace, name string) (*types.Dataset, error)
 	GetVersion(entityType, workspace, name, version string) (*types.Version, error)

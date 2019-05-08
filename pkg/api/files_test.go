@@ -732,3 +732,73 @@ func TestCommitNoDelete(t *testing.T) {
 
 	utils.Assert(http.StatusForbidden, resp.StatusCode, t)
 }
+
+func TestFilter(t *testing.T) {
+	fname := getFname()
+	setup(fname)
+	dbPrepare(t)
+	defer teardown(fname)
+
+	// Upload stage
+	url := buildURL("dataset/workspace/dataset/versions/1.0.0/upload/file1.txt")
+	resp, err := client.Post(url, "application/json", bytes.NewBufferString(fileData1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/upload/folder/file2.txt")
+	resp, err = client.Post(url, "application/json", bytes.NewBufferString(fileData2))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(http.StatusCreated, resp.StatusCode, t)
+
+	// Filter
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/tree?filter=file1")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fs []io.ChunkedFileInfo
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(1, len(fs), t)
+	f := fs[0]
+
+	utils.Assert("file1.txt", f.Fname, t)
+	utils.Assert(int64(15), f.Fsize, t)
+	utils.Assert(uint32(0644), uint32(f.Fmode), t)
+
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/tree?filter=file2")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(1, len(fs), t)
+	f = fs[0]
+	utils.Assert("folder", f.Fname, t)
+
+	url = buildURL("dataset/workspace/dataset/versions/1.0.0/tree/folder?filter=file2")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&fs); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(1, len(fs), t)
+	f = fs[0]
+	utils.Assert("file2.txt", f.Fname, t)
+	utils.Assert(int64(30), f.Fsize, t)
+	utils.Assert(uint32(0644), uint32(f.Fmode), t)
+}

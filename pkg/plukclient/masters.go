@@ -216,12 +216,12 @@ func (c *MultiMasterClient) DownloadChunk(hash string, version byte) (reader io.
 	return nil, err
 }
 
-func (c *MultiMasterClient) GetFSStructure(entityType, workspace, name, version string) (fs *plukio.ChunkedFileFS, err error) {
+func (c *MultiMasterClient) GetFSStructure(entityType, workspace, name, version, filter string) (fs *plukio.ChunkedFileFS, err error) {
 	for _, cl := range c.baseClients {
 		if err != nil {
 			return nil, err
 		}
-		fs, err = cl.GetFSStructure(entityType, workspace, name, version)
+		fs, err = cl.GetFSStructure(entityType, workspace, name, version, filter)
 		if err != nil {
 			continue
 		}

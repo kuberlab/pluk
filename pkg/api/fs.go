@@ -35,7 +35,7 @@ func (api *API) getDatasetFS(req *restful.Request, resp *restful.Response) {
 		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
-	fs, err := api.getFS(dataset, version)
+	fs, err := api.getFS(dataset, version, "")
 	if err != nil {
 		WriteError(resp, err)
 		return

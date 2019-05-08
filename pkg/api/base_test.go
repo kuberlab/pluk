@@ -38,6 +38,7 @@ func getFname() string {
 
 func setup(fname string) {
 	// test server
+	//os.Setenv("DEBUG", "true")
 	db.DbMgr = db.NewFakeDatabaseMgr(fname)
 	logrus.SetLevel(logrus.DebugLevel)
 	server = httptest.NewServer(GlobalHandler(Build()))

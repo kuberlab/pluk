@@ -17,8 +17,8 @@ type FileChunkMgr interface {
 	GetFileChunk(fileID uint, chunkID uint, index int) (*FileChunk, error)
 	ListFileChunks(filter FileChunk) ([]*FileChunk, error)
 	DeleteFileChunk(fileID, chunkID uint) error
-	GetFS(dsType, workspace, dataset, version string) (*io.ChunkedFileFS, error)
-	GetRawFiles(dsType, workspace, dataset, version, prefix string, precise bool) ([]RawFile, error)
+	GetFS(dsType, workspace, dataset, version, filter string) (*io.ChunkedFileFS, error)
+	GetRawFiles(dsType, workspace, dataset, version, prefix, filter string, precise bool) ([]RawFile, error)
 	DeleteRelatedFiles(dsType, workspace, dataset, version string) (int64, error)
 	DeleteFiles(dsType, workspace, dataset, version, prefix string, preciseName bool) (int64, error)
 	ListRelatedChunks(dsType, workspace, dataset, version string) ([]*FileChunk, error)
@@ -144,11 +144,11 @@ func (mgr *DatabaseMgr) ListRelatedChunksForFiles(
 	}
 	if prefix != "" {
 		var cond string
-		prefix = strings.Replace(prefix, "'", "''", -1)
+		values = append(values, prefix)
 		if preciseName {
-			cond = fmt.Sprintf("files.path = '%v'", prefix)
+			cond = "files.path = ?"
 		} else {
-			cond = fmt.Sprintf("files.path LIKE '%v%%'", prefix)
+			cond = "files.path LIKE ? || '%'"
 		}
 		conditions = append(conditions, cond)
 	}
@@ -181,11 +181,11 @@ func (mgr *DatabaseMgr) DeleteFiles(dsType, workspace, dataset, version, prefix 
 	}
 	if prefix != "" {
 		var cond string
-		prefix = strings.Replace(prefix, "'", "''", -1)
+		values = append(values, prefix)
 		if preciseName {
-			cond = fmt.Sprintf("files.path = '%v'", prefix)
+			cond = "files.path = ?"
 		} else {
-			cond = fmt.Sprintf("files.path LIKE '%v%%'", prefix)
+			cond = "files.path LIKE ? || '%'"
 		}
 		conditions = append(conditions, cond)
 	}
@@ -258,7 +258,7 @@ FROM "file_chunks"
   INNER JOIN chunks ON file_chunks.chunk_id = chunks.id
 ORDER BY chunk_index;
 */
-func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, prefix string, precise bool) ([]RawFile, error) {
+func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, prefix, filter string, precise bool) ([]RawFile, error) {
 	join := strings.Builder{}
 	join.WriteString(
 		"INNER JOIN files f ON f.id = file_chunks.file_id " +
@@ -276,9 +276,13 @@ func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, prefix 
 			join.WriteString(" AND f.path = ?")
 			values = append(values, prefix)
 		} else {
-			prefix = strings.Replace(prefix, "'", "''", -1)
-			join.WriteString(fmt.Sprintf(" AND f.path LIKE '%v%%'", prefix))
+			join.WriteString(" AND f.path LIKE ? || '%'")
+			values = append(values, prefix)
 		}
+	}
+	if filter != "" {
+		join.WriteString(" AND f.path LIKE '%' || ? || '%'")
+		values = append(values, filter)
 	}
 	rawFiles := make([]RawFile, 0)
 	err := mgr.db.
@@ -291,8 +295,8 @@ func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, prefix 
 	return rawFiles, err
 }
 
-func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version string) (*io.ChunkedFileFS, error) {
-	rawFiles, err := mgr.GetRawFiles(dsType, workspace, dataset, version, "", false)
+func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version, filter string) (*io.ChunkedFileFS, error) {
+	rawFiles, err := mgr.GetRawFiles(dsType, workspace, dataset, version, "", filter, false)
 
 	if err != nil {
 		return nil, err

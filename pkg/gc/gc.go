@@ -168,7 +168,7 @@ func GoGC() {
 
 func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) error {
 	// Delete all files within this repo
-	rawFiles, err := mgr.GetRawFiles(dataset.Type, dataset.Workspace, dataset.Name, version, "", false)
+	rawFiles, err := mgr.GetRawFiles(dataset.Type, dataset.Workspace, dataset.Name, version, "", "", false)
 	if err != nil {
 		return err
 	}

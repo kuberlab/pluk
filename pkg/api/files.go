@@ -27,6 +27,7 @@ func (api *API) fsReadDir(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
 	filepath := req.PathParameter("path")
+	filter := req.QueryParameter("filter")
 	master := api.masterClient(req)
 
 	dataset, err := api.ds.GetDataset(currentType(req), workspace, name, master)
@@ -34,7 +35,7 @@ func (api *API) fsReadDir(req *restful.Request, resp *restful.Response) {
 		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
-	fs, err := api.getFS(dataset, version)
+	fs, err := api.getFS(dataset, version, filter)
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -61,7 +62,7 @@ func (api *API) fsReadFile(req *restful.Request, resp *restful.Response) {
 		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
-	fs, err := api.getFS(dataset, version)
+	fs, err := api.getFS(dataset, version, "")
 	if err != nil {
 		WriteError(resp, err)
 		return

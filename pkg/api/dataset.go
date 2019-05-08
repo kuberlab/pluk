@@ -87,7 +87,7 @@ func (api *API) downloadDataset(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	fs, err := api.getFS(dataset, version)
+	fs, err := api.getFS(dataset, version, "")
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -137,7 +137,7 @@ func (api *API) datasetTarSize(req *restful.Request, resp *restful.Response) {
 		WriteError(resp, EntityNotFoundError(req, name, err))
 		return
 	}
-	fs, err := api.getFS(dataset, version)
+	fs, err := api.getFS(dataset, version, "")
 	if err != nil {
 		WriteError(resp, err)
 		return
@@ -256,23 +256,23 @@ func (api *API) forkDataset(req *restful.Request, resp *restful.Response) {
 	resp.WriteHeaderAndEntity(http.StatusCreated, dataset)
 }
 
-func (api *API) fsCacheKey(dataset *datasets.Dataset, version string) string {
-	return api.fsCacheKeyPrefix(dataset) + ":" + version + "-fs"
+func (api *API) fsCacheKey(dataset *datasets.Dataset, version, filter string) string {
+	return api.fsCacheKeyPrefix(dataset) + ":" + version + "-fs-" + filter
 }
 
 func (api *API) fsCacheKeyPrefix(ds *datasets.Dataset) string {
 	return fmt.Sprintf("%v/%v/%v", ds.Type, ds.Workspace, ds.Name)
 }
 
-func (api *API) getFS(dataset *datasets.Dataset, version string) (fs *plukio.ChunkedFileFS, err error) {
-	fsRaw := api.fsCache.GetRaw(api.fsCacheKey(dataset, version))
+func (api *API) getFS(dataset *datasets.Dataset, version, filter string) (fs *plukio.ChunkedFileFS, err error) {
+	fsRaw := api.fsCache.GetRaw(api.fsCacheKey(dataset, version, filter))
 	if fsRaw == nil {
 		logrus.Infof("Caching FS %v:%v...", dataset.Name, version)
-		fs, err = dataset.GetFSStructure(version)
+		fs, err = dataset.GetFSStructure(version, filter)
 		if err != nil {
 			return nil, errors.NewStatus(http.StatusNotFound, err.Error())
 		}
-		api.fsCache.SetRaw(api.fsCacheKey(dataset, version), fs)
+		api.fsCache.SetRaw(api.fsCacheKey(dataset, version, filter), fs)
 		logrus.Infof("Successfully cached FS %v:%v.", dataset.Name, version)
 	} else {
 		fs = fsRaw.(*plukio.ChunkedFileFS)
@@ -283,7 +283,7 @@ func (api *API) getFS(dataset *datasets.Dataset, version string) (fs *plukio.Chu
 
 func (api *API) cacheFS(dataset *datasets.Dataset, versions []string) {
 	for _, v := range versions {
-		_, err := api.getFS(dataset, v)
+		_, err := api.getFS(dataset, v, "")
 		if err != nil {
 			logrus.Error(err)
 			return
@@ -315,7 +315,7 @@ func (api *API) invalidateCache(ds *datasets.Dataset) {
 
 func (api *API) invalidateVersionCache(ds *datasets.Dataset, version string) {
 	// Invalidate cache
-	key := api.fsCacheKey(ds, version)
+	key := api.fsCacheKey(ds, version, "")
 	logrus.Infof("Drop cache for %v", key)
 	api.fsCache.Cache.Delete(key)
 }

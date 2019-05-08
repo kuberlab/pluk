@@ -133,7 +133,7 @@ func deleteChunks(mgr db.DataMgr, chunks []db.Chunk) int64 {
 }
 
 func DeleteFiles(mgr db.DataMgr, eType, ws, dataset, version, prefix string, preciseName, strict bool) error {
-	rawFiles, err := mgr.GetRawFiles(eType, ws, dataset, version, prefix, preciseName)
+	rawFiles, err := mgr.GetRawFiles(eType, ws, dataset, version, prefix, "", preciseName)
 	if err != nil {
 		return err
 	}

@@ -57,7 +57,7 @@ func NewPlukeFS(dsType, workspace, dataset, version, server, secret, secretWorks
 	}
 
 	fs.client = client
-	innerFS, err := client.GetFSStructure(dsType, workspace, dataset, version)
+	innerFS, err := client.GetFSStructure(dsType, workspace, dataset, version, "")
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func (fs *PlukeFS) tryChangeDataset(filename string) (file nodefs.File, code fus
 
 	// Change dataset only if current dataset/version differs from target.
 	if dataset != fs.dataset || version != fs.version {
-		newFS, err := fs.client.GetFSStructure(fs.dsType, fs.workspace, dataset, version)
+		newFS, err := fs.client.GetFSStructure(fs.dsType, fs.workspace, dataset, version, "")
 		if err != nil {
 			msg := fmt.Sprintf("Failed to change FS to %v:%v: %v", dataset, version, err)
 			logrus.Error(msg)

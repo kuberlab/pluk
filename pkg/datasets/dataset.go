@@ -293,7 +293,7 @@ func CheckAndQueueFile(tx db.DataMgr, dsv *db.DatasetVersion, f *types.HashedFil
 }
 
 func ClearExtraChunks(tx db.DataMgr, dsv *db.DatasetVersion, path string, replacement *types.HashedFile) error {
-	exChunks, err := tx.GetRawFiles(dsv.Type, dsv.Workspace, dsv.Name, dsv.Version, path, true)
+	exChunks, err := tx.GetRawFiles(dsv.Type, dsv.Workspace, dsv.Name, dsv.Version, path, "", true)
 	if err != nil {
 		return err
 	}
@@ -371,11 +371,11 @@ func (d *Dataset) TarSize() (int64, error) {
 	return size, err
 }
 
-func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err error) {
+func (d *Dataset) GetFSStructure(version string, filters ...string) (fs *plukio.ChunkedFileFS, err error) {
 	_, err = d.mgr.GetDatasetVersion(d.Type, d.Workspace, d.Name, version)
 
 	if err == nil {
-		fs, err = d.GetFSFromDB(version)
+		fs, err = d.GetFSFromDB(version, filters...)
 	} else {
 		if !utils.HasMasters() {
 			return nil, fmt.Errorf(
@@ -383,7 +383,7 @@ func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err 
 				version, d.Type, d.Workspace, d.Name,
 			)
 		}
-		fs, err = d.getFSStructureFromMaster(version)
+		fs, err = d.getFSStructureFromMaster(version, filters...)
 	}
 
 	if err != nil {
@@ -395,8 +395,12 @@ func (d *Dataset) GetFSStructure(version string) (fs *plukio.ChunkedFileFS, err 
 	return fs, nil
 }
 
-func (d *Dataset) getFSStructureFromMaster(version string) (*plukio.ChunkedFileFS, error) {
-	fs, err := d.MasterClient.GetFSStructure(d.Type, d.Workspace, d.Name, version)
+func (d *Dataset) getFSStructureFromMaster(version string, filters ...string) (*plukio.ChunkedFileFS, error) {
+	var filter = ""
+	if len(filters) > 0 {
+		filter = filters[0]
+	}
+	fs, err := d.MasterClient.GetFSStructure(d.Type, d.Workspace, d.Name, version, filter)
 
 	if err != nil {
 		return nil, err
@@ -438,8 +442,12 @@ func (d *Dataset) SaveFSLocally(src *plukio.ChunkedFileFS, version string) error
 	return d.Save(dest, version, "", false, false, false, false)
 }
 
-func (d *Dataset) GetFSFromDB(version string) (*plukio.ChunkedFileFS, error) {
-	return d.mgr.GetFS(d.Type, d.Workspace, d.Name, version)
+func (d *Dataset) GetFSFromDB(version string, filters ...string) (*plukio.ChunkedFileFS, error) {
+	var filter = ""
+	if len(filters) > 0 {
+		filter = filters[0]
+	}
+	return d.mgr.GetFS(d.Type, d.Workspace, d.Name, version, filter)
 }
 
 func (d *Dataset) CheckVersion(version string) (bool, error) {
