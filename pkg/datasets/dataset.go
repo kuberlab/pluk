@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"unicode"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
@@ -336,6 +337,15 @@ func (d *Dataset) Download(resp *restful.Response) error {
 	return WriteTar(d.FS.Clone(), resp)
 }
 
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] > unicode.MaxASCII {
+			return false
+		}
+	}
+	return true
+}
+
 func (d *Dataset) TarSize() (int64, error) {
 	var size int64 = 0
 	err := d.FS.Walk("/", func(path string, f *plukio.ChunkedFile, err error) error {
@@ -355,6 +365,9 @@ func (d *Dataset) TarSize() (int64, error) {
 			// Directory size
 			// size += 4096
 			return nil
+		}
+		if !isASCII(name) {
+			size += 1024
 		}
 		// Header size
 		size += 512
