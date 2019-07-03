@@ -259,6 +259,20 @@ func TestForkDataset(t *testing.T) {
 	}
 
 	utils.Assert(2, len(fs), t)
+
+	// Check version date
+	url = buildURL("dataset/another-ws/dataset/versions/1.0.0/get")
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := &types.Version{}
+	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
+		t.Fatal(err)
+	}
+
+	utils.Assert(true, v.UpdatedAt.Time.Sub(time.Now()) < time.Second, t)
+	utils.Assert(true, v.CreatedAt.Time.Sub(time.Now()) < time.Second, t)
 }
 
 func TestForkDatasetName(t *testing.T) {

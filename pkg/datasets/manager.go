@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/lib/pkg/errors"
+	libtypes "github.com/kuberlab/lib/pkg/types"
 	"github.com/kuberlab/pluk/pkg/db"
 	"github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
@@ -115,6 +116,9 @@ func (m *Manager) ForkDataset(src types.Dataset, target types.Dataset, master io
 				return nil, err
 			}
 			if _, err = ds.CommitVersion(ver.Version, ver.Message); err != nil {
+				return nil, err
+			}
+			if err = ds.mgr.UpdateDatasetVersionDate(ds.Type, ds.Workspace, ds.Name, ver.Version, libtypes.TimeNow()); err != nil {
 				return nil, err
 			}
 		}

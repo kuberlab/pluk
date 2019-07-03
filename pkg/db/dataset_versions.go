@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"github.com/kuberlab/lib/pkg/types"
 )
 
 type DatasetVersionMgr interface {
@@ -14,6 +15,7 @@ type DatasetVersionMgr interface {
 	RecoverDatasetVersion(dsv *DatasetVersion) error
 	CommitVersion(dsType, workspace, name, version, message string) (*DatasetVersion, error)
 	UpdateDatasetVersionSize(dsType, workspace, name, version string) error
+	UpdateDatasetVersionDate(dsType, workspace, name, version string, date types.Time) error
 }
 
 type DatasetVersion struct {
@@ -42,6 +44,11 @@ func (mgr *DatabaseMgr) UpdateDatasetVersion(datasetVersion *DatasetVersion) (*D
 func (mgr *DatabaseMgr) RecoverDatasetVersion(dsv *DatasetVersion) error {
 	sql := "UPDATE dataset_versions SET deleted=? where name=? AND type=? AND workspace=? AND version=?"
 	return mgr.db.Exec(sql, false, dsv.Name, dsv.Type, dsv.Workspace, dsv.Version).Error
+}
+
+func (mgr *DatabaseMgr) UpdateDatasetVersionDate(dsType, workspace, name, version string, date types.Time) error {
+	sql := "UPDATE dataset_versions SET created_at=?, updated_at=? where name=? AND type=? AND workspace=? AND version=?"
+	return mgr.db.Exec(sql, date.SQLFormat(), date.SQLFormat(), name, dsType, workspace, version).Error
 }
 
 func (mgr *DatabaseMgr) GetDatasetVersion(dsType, workspace, name, version string) (*DatasetVersion, error) {
