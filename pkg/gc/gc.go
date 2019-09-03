@@ -359,6 +359,10 @@ func ClearChunks(mgr db.DataMgr) {
 	}
 
 	err = filepath.Walk(utils.DataDir(), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			logrus.Errorf("[ClearChunks] Failed seek files: %v", err)
+			return err
+		}
 		if info.IsDir() {
 			return nil
 		}
