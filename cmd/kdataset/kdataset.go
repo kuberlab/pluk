@@ -91,10 +91,16 @@ func initConfig(cmd *cobra.Command, args []string) error {
 	}
 
 	// Special rule for base pluke url
-	config.InitConfigField(&config.Config.BaseURL, baseURL, "KUBERLAB_URL", "")
-	config.InitConfigField(&config.Config.PlukURL, plukURL, "PLUKE_URL", "")
+	baseUrlSource := config.InitConfigField(&config.Config.BaseURL, baseURL, "KUBERLAB_URL", "")
+	plukUrlSource := config.InitConfigField(&config.Config.PlukURL, plukURL, "PLUKE_URL", "")
 	config.InitConfigField(&config.Config.PlukURL, oldPlukURL, "PLUKE_URL", "")
 	config.InitConfigField(&config.Config.InternalKey, internalKey, "INTERNAL_KEY", "")
+
+	if config.Config.BaseURL != "" && baseUrlSource > plukUrlSource {
+		// Set priority to baseURL if specified; clear Pluke URL in this case.
+		config.Config.PlukURL = ""
+	}
+
 	overridePlukURL()
 
 	// check new version

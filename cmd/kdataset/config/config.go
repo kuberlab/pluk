@@ -10,6 +10,13 @@ import (
 
 var Config *DealerConfig
 
+const (
+	// Priority
+	FromCFG = 0
+	FromENV = 1
+	FromCLI = 2
+)
+
 type DealerConfig struct {
 	BaseURL         string `yaml:"base_url"`
 	PlukURL         string `yaml:"pluk_url"`
@@ -20,22 +27,23 @@ type DealerConfig struct {
 	Insecure        bool   `yaml:"insecure"`
 }
 
-func InitConfigField(field *string, cliValue, envVarName, defaultValue string) {
+func InitConfigField(field *string, cliValue, envVarName, defaultValue string) int {
 	// 1. CLI value
 	if cliValue != "" {
 		*field = cliValue
-		return
+		return FromCLI
 	}
 	// 2. Env value
 	envValue := os.Getenv(envVarName)
 	if envValue != "" {
 		*field = envValue
-		return
+		return FromENV
 	}
 	// 3. Default value if not set
 	if *field == "" {
 		*field = defaultValue
 	}
+	return FromCFG
 }
 
 // InitConfig loads Config from the given path.
