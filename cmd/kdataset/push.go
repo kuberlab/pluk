@@ -364,7 +364,7 @@ func (cmd *pushCmd) uploadChunks(
 			//		os.Exit(1)
 			//	}
 			//} else {
-			if err = client.SaveChunkReader(hash, chReader, types.ChunkVersion); err != nil {
+			if err = utils.Retry("Upload chunk", 0.1, 10, client.SaveChunkReader, hash, chReader, byte(types.ChunkVersion)); err != nil {
 				_ = pool.Stop()
 				logrus.Fatalf("Failed to upload chunk: %v", err)
 			}

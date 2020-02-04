@@ -2,7 +2,9 @@ package utils
 
 import (
 	"crypto/sha512"
+	"errors"
 	"fmt"
+	"github.com/Sirupsen/logrus"
 	"os"
 	"reflect"
 	"runtime"
@@ -315,4 +317,62 @@ func CheckVersion(version string) error {
 		return fmt.Errorf("Version must be a valid semantic version. Given %v, try to save as version %v", version, v.String())
 	}
 	return nil
+}
+
+func Retry(description string, delaySec, timeoutSec float64, f interface{}, arg ...interface{}) (err error) {
+	vf := reflect.ValueOf(f)
+	valuesArgs := make([]reflect.Value, 0)
+
+	if vf.Kind() != reflect.Func {
+		err = errors.New(fmt.Sprintf("%v is not a Func!", vf.String()))
+		return
+	}
+
+	for _, v := range arg {
+		valuesArgs = append(valuesArgs, reflect.ValueOf(v))
+	}
+
+	run := func() error {
+		res := vf.Call(valuesArgs)
+		last := res[len(res)-1]
+
+		if last.IsNil() {
+			return nil
+		}
+		errF := last.Interface().(error)
+
+		return errF
+	}
+	err = run()
+
+	if err == nil {
+		return nil
+	}
+
+	timeoutDur := time.Duration(int64(float64(time.Second) * timeoutSec))
+	delayDur := time.Duration(int64(float64(time.Second) * delaySec))
+	timeout := time.NewTimer(timeoutDur)
+	sleep := time.NewTicker(delayDur)
+
+	defer timeout.Stop()
+	defer sleep.Stop()
+
+	step := 1
+	for {
+		select {
+		case <-sleep.C:
+			logrus.Warningf("Retry(%v) call: %v", step, description)
+
+			err = run()
+
+			if err == nil {
+				return nil
+			} //else {
+			//	tasks.Warning(err.Error())
+			//}
+			step++
+		case <-timeout.C:
+			return errors.New(fmt.Sprintf("Timeout while waiting for %v: %v", vf.String(), err))
+		}
+	}
 }
