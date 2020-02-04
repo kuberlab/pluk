@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	plukio "github.com/kuberlab/pluk/pkg/io"
 	"net/http"
 
 	"github.com/emicklei/go-restful"
@@ -143,7 +144,14 @@ func (api *API) deleteVersion(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	version := req.PathParameter("version")
 	workspace := req.PathParameter("workspace")
-	master := api.masterClient(req)
+	skipMaster := getBoolQueryParam(req, "skip_master")
+
+	var master plukio.PlukClient
+	if skipMaster {
+		master = nil
+	} else {
+		master = api.masterClient(req)
+	}
 
 	acquireConcurrency()
 	defer releaseConcurrency()

@@ -376,3 +376,12 @@ func Retry(description string, delaySec, timeoutSec float64, f interface{}, arg 
 		}
 	}
 }
+
+type FakeWriter struct {
+	Written int
+}
+
+func (w *FakeWriter) Write(b []byte) (int, error) {
+	w.Written += len(b)
+	return len(b), nil
+}

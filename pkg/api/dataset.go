@@ -157,7 +157,14 @@ func (api *API) deleteDataset(req *restful.Request, resp *restful.Response) {
 	name := req.PathParameter("name")
 	workspace := req.PathParameter("workspace")
 	skipDealer := getBoolQueryParam(req, "skip_dealer")
-	master := api.masterClient(req)
+	skipMaster := getBoolQueryParam(req, "skip_master")
+
+	var master plukio.PlukClient
+	if skipMaster {
+		master = nil
+	} else {
+		master = api.masterClient(req)
+	}
 
 	acquireConcurrency()
 	defer releaseConcurrency()

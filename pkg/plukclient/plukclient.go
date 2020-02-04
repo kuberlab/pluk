@@ -551,11 +551,19 @@ func (c *Client) SaveChunk(hash string, data []byte, version byte) error {
 	if err != nil {
 		return err
 	}
-	req.Body = ioutil.NopCloser(bytes.NewReader(data))
+	fakeWriter := &utils.FakeWriter{}
+	rd := io.TeeReader(bytes.NewReader(data), fakeWriter)
+	req.Body = ioutil.NopCloser(rd)
 	_, err = c.Do(req, nil)
 
 	if err != nil {
 		return err
+	}
+	if fakeWriter.Written != len(data) {
+		return fmt.Errorf(
+			"Data length doesn't match the length of written data in the request: "+
+				"got %v, need %v", fakeWriter.Written, len(data),
+		)
 	}
 
 	return err

@@ -2,6 +2,7 @@ package io
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -87,36 +88,42 @@ func GetChunk(chunkPath string, version byte) (reader ReaderInterface, err error
 			// Read from master
 			//logrus.Debugf("download")
 			//t := time.Now()
-			readerRaw, err := MasterClient.DownloadChunk(hash, version)
 
-			if err != nil {
-				return nil, err
-			}
-			if utils.SaveChunks() {
+			getData := func(hash string, version byte, buffer *bytes.Buffer) error {
+				buffer.Reset()
+				check, err := MasterClient.CheckChunk(hash, version)
+				if err != nil {
+					return err
+				}
+				readerRaw, err := MasterClient.DownloadChunk(hash, version)
+
+				if err != nil {
+					return err
+				}
 				data, err := ioutil.ReadAll(readerRaw)
 				if err != nil {
-					return nil, err
+					return err
 				}
-				//logrus.Debugf("download complete! %v", time.Since(t))
 				readerRaw.Close()
+				if int64(len(data)) != check.Size {
+					return fmt.Errorf("Downloaded chunk size mismatch with real chunk size")
+				}
+				buffer.Write(data)
+				return nil
+			}
+
+			buf := bytes.NewBuffer([]byte{})
+			err := utils.Retry("get chunk", 0.1, 5, getData, hash, byte(version), buf)
+			data := buf.Bytes()
+
+			if utils.SaveChunks() {
+				//logrus.Debugf("download complete! %v", time.Since(t))
 				err = SaveChunk(hash, version, ioutil.NopCloser(bytes.NewBuffer(data)), false)
 				if err != nil {
 					logrus.Errorf("Could not save chunk: %v", err)
 				}
-				return NewChunkReaderFromData(data), nil
-			} else {
-				data, err := ioutil.ReadAll(readerRaw)
-				if err != nil {
-					return nil, err
-				}
-				//logrus.Debugf("download complete! %v", time.Since(t))
-				readerRaw.Close()
-				return NewChunkReaderFromData(data), nil
-				//if err != nil {
-				//	return nil, err
-				//}
-				//return reader, nil
 			}
+			return NewChunkReaderFromData(data), nil
 		} else {
 			return nil, err
 		}
