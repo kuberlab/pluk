@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -25,18 +26,33 @@ func (s *Server) GetChunk(ctx context.Context, in *ChunkRequest) (*ChunkResponse
 		logrus.Error(err)
 		return nil, err
 	}
-	reader, err := plukio.GetChunk(in.Path, byte(in.Version))
+
+	getData := func(path string, version byte) ([]byte, error) {
+		reader, err := plukio.GetChunk(path, version)
+		if err != nil {
+			logrus.Error(err)
+			return nil, err
+		}
+		bt := bytes.NewBuffer(make([]byte, 0, 16384))
+		io.Copy(bt, reader)
+		reader.Close()
+		return bt.Bytes(), nil
+	}
+
+	data, err := getData(in.Path, byte(in.Version))
 	if err != nil {
-		logrus.Error(err)
 		return nil, err
 	}
-	bt := bytes.NewBuffer(make([]byte, 0, 16384))
-	io.Copy(bt, reader)
-	reader.Close()
-	if bt.Len() == 0 {
-		logrus.Warningf("Zero chunk response for %v", in.Path)
+
+	if len(data) == 0 {
+		logrus.Warningf("Zero chunk response for %v, re-requesting", in.Path)
+		os.Remove(in.Path)
+		data, err = getData(in.Path, byte(in.Version))
+		if err != nil {
+			return nil, err
+		}
 	}
-	return &ChunkResponse{Data: bt.Bytes()}, nil
+	return &ChunkResponse{Data: data}, nil
 }
 
 func (s *Server) checkAuth(auth *Auth) (bool, error) {
