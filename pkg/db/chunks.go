@@ -59,6 +59,9 @@ func (mgr *DatabaseMgr) CreateChunk(chunk *Chunk) error {
 }
 
 func (mgr *DatabaseMgr) ListChunksByUniqueHash(hashes []*RawFile) ([]*Chunk, error) {
+	if len(hashes) == 0 {
+		return make([]*Chunk, 0), nil
+	}
 	where := strings.Builder{}
 	where.WriteString("hash IN (")
 
