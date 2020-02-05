@@ -389,6 +389,10 @@ func (d *Dataset) GetFSStructure(version string, filters ...string) (fs *plukio.
 
 	if err == nil {
 		fs, err = d.GetFSFromDB(version, filters...)
+		if err == nil && len(fs.Dirs) == 0 && len(fs.Files) == 0 && utils.HasMasters() {
+			// Empty FS in the DB; need to get FS from master.
+			fs, err = d.getFSStructureFromMaster(version, filters...)
+		}
 	} else {
 		if !utils.HasMasters() {
 			return nil, fmt.Errorf(
