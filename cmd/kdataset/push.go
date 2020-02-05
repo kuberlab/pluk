@@ -8,13 +8,14 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	chunk_io "github.com/kuberlab/pluk/pkg/io"
+	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
 	"github.com/spf13/cobra"
@@ -131,6 +132,15 @@ func NewPushCmd() *cobra.Command {
 }
 
 func (cmd *pushCmd) run() error {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for range c {
+			logrus.Printf("Shutdown...")
+			os.Exit(0)
+		}
+	}()
+
 	logrus.Debugf("Concurrency is set to %v.", cmd.concurrency)
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -233,6 +243,9 @@ func (cmd *pushCmd) run() error {
 	barFiles.ShowSpeed = true
 
 	pool, err := pb.StartPool(bar, barFiles)
+	if err != nil {
+		logrus.Fatal(err)
+	}
 	pool.RefreshRate = 150 * time.Millisecond
 
 	bufLimit := 5000
@@ -287,19 +300,6 @@ func (cmd *pushCmd) run() error {
 	flushBuf(true)
 	//logrus.Debugf("File structure: %v", structure)
 
-	//if err = client.SaveFileStructure(
-	//	structure,
-	//	entityType.Value,
-	//	cmd.workspace,
-	//	cmd.name,
-	//	cmd.version,
-	//	cmd.comment,
-	//	cmd.create,
-	//	cmd.publish,
-	//); err != nil {
-	//	logrus.Fatal(err)
-	//}
-
 	if cmd.specFile != "" {
 		err = client.PostEntitySpec(entityType.Value, cmd.workspace, cmd.name, specData)
 		if err != nil {
@@ -313,7 +313,7 @@ func (cmd *pushCmd) run() error {
 }
 
 func (cmd *pushCmd) uploadChunks(
-	bar, barFiles *pb.ProgressBar, pool *pb.Pool, client chunk_io.PlukClient,
+	bar, barFiles *pb.ProgressBar, pool *pb.Pool, client plukio.PlukClient,
 	upload bool, fileChan chan *types.HashedFile) (err error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -397,7 +397,7 @@ func (cmd *pushCmd) uploadChunks(
 		if err != nil {
 			return err
 		}
-		r := chunk_io.NewChunkedReader(cmd.chunkSize, file)
+		r := plukio.NewChunkedReader(cmd.chunkSize, file)
 		// Populate file structure.
 		hashed := &types.HashedFile{
 			Path:     strings.TrimPrefix(path, cwd+"/"),
@@ -428,7 +428,6 @@ func (cmd *pushCmd) uploadChunks(
 		file.Close()
 		barFiles.Increment()
 		logrus.Debugf("Whole file size = %v", hashed.Size)
-		//files = append(files, hashed)
 		fileChan <- hashed
 		return nil
 	})
