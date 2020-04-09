@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/types"
@@ -16,6 +17,7 @@ import (
 type ChunkedReader struct {
 	ChunkSize int
 	reader    io.Reader
+	Timer     time.Duration
 }
 
 func NewChunkedReader(chunkSize int, reader io.Reader) *ChunkedReader {
@@ -31,7 +33,9 @@ func (c *ChunkedReader) NextChunk() ([]byte, string, error) {
 	n, err := c.reader.Read(data)
 	if n > 0 {
 		res := data[:n]
+		t := time.Now()
 		sum := utils.CalcHash(res)
+		c.Timer += time.Since(t)
 		return res, sum, nil
 	}
 	if err != nil {

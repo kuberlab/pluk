@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -35,6 +36,9 @@ type pushCmd struct {
 	force       bool
 	publish     bool
 	skipUpload  bool
+	profile     bool
+
+	profiler *Profiler
 	//websocket   bool
 }
 
@@ -89,8 +93,8 @@ func NewPushCmd() *cobra.Command {
 		&push.concurrency,
 		"concurrency",
 		"c",
-		int64(runtime.NumCPU()),
-		"Number of concurrent request to server.",
+		0,
+		"Number of concurrent request to server. Setting to 0 will automatically detect the appropriate number.",
 	)
 	f.BoolVarP(
 		&push.create,
@@ -105,6 +109,13 @@ func NewPushCmd() *cobra.Command {
 		"",
 		false,
 		"Skip upload chunks and move right to committing FS",
+	)
+	f.BoolVarP(
+		&push.profile,
+		"profile",
+		"",
+		false,
+		"Enable profiling",
 	)
 	f.BoolVarP(
 		&push.publish,
@@ -131,6 +142,18 @@ func NewPushCmd() *cobra.Command {
 	return cmd
 }
 
+func DetectConcurrency(avgSize float64) int64 {
+	// y = 10.474 - 0.09474 * x
+	numCPU := int64(runtime.NumCPU())
+	pivot := int64(math.Round(10.474-0.09474*avgSize)) * numCPU
+	if pivot < numCPU {
+		return numCPU
+	} else if pivot > 10*numCPU {
+		return 10 * numCPU
+	}
+	return pivot
+}
+
 func (cmd *pushCmd) run() error {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -141,11 +164,13 @@ func (cmd *pushCmd) run() error {
 		}
 	}()
 
-	logrus.Debugf("Concurrency is set to %v.", cmd.concurrency)
 	cwd, err := os.Getwd()
 	if err != nil {
 		logrus.Fatal(err)
 	}
+
+	cmd.profiler = NewProfiler()
+	var t time.Time
 
 	var specData *bytes.Buffer
 	if cmd.specFile != "" {
@@ -214,6 +239,8 @@ func (cmd *pushCmd) run() error {
 	var fileCount int64 = 0
 
 	// Populate all files size.
+	t = time.Now()
+	logrus.Infof("Computing files count and estimate directory space...")
 	err = filepath.Walk(cwd, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -233,6 +260,14 @@ func (cmd *pushCmd) run() error {
 		fileCount++
 		return nil
 	})
+	cmd.profiler.AddTime("computing space", time.Since(t))
+
+	if cmd.concurrency == 0 {
+		cmd.concurrency = DetectConcurrency(float64(totalSize/1024) / float64(fileCount))
+	} else {
+	}
+
+	logrus.Infof("Concurrency is set to %v.", cmd.concurrency)
 
 	// Bar bytes
 	bar := pb.New64(totalSize).SetUnits(pb.U_BYTES).SetMaxWidth(100)
@@ -248,12 +283,13 @@ func (cmd *pushCmd) run() error {
 	}
 	pool.RefreshRate = 150 * time.Millisecond
 
-	bufLimit := 5000
-	fileChan := make(chan *types.HashedFile, 20000)
+	bufLimit := 2500
+	fileChan := make(chan *types.HashedFile, 10000)
 
 	fileBuf := make([]*types.HashedFile, 0)
 
 	flushBuf := func(last bool) {
+		t = time.Now()
 		structure := types.FileStructure{Files: fileBuf}
 		if err = client.SaveFileStructure(
 			structure,
@@ -271,6 +307,7 @@ func (cmd *pushCmd) run() error {
 			_ = pool.Stop()
 			logrus.Fatal(err)
 		}
+		cmd.profiler.AddTime("save FS", time.Since(t))
 	}
 
 	syncCh := make(chan bool, 0)
@@ -308,6 +345,9 @@ func (cmd *pushCmd) run() error {
 	}
 
 	logrus.Info("Successfully uploaded and committed.")
+	if cmd.profile {
+		fmt.Println(cmd.profiler.String())
+	}
 
 	return nil
 }
@@ -331,7 +371,8 @@ func (cmd *pushCmd) uploadChunks(
 	ctx := context.TODO()
 
 	var resp *types.ChunkCheck
-	checkAndUpload := func(chunkData []byte, hash string) {
+	checkAndUpload := func(chunkData []byte, hash string, name string) {
+		t := time.Now()
 		defer func() {
 			//lock.Lock()
 			//bar.Add(len(chunkData))
@@ -341,6 +382,7 @@ func (cmd *pushCmd) uploadChunks(
 
 		if !upload {
 			bar.Add(len(chunkData))
+			cmd.profiler.AddTime("upload chunks", time.Since(t))
 			return
 		}
 
@@ -364,7 +406,7 @@ func (cmd *pushCmd) uploadChunks(
 			//		os.Exit(1)
 			//	}
 			//} else {
-			if err = utils.Retry("Upload chunk", 0.1, 10, client.SaveChunkReader, hash, chReader, byte(types.ChunkVersion)); err != nil {
+			if err = utils.Retry(fmt.Sprintf("Upload chunk, file=%v", name), 0.1, 10, client.SaveChunkReader, hash, chReader, byte(types.ChunkVersion)); err != nil {
 				_ = pool.Stop()
 				logrus.Fatalf("Failed to upload chunk: %v", err)
 			}
@@ -372,10 +414,10 @@ func (cmd *pushCmd) uploadChunks(
 		} else {
 			bar.Add(len(chunkData))
 		}
+		cmd.profiler.AddTime("upload chunks", time.Since(t)/time.Duration(cmd.concurrency))
 		return
 	}
 
-	logrus.Infof("Computing files count and estimate directory space...")
 	err = filepath.Walk(cwd, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -398,6 +440,7 @@ func (cmd *pushCmd) uploadChunks(
 			return err
 		}
 		r := plukio.NewChunkedReader(cmd.chunkSize, file)
+		fName := file.Name()
 		// Populate file structure.
 		hashed := &types.HashedFile{
 			Path:     strings.TrimPrefix(path, cwd+"/"),
@@ -407,7 +450,9 @@ func (cmd *pushCmd) uploadChunks(
 		var chunkData []byte
 		var hash string
 		for {
+			t := time.Now()
 			chunkData, hash, err = r.NextChunk()
+			cmd.profiler.AddTime("read & hash", time.Since(t))
 			if err != nil && err != io.EOF {
 				return err
 			}
@@ -418,7 +463,7 @@ func (cmd *pushCmd) uploadChunks(
 			}
 
 			sem.Acquire(ctx, 1)
-			go checkAndUpload(chunkData, hash)
+			go checkAndUpload(chunkData, hash, fName)
 
 			length := int64(len(chunkData))
 			hashed.Size += length
@@ -426,6 +471,7 @@ func (cmd *pushCmd) uploadChunks(
 
 		}
 		file.Close()
+		cmd.profiler.AddTime("hash", r.Timer)
 		barFiles.Increment()
 		logrus.Debugf("Whole file size = %v", hashed.Size)
 		fileChan <- hashed
