@@ -38,8 +38,8 @@ type pushCmd struct {
 	skipUpload  bool
 	profile     bool
 
-	profiler *Profiler
-	//websocket   bool
+	profiler  *Profiler
+	websocket bool
 }
 
 func NewPushCmd() *cobra.Command {
@@ -131,13 +131,13 @@ func NewPushCmd() *cobra.Command {
 		false,
 		"Force uploading regardless warnings.",
 	)
-	//f.BoolVarP(
-	//	&push.websocket,
-	//	"websocket",
-	//	"w",
-	//	false,
-	//	"Use websocket for connecting to server. Decreases the number of requests.",
-	//)
+	f.BoolVarP(
+		&push.websocket,
+		"websocket",
+		"w",
+		false,
+		"Use websocket for connecting to server. Decreases the number of requests.",
+	)
 
 	return cmd
 }
@@ -148,8 +148,8 @@ func DetectConcurrency(avgSize float64) int64 {
 	pivot := int64(math.Round(10.474-0.09474*avgSize)) * numCPU
 	if pivot < numCPU {
 		return numCPU
-	} else if pivot > 10*numCPU {
-		return 10 * numCPU
+	} else if pivot > int64(math.Round(7.5*float64(numCPU))) {
+		return int64(math.Round(7.5 * float64(numCPU)))
 	}
 	return pivot
 }
