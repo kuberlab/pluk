@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -33,9 +34,9 @@ type Client struct {
 	BaseURL   *url.URL
 	UserAgent string
 
-	auth *AuthOpts
-	conn *websocket.Conn
-	ws   *types.WebsocketClient
+	auth   *AuthOpts
+	wsLock sync.RWMutex
+	ws     map[*types.WebsocketClient]bool
 }
 
 type AuthOpts struct {
@@ -96,10 +97,11 @@ func NewClient(baseURL string, auth *AuthOpts) (*Client, error) {
 		Client:    baseClient,
 		UserAgent: "go-plukclient/1",
 		auth:      auth,
+		ws:        make(map[*types.WebsocketClient]bool),
 	}, nil
 }
 
-func (c *Client) PrepareWebsocket() error {
+func (c *Client) PrepareWebsocket(num int64) error {
 	dialer := websocket.Dialer{}
 	urlStr := "/websocket"
 
@@ -117,14 +119,16 @@ func (c *Client) PrepareWebsocket() error {
 	u := fmt.Sprintf("%v://%v/%v", scheme, c.BaseURL.Host, strings.TrimPrefix(c.BaseURL.Path, "/"))
 	u = strings.TrimSuffix(u, "/") + urlStr
 	logrus.Debugf("Connect to %v", u)
-	conn, resp, err := dialer.Dial(u, c.authHeaders())
+	for i := 0; i < int(num); i++ {
+		conn, resp, err := dialer.Dial(u, c.authHeaders())
 
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
+		id := resp.Header.Get("Sec-Websocket-Accept")
+		ws := types.NewWebsocketClient(conn, id, "0.0.0.0")
+		c.ws[ws] = false
 	}
-	c.conn = conn
-	id := resp.Header.Get("Sec-Websocket-Accept")
-	c.ws = types.NewWebsocketClient(conn, id, "0.0.0.0")
 	return nil
 }
 
@@ -537,10 +541,6 @@ func (c *Client) GetFSStructure(entityType, workspace, name, version, filter str
 		return nil, err
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
 	return fs, nil
 }
 
@@ -586,21 +586,50 @@ func (c *Client) SaveChunkReader(hash string, reader io.Reader, version byte) er
 	return err
 }
 
+func (c *Client) acquireWebsocket() *types.WebsocketClient {
+	for {
+		c.wsLock.Lock()
+		for websocketClient, acquired := range c.ws {
+			if !acquired {
+				c.ws[websocketClient] = true
+				c.wsLock.Unlock()
+				return websocketClient
+			}
+		}
+		c.wsLock.Unlock()
+		//time.Sleep(time.Millisecond * 10)
+	}
+}
+
+func (c *Client) releaseWebsocket(ws *types.WebsocketClient) {
+	c.wsLock.Lock()
+	c.ws[ws] = false
+	c.wsLock.Unlock()
+}
+
 func (c *Client) SaveChunkWebsocket(hash string, data []byte) error {
+	ws := c.acquireWebsocket()
+
 	chunkData := types.ChunkData{Data: data, Hash: hash}
-	return c.ws.WriteMessage(chunkData.Type(), chunkData)
+	err := ws.WriteMessage(chunkData.Type(), chunkData)
+	c.releaseWebsocket(ws)
+	return err
 }
 
 func (c *Client) CheckChunkWebsocket(hash string) (*types.ChunkCheck, error) {
+	ws := c.acquireWebsocket()
+	defer c.releaseWebsocket(ws)
+
+	chunkCheck := types.ChunkCheck{Hash: hash}
+	err := ws.WriteMessage(chunkCheck.Type(), chunkCheck)
+	if err != nil {
+		return nil, err
+	}
+	// attempt many reads (skip broadcast messages)
 	attempts := 5
 	for {
-		chunkCheck := types.ChunkCheck{Hash: hash}
-		err := c.ws.WriteMessage(chunkCheck.Type(), chunkCheck)
-		if err != nil {
-			return nil, err
-		}
 		msg := libtypes.Message{}
-		if err = c.ws.Ws.ReadJSON(&msg); err != nil {
+		if err = ws.Ws.ReadJSON(&msg); err != nil {
 			return nil, err
 		}
 		if msg.Type != "chunkCheck" {
@@ -619,8 +648,8 @@ func (c *Client) CheckChunkWebsocket(hash string) (*types.ChunkCheck, error) {
 }
 
 func (c *Client) Close() error {
-	if c.conn != nil {
-		return c.conn.Close()
+	for ws := range c.ws {
+		ws.Ws.Close()
 	}
 	return nil
 }

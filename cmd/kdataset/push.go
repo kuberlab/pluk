@@ -143,14 +143,14 @@ func NewPushCmd() *cobra.Command {
 	return cmd
 }
 
-func DetectConcurrency(avgSize float64) int64 {
+func DetectConcurrency(avgSize float64, maxMultiplier float64) int64 {
 	// y = 10.474 - 0.09474 * x
 	numCPU := int64(runtime.NumCPU())
 	pivot := int64(math.Round(10.474-0.09474*avgSize)) * numCPU
 	if pivot < numCPU {
 		return numCPU
-	} else if pivot > int64(math.Round(7.5*float64(numCPU))) {
-		return int64(math.Round(7.5 * float64(numCPU)))
+	} else if pivot > int64(math.Round(maxMultiplier*float64(numCPU))) {
+		return int64(math.Round(maxMultiplier * float64(numCPU)))
 	}
 	return pivot
 }
@@ -228,13 +228,6 @@ func (cmd *pushCmd) run() error {
 		}
 	}
 
-	if cmd.websocket {
-		if err = client.PrepareWebsocket(); err != nil {
-			logrus.Fatal(err)
-		}
-	}
-	defer client.Close()
-
 	logrus.Debug("Run push...")
 	var totalSize int64 = 0
 	var fileCount int64 = 0
@@ -264,11 +257,24 @@ func (cmd *pushCmd) run() error {
 	cmd.profiler.AddTime("computing space", time.Since(t))
 
 	if cmd.concurrency == 0 {
-		cmd.concurrency = DetectConcurrency(float64(totalSize/1024) / float64(fileCount))
-	} else {
-	}
+		if !cmd.websocket && fileCount > 5000 {
+			cmd.websocket = true
+		}
 
+		if cmd.websocket {
+			cmd.concurrency = DetectConcurrency(float64(totalSize/1024)/float64(fileCount), 5)
+		} else {
+			cmd.concurrency = DetectConcurrency(float64(totalSize/1024)/float64(fileCount), 7.5)
+		}
+	}
 	logrus.Infof("Concurrency is set to %v.", cmd.concurrency)
+
+	if cmd.websocket {
+		if err = client.PrepareWebsocket(cmd.concurrency); err != nil {
+			logrus.Fatal(err)
+		}
+	}
+	defer client.Close()
 
 	// Bar bytes
 	bar := pb.New64(totalSize).SetUnits(pb.U_BYTES).SetMaxWidth(100)
@@ -364,7 +370,7 @@ func (cmd *pushCmd) uploadChunks(
 
 	var sem *semaphore.Weighted
 	if cmd.websocket {
-		sem = semaphore.NewWeighted(1)
+		sem = semaphore.NewWeighted(cmd.concurrency)
 	} else {
 		sem = semaphore.NewWeighted(cmd.concurrency)
 	}
@@ -387,9 +393,6 @@ func (cmd *pushCmd) uploadChunks(
 			return
 		}
 
-		rd := bytes.NewReader(chunkData)
-		chReader := io.TeeReader(rd, bar)
-
 		if cmd.websocket {
 			resp, err = client.CheckChunkWebsocket(hash)
 		} else {
@@ -406,8 +409,14 @@ func (cmd *pushCmd) uploadChunks(
 					logrus.Errorf("Failed to upload chunk: %v", err)
 					os.Exit(1)
 				}
+				bar.Add(len(chunkData))
 			} else {
-				if err = utils.Retry(fmt.Sprintf("Upload chunk, file=%v", name), 0.1, 10, client.SaveChunkReader, hash, chReader, byte(types.ChunkVersion)); err != nil {
+				rd := bytes.NewReader(chunkData)
+				chReader := io.TeeReader(rd, bar)
+				if err = utils.Retry(
+					fmt.Sprintf("Upload chunk, file=%v", name),
+					0.1, 10,
+					client.SaveChunkReader, hash, chReader, byte(types.ChunkVersion)); err != nil {
 					_ = pool.Stop()
 					logrus.Fatalf("Failed to upload chunk: %v", err)
 				}
