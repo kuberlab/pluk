@@ -188,7 +188,7 @@ func deleteDatasetVersion(mgr db.DataMgr, dataset *db.Dataset, version string) e
 		//	}
 		//	return err
 		//}
-		chunk := &db.Chunk{Hash: raw.Hash, Size: raw.ChunkSize, ID: raw.ChunkID}
+		chunk := &db.Chunk{Hash: raw.Hash, Size: raw.ChunkSize, ID: raw.ChunkID, Version: raw.Version}
 		datasets.CheckAndDeleteChunk(mgr, chunk)
 		//if datasets.CheckAndDeleteChunk(mgr, chunk) {
 		//	deleted++

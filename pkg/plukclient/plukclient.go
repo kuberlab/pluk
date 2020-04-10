@@ -60,7 +60,7 @@ func AllowedTypesList() []string {
 	return allowed
 }
 
-func NewClient(baseURL string, auth *AuthOpts) (plukio.PlukClient, error) {
+func NewClient(baseURL string, auth *AuthOpts) (*Client, error) {
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	base, err := url.Parse(baseURL)
 	if err != nil {

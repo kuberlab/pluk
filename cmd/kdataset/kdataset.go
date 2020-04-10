@@ -9,7 +9,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kuberlab/pluk/cmd/kdataset/config"
-	"github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/spf13/cobra"
 )
@@ -109,7 +108,7 @@ func initConfig(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func initClient() (io.PlukClient, error) {
+func initClient() (*plukclient.Client, error) {
 	var opts *plukclient.AuthOpts
 	if config.Config.InternalKey != "" {
 		opts = &plukclient.AuthOpts{

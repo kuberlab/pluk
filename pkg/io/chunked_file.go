@@ -46,6 +46,9 @@ type PlukClient interface {
 	SaveFileStructure(structure types.FileStructure,
 		entityType, workspace, name, version string, opts types.SaveOpts) error
 	WebdavAuth(user, pass, path string) (bool, error)
+
+	// Websockets
+	PrepareWebsocket() error
 }
 
 type PlukGRPCClient interface {

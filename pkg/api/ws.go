@@ -63,7 +63,7 @@ func (api *API) wsReader(client *types.WebsocketClient) {
 	for {
 		_, msg, err := client.Ws.ReadMessage()
 		if err != nil {
-			logrus.Error(err)
+			logrus.Errorf("read: %v", err)
 			break
 		}
 		if string(msg) == "ping" {
@@ -73,9 +73,10 @@ func (api *API) wsReader(client *types.WebsocketClient) {
 				break
 			}
 			logrus.Infof("Received 'ping' signal from websocket id '%v'", client.ID)
+			continue
 		}
 		//message := libtypes.Message{}
-		//err := client.Ws.ReadJSON(&message)
+		//err = json.Unmarshal(msg, &message)
 		//if err != nil {
 		//	if errC, ok := err.(*websocket.CloseError); ok {
 		//		if errC.Code == websocket.CloseAbnormalClosure {
@@ -97,6 +98,7 @@ func (api *API) wsReader(client *types.WebsocketClient) {
 		//
 		//	err = plukio.SaveChunk(
 		//		chunk.Hash,
+		//		2,
 		//		ioutil.NopCloser(bytes.NewReader(chunk.Data)),
 		//		true,
 		//	)
@@ -111,7 +113,7 @@ func (api *API) wsReader(client *types.WebsocketClient) {
 		//		logrus.Error(err)
 		//		return
 		//	}
-		//	size, exists := plukio.CheckLocalChunk(check.Hash)
+		//	size, exists := plukio.CheckLocalChunk(check.Hash, 2)
 		//	check.Exists = exists
 		//	check.Size = size
 		//	if err := client.WriteMessage(check.Type(), check); err != nil {

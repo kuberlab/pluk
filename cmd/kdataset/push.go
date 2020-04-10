@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/kuberlab/pluk/pkg/plukclient"
 	"io"
 	"io/ioutil"
 	"math"
@@ -227,11 +228,11 @@ func (cmd *pushCmd) run() error {
 		}
 	}
 
-	//if cmd.websocket {
-	//	if err = client.PrepareWebsocket(); err != nil {
-	//		logrus.Fatal(err)
-	//	}
-	//}
+	if cmd.websocket {
+		if err = client.PrepareWebsocket(); err != nil {
+			logrus.Fatal(err)
+		}
+	}
 	defer client.Close()
 
 	logrus.Debug("Run push...")
@@ -353,7 +354,7 @@ func (cmd *pushCmd) run() error {
 }
 
 func (cmd *pushCmd) uploadChunks(
-	bar, barFiles *pb.ProgressBar, pool *pb.Pool, client plukio.PlukClient,
+	bar, barFiles *pb.ProgressBar, pool *pb.Pool, client *plukclient.Client,
 	upload bool, fileChan chan *types.HashedFile) (err error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -362,11 +363,11 @@ func (cmd *pushCmd) uploadChunks(
 	}
 
 	var sem *semaphore.Weighted
-	//if cmd.websocket {
-	//	sem = semaphore.NewWeighted(1)
-	//} else {
-	sem = semaphore.NewWeighted(cmd.concurrency)
-	//}
+	if cmd.websocket {
+		sem = semaphore.NewWeighted(1)
+	} else {
+		sem = semaphore.NewWeighted(cmd.concurrency)
+	}
 	//lock := &sync.RWMutex{}
 	ctx := context.TODO()
 
@@ -389,28 +390,28 @@ func (cmd *pushCmd) uploadChunks(
 		rd := bytes.NewReader(chunkData)
 		chReader := io.TeeReader(rd, bar)
 
-		//if cmd.websocket {
-		//	resp, err = client.CheckChunkWebsocket(hash)
-		//} else {
-		resp, err = client.CheckChunk(hash, types.ChunkVersion)
-		//}
+		if cmd.websocket {
+			resp, err = client.CheckChunkWebsocket(hash)
+		} else {
+			resp, err = client.CheckChunk(hash, types.ChunkVersion)
+		}
 		if err != nil {
 			_ = pool.Stop()
 			logrus.Fatalf("Failed to check chunk: %v", err)
 		}
 		if !resp.Exists || resp.Size != int64(len(chunkData)) {
 			// Upload chunk.
-			//if cmd.websocket {
-			//	if err = client.SaveChunkWebsocket(hash, chunkData); err != nil {
-			//		logrus.Errorf("Failed to upload chunk: %v", err)
-			//		os.Exit(1)
-			//	}
-			//} else {
-			if err = utils.Retry(fmt.Sprintf("Upload chunk, file=%v", name), 0.1, 10, client.SaveChunkReader, hash, chReader, byte(types.ChunkVersion)); err != nil {
-				_ = pool.Stop()
-				logrus.Fatalf("Failed to upload chunk: %v", err)
+			if cmd.websocket {
+				if err = client.SaveChunkWebsocket(hash, chunkData); err != nil {
+					logrus.Errorf("Failed to upload chunk: %v", err)
+					os.Exit(1)
+				}
+			} else {
+				if err = utils.Retry(fmt.Sprintf("Upload chunk, file=%v", name), 0.1, 10, client.SaveChunkReader, hash, chReader, byte(types.ChunkVersion)); err != nil {
+					_ = pool.Stop()
+					logrus.Fatalf("Failed to upload chunk: %v", err)
+				}
 			}
-			//}
 		} else {
 			bar.Add(len(chunkData))
 		}
