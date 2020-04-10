@@ -592,23 +592,30 @@ func (c *Client) SaveChunkWebsocket(hash string, data []byte) error {
 }
 
 func (c *Client) CheckChunkWebsocket(hash string) (*types.ChunkCheck, error) {
-	chunkCheck := types.ChunkCheck{Hash: hash}
-	err := c.ws.WriteMessage(chunkCheck.Type(), chunkCheck)
-	if err != nil {
-		return nil, err
-	}
-	msg := libtypes.Message{}
-	if err = c.ws.Ws.ReadJSON(&msg); err != nil {
-		return nil, err
-	}
-	if msg.Type != "chunkCheck" {
-		return nil, fmt.Errorf("Wrong message type: %v", msg.Type)
-	}
-	if err = utils.LoadAsJson(msg.Content.(map[string]interface{}), &chunkCheck); err != nil {
-		return nil, err
-	}
+	attempts := 5
+	for {
+		chunkCheck := types.ChunkCheck{Hash: hash}
+		err := c.ws.WriteMessage(chunkCheck.Type(), chunkCheck)
+		if err != nil {
+			return nil, err
+		}
+		msg := libtypes.Message{}
+		if err = c.ws.Ws.ReadJSON(&msg); err != nil {
+			return nil, err
+		}
+		if msg.Type != "chunkCheck" {
+			if attempts == 0 {
+				return nil, fmt.Errorf("Wrong message type: %v", msg.Type)
+			}
+			attempts--
+			continue
+		}
+		if err = utils.LoadAsJson(msg.Content.(map[string]interface{}), &chunkCheck); err != nil {
+			return nil, err
+		}
 
-	return &chunkCheck, nil
+		return &chunkCheck, nil
+	}
 }
 
 func (c *Client) Close() error {
