@@ -257,9 +257,9 @@ func (cmd *pushCmd) run() error {
 	cmd.profiler.AddTime("computing space", time.Since(t))
 
 	if cmd.concurrency == 0 {
-		if !cmd.websocket && fileCount > 5000 {
-			cmd.websocket = true
-		}
+		//if !cmd.websocket && fileCount > 5000 {
+		//	cmd.websocket = true
+		//}
 
 		if cmd.websocket {
 			cmd.concurrency = DetectConcurrency(float64(totalSize/1024)/float64(fileCount), 5)
