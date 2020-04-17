@@ -396,7 +396,13 @@ func (cmd *pushCmd) uploadChunks(
 		if cmd.websocket {
 			resp, err = client.CheckChunkWebsocket(hash)
 		} else {
-			resp, err = client.CheckChunk(hash, types.ChunkVersion)
+			respRaw, errC := utils.Retry(
+				"check chunk",
+				0.1, 10,
+				client.CheckChunk, hash, types.ChunkVersion,
+			)
+			err = errC
+			resp = respRaw.(*types.ChunkCheck)
 		}
 		if err != nil {
 			_ = pool.Stop()
@@ -413,7 +419,7 @@ func (cmd *pushCmd) uploadChunks(
 			} else {
 				rd := bytes.NewReader(chunkData)
 				chReader := io.TeeReader(rd, bar)
-				if err = utils.Retry(
+				if _, err = utils.Retry(
 					fmt.Sprintf("Upload chunk, file=%v", name),
 					0.1, 10,
 					client.SaveChunkReader, hash, chReader, byte(types.ChunkVersion)); err != nil {

@@ -117,7 +117,7 @@ func GetChunk(chunkPath string, version byte) (reader ReaderInterface, err error
 			}
 
 			buf := bytes.NewBuffer([]byte{})
-			err := utils.Retry("get chunk", 0.1, 5, getData, hash, byte(version), buf)
+			_, err := utils.Retry("get chunk", 0.1, 5, getData, hash, byte(version), buf)
 			data := buf.Bytes()
 
 			if utils.SaveChunks() {

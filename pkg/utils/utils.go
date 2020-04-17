@@ -319,7 +319,7 @@ func CheckVersion(version string) error {
 	return nil
 }
 
-func Retry(description string, delaySec, timeoutSec float64, f interface{}, arg ...interface{}) (err error) {
+func Retry(description string, delaySec, timeoutSec float64, f interface{}, arg ...interface{}) (res interface{}, err error) {
 	vf := reflect.ValueOf(f)
 	valuesArgs := make([]reflect.Value, 0)
 
@@ -332,21 +332,28 @@ func Retry(description string, delaySec, timeoutSec float64, f interface{}, arg 
 		valuesArgs = append(valuesArgs, reflect.ValueOf(v))
 	}
 
-	run := func() error {
+	run := func() (interface{}, error) {
 		res := vf.Call(valuesArgs)
 		last := res[len(res)-1]
+		var first interface{} = nil
+		if len(res) >= 2 {
+			raw := res[0]
+			if !raw.IsNil() {
+				first = raw.Interface()
+			}
+		}
 
 		if last.IsNil() {
-			return nil
+			return first, nil
 		}
 		errF := last.Interface().(error)
 
-		return errF
+		return first, errF
 	}
-	err = run()
+	res, err = run()
 
 	if err == nil {
-		return nil
+		return res, nil
 	}
 
 	timeoutDur := time.Duration(int64(float64(time.Second) * timeoutSec))
@@ -363,16 +370,16 @@ func Retry(description string, delaySec, timeoutSec float64, f interface{}, arg 
 		case <-sleep.C:
 			logrus.Warningf("Retry(%v) call: %v", step, description)
 
-			err = run()
+			res, err = run()
 
 			if err == nil {
-				return nil
+				return res, nil
 			} //else {
 			//	tasks.Warning(err.Error())
 			//}
 			step++
 		case <-timeout.C:
-			return errors.New(fmt.Sprintf("Timeout while waiting for %v: %v", vf.String(), err))
+			return res, errors.New(fmt.Sprintf("Timeout while waiting for %v: %v", vf.String(), err))
 		}
 	}
 }

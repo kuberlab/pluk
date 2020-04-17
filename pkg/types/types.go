@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	ChunkVersion = 2
+	ChunkVersion byte = 2
 )
 
 type Workspace dealerclient.Workspace
