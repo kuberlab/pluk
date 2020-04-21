@@ -117,7 +117,10 @@ func GetChunk(chunkPath string, version byte) (reader ReaderInterface, err error
 			}
 
 			buf := bytes.NewBuffer([]byte{})
-			_, err := utils.Retry("get chunk", 0.1, 5, getData, hash, byte(version), buf)
+			_, err := utils.Retry("get chunk", 0.1, 30, getData, hash, byte(version), buf)
+			if err != nil {
+				logrus.Warningf("Failed get chunk: %v", err)
+			}
 			data := buf.Bytes()
 
 			if utils.SaveChunks() {
