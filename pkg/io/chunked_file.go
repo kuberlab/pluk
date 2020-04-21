@@ -50,6 +50,7 @@ type PlukClient interface {
 
 type PlukGRPCClient interface {
 	GetChunk(path string, version byte) ([]byte, error)
+	GetChunkWithCheck(path string, version byte, size int64) ([]byte, error)
 }
 
 var (
@@ -335,6 +336,19 @@ func (f *ChunkedFile) getChunkReader(chunkPath string, version byte) (reader Rea
 	}
 }
 
+func (f *ChunkedFile) getChunkReaderWithSize(chunkPath string, version byte, size int64) (reader ReaderInterface, err error) {
+	//_, version := utils.GetHashFromPath(chunkPath)
+	if !utils.UseGrpc {
+		return GetChunk(chunkPath, version)
+	} else {
+		bts, err := GrpcClient.GetChunkWithCheck(chunkPath, version, size)
+		if err != nil {
+			return nil, err
+		}
+		return NewChunkReaderFromData(bts), nil
+	}
+}
+
 func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 	//f.lock.Lock()
 	//defer f.lock.Unlock()
@@ -344,7 +358,10 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 		if len(f.Chunks) == 0 {
 			return 0, io.EOF
 		}
-		reader, err = f.getChunkReader(f.Chunks[f.currentChunk].Path, f.Chunks[f.currentChunk].Version)
+		//reader, err = f.getChunkReader(f.Chunks[f.currentChunk].Path, f.Chunks[f.currentChunk].Version)
+		reader, err = f.getChunkReaderWithSize(
+			f.Chunks[f.currentChunk].Path, f.Chunks[f.currentChunk].Version, f.Chunks[f.currentChunk].Size,
+		)
 		if err != nil {
 			logrus.Error(err)
 			return read, io.EOF
@@ -374,7 +391,10 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 			f.currentChunk++
 			chunk = f.currentChunk
 			f.chunkOffset = 0
-			reader, err = f.getChunkReader(f.Chunks[f.currentChunk].Path, f.Chunks[f.currentChunk].Version)
+			//reader, err = f.getChunkReader(f.Chunks[f.currentChunk].Path, f.Chunks[f.currentChunk].Version)
+			reader, err = f.getChunkReaderWithSize(
+				f.Chunks[f.currentChunk].Path, f.Chunks[f.currentChunk].Version, f.Chunks[f.currentChunk].Size,
+			)
 			if err != nil {
 				logrus.Error(err)
 				f.currentChunkReader = nil

@@ -9,6 +9,7 @@ package grpc;
 service Pluke {
     // Obtains the chunk at given path.
     rpc GetChunk(ChunkRequest) returns (ChunkResponse) {}
+    rpc GetChunkWithCheck(ChunkRequestWithCheck) returns (ChunkResponse) {}
 }
 
 // The request message containing chunk request path and auth.
@@ -16,6 +17,14 @@ message ChunkRequest {
     string path = 1;
     int32 version = 2;
     Auth auth = 3;
+}
+
+// The request message containing chunk request path and auth.
+message ChunkRequestWithCheck {
+    string path = 1;
+    int32 version = 2;
+    int64 size = 3;
+    Auth auth = 4;
 }
 
 // The response message containing the chunk data

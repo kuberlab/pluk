@@ -63,3 +63,19 @@ func (c *Client) GetChunk(path string, version byte) ([]byte, error) {
 	}
 	return resp.Data, nil
 }
+
+func (c *Client) GetChunkWithCheck(path string, version byte, size int64) ([]byte, error) {
+	resp, err := c.internal.GetChunkWithCheck(
+		ctx,
+		&ChunkRequestWithCheck{
+			Path:    path,
+			Version: int32(version),
+			Size:    size,
+			Auth:    c.auth,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Data, nil
+}

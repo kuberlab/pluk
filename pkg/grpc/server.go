@@ -21,7 +21,7 @@ import (
 type Server struct{}
 
 // GetChunk implements PlukeServer
-func (s *Server) GetChunk(ctx context.Context, in *ChunkRequest) (*ChunkResponse, error) {
+func (s *Server) GetChunk(_ context.Context, in *ChunkRequest) (*ChunkResponse, error) {
 	if ok, err := s.checkAuth(in.Auth); !ok {
 		logrus.Error(err)
 		return nil, err
@@ -35,7 +35,7 @@ func (s *Server) GetChunk(ctx context.Context, in *ChunkRequest) (*ChunkResponse
 		}
 		bt := bytes.NewBuffer(make([]byte, 0, 16384))
 		io.Copy(bt, reader)
-		reader.Close()
+		_ = reader.Close()
 		return bt.Bytes(), nil
 	}
 
@@ -46,6 +46,41 @@ func (s *Server) GetChunk(ctx context.Context, in *ChunkRequest) (*ChunkResponse
 
 	if len(data) == 0 {
 		logrus.Warningf("Zero chunk response for %v, re-requesting", in.Path)
+		os.Remove(in.Path)
+		data, err = getData(in.Path, byte(in.Version))
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &ChunkResponse{Data: data}, nil
+}
+
+// GetChunkWithCheck implements PlukeServer
+func (s *Server) GetChunkWithCheck(_ context.Context, in *ChunkRequestWithCheck) (*ChunkResponse, error) {
+	if ok, err := s.checkAuth(in.Auth); !ok {
+		logrus.Error(err)
+		return nil, err
+	}
+
+	getData := func(path string, version byte) ([]byte, error) {
+		reader, err := plukio.GetChunk(path, version)
+		if err != nil {
+			logrus.Error(err)
+			return nil, err
+		}
+		bt := bytes.NewBuffer(make([]byte, 0, 16384))
+		io.Copy(bt, reader)
+		_ = reader.Close()
+		return bt.Bytes(), nil
+	}
+
+	data, err := getData(in.Path, byte(in.Version))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(data) == 0 || int64(len(data)) != in.Size {
+		logrus.Warningf("Got chunk size %v/%v for %v, re-requesting", len(data), in.Size, in.Path)
 		os.Remove(in.Path)
 		data, err = getData(in.Path, byte(in.Version))
 		if err != nil {
