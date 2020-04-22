@@ -421,7 +421,7 @@ func (cmd *pushCmd) uploadChunks(
 				chReader := io.TeeReader(rd, bar)
 				if _, err = utils.Retry(
 					fmt.Sprintf("Upload chunk, file=%v", name),
-					0.1, 10,
+					0.1, 90,
 					client.SaveChunkReader, hash, chReader, byte(types.ChunkVersion)); err != nil {
 					_ = pool.Stop()
 					logrus.Fatalf("Failed to upload chunk: %v", err)
