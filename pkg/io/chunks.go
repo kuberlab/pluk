@@ -178,7 +178,11 @@ func SaveChunk(hash string, version byte, data io.ReadCloser, sendToMaster bool)
 
 	if utils.HasMasters() && sendToMaster {
 		// TODO: decide whether it can go in async
-		return MasterClient.SaveChunk(hash, buf.Bytes(), version)
+		_, err = utils.Retry(
+			"Save chunk", 0.1, 30,
+			MasterClient.SaveChunk, hash, buf.Bytes(), byte(version),
+		)
+		return err
 	}
 	//logrus.Debugf("Save complete! %v", time.Since(t))
 	return nil

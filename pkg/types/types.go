@@ -140,6 +140,7 @@ type WebsocketClient struct {
 	ID          string          `json:"id"`
 	IP          string          `json:"ip"`
 	ConnectedAt types.Time      `json:"connected_at"`
+	Closed      bool
 }
 
 func NewWebsocketClient(ws *websocket.Conn, id, ip string) *WebsocketClient {
@@ -150,6 +151,10 @@ func NewWebsocketClient(ws *websocket.Conn, id, ip string) *WebsocketClient {
 		lock:        &sync.RWMutex{},
 		ConnectedAt: types.NewTime(time.Now()),
 	}
+}
+
+func (c *WebsocketClient) closeHandler() {
+
 }
 
 func (c *WebsocketClient) WriteMessage(sType string, content interface{}) error {

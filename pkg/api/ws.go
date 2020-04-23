@@ -43,6 +43,24 @@ func (api API) websocket(req *restful.Request, resp *restful.Response) {
 	api.wsReader(wsClient)
 }
 
+func (api API) websocketChunks(req *restful.Request, resp *restful.Response) {
+	ws, err := upgrader.Upgrade(resp.ResponseWriter, req.Request, nil)
+	if err != nil {
+		if _, ok := err.(websocket.HandshakeError); ok {
+			WriteStatusError(resp, http.StatusBadRequest, err)
+		} else {
+			WriteStatusError(resp, http.StatusInternalServerError, err)
+		}
+		return
+	}
+	id := req.HeaderParameter("Sec-Websocket-Key")
+	ip := strings.Split(req.Request.RemoteAddr, ":")[0]
+	wsClient := types.NewWebsocketClient(ws, id, ip)
+
+	//api.hub.Register(wsClient)
+	api.wsReader(wsClient)
+}
+
 func (api *API) wsConnections(req *restful.Request, resp *restful.Response) {
 	resp.WriteEntity(api.hub.Connections())
 }
@@ -57,6 +75,71 @@ func (api *API) lastReceivedMessages(req *restful.Request, resp *restful.Respons
 
 	messages := <-response
 	resp.WriteEntity(messages)
+}
+
+func (api *API) wsReaderChunks(client *types.WebsocketClient) {
+	defer client.Ws.Close()
+	//defer api.hub.Drop(client)
+	client.Ws.SetReadLimit(0) // No limit.
+
+	for {
+		_, msg, err := client.Ws.ReadMessage()
+		if err != nil {
+			if errC, ok := err.(*websocket.CloseError); ok {
+				if errC.Code == websocket.CloseAbnormalClosure {
+					break
+				}
+			}
+			logrus.Error(err)
+			break
+		}
+		message := libtypes.Message{}
+		err = json.Unmarshal(msg, &message)
+		if err != nil {
+			if errC, ok := err.(*websocket.CloseError); ok {
+				if errC.Code == websocket.CloseAbnormalClosure {
+					break
+				}
+			}
+			logrus.Error(err)
+			break
+		}
+
+		switch message.Type {
+		case "chunkData":
+			chunk := types.ChunkData{}
+			err = utils.LoadAsJson(message.Content.(map[string]interface{}), &chunk)
+			if err != nil {
+				logrus.Error(err)
+				return
+			}
+
+			err = plukio.SaveChunk(
+				chunk.Hash,
+				2,
+				ioutil.NopCloser(bytes.NewReader(chunk.Data)),
+				true,
+			)
+			if err != nil {
+				logrus.Error(err)
+				return
+			}
+		case "chunkCheck":
+			check := &types.ChunkCheck{}
+			err = utils.LoadAsJson(message.Content.(map[string]interface{}), &check)
+			if err != nil {
+				logrus.Error(err)
+				return
+			}
+			size, exists := plukio.CheckLocalChunk(check.Hash, 2)
+			check.Exists = exists
+			check.Size = size
+			if err := client.WriteMessage(check.Type(), check); err != nil {
+				return
+			}
+		}
+
+	}
 }
 
 func (api *API) wsReader(client *types.WebsocketClient) {

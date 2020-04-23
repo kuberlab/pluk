@@ -103,7 +103,7 @@ func NewClient(baseURL string, auth *AuthOpts) (*Client, error) {
 
 func (c *Client) PrepareWebsocket(num int64) error {
 	dialer := websocket.Dialer{}
-	urlStr := "/websocket"
+	urlStr := "/websocket-chunks"
 
 	var scheme string
 	switch c.BaseURL.Scheme {
@@ -587,16 +587,20 @@ func (c *Client) SaveChunkReader(hash string, reader io.Reader, version byte) er
 }
 
 func (c *Client) acquireWebsocket() *types.WebsocketClient {
+	now := time.Now()
 	for {
 		c.wsLock.Lock()
 		for websocketClient, acquired := range c.ws {
-			if !acquired {
+			if !acquired && !websocketClient.Closed {
 				c.ws[websocketClient] = true
 				c.wsLock.Unlock()
 				return websocketClient
 			}
 		}
 		c.wsLock.Unlock()
+		if time.Since(now) >= time.Minute {
+			logrus.Fatalf("Cannot pick up the websocket connections: It seems all the connections are already closed.")
+		}
 		//time.Sleep(time.Millisecond * 10)
 	}
 }
@@ -611,7 +615,29 @@ func (c *Client) SaveChunkWebsocket(hash string, data []byte) error {
 	ws := c.acquireWebsocket()
 
 	chunkData := types.ChunkData{Data: data, Hash: hash}
-	err := ws.WriteMessage(chunkData.Type(), chunkData)
+	attempts := 5
+	var err error
+	for {
+		if attempts == 0 {
+			return err
+		}
+		err = ws.WriteMessage(chunkData.Type(), chunkData)
+		if err != nil {
+			if errC, ok := err.(*websocket.CloseError); ok {
+				if errC.Code == websocket.CloseAbnormalClosure {
+					ws.Closed = true
+					//fmt.Println("Close socket\n")
+					c.releaseWebsocket(ws)
+					ws = c.acquireWebsocket()
+					attempts--
+					continue
+				}
+			} else {
+				return err
+			}
+		}
+		break
+	}
 	c.releaseWebsocket(ws)
 	return err
 }
@@ -621,23 +647,49 @@ func (c *Client) CheckChunkWebsocket(hash string) (*types.ChunkCheck, error) {
 	defer c.releaseWebsocket(ws)
 
 	chunkCheck := types.ChunkCheck{Hash: hash}
-	err := ws.WriteMessage(chunkCheck.Type(), chunkCheck)
-	if err != nil {
-		return nil, err
-	}
-	// attempt many reads (skip broadcast messages)
 	attempts := 5
+	var err error
 	for {
-		msg := libtypes.Message{}
-		if err = ws.Ws.ReadJSON(&msg); err != nil {
+		if attempts == 0 {
 			return nil, err
 		}
-		if msg.Type != "chunkCheck" {
-			if attempts == 0 {
-				return nil, fmt.Errorf("Wrong message type: %v", msg.Type)
+		err = ws.WriteMessage(chunkCheck.Type(), chunkCheck)
+		if err != nil {
+			if errC, ok := err.(*websocket.CloseError); ok {
+				if errC.Code == websocket.CloseAbnormalClosure {
+					//fmt.Println("Close socket\n")
+					ws.Closed = true
+					c.releaseWebsocket(ws)
+					ws = c.acquireWebsocket()
+					attempts--
+					continue
+				} else {
+					return nil, err
+				}
 			}
-			attempts--
-			continue
+		}
+		break
+	}
+	// attempt many reads (skip broadcast messages)
+	attempts = 5
+	for {
+		if attempts == 0 {
+			return nil, err
+		}
+		msg := libtypes.Message{}
+		if err = ws.Ws.ReadJSON(&msg); err != nil {
+			if errC, ok := err.(*websocket.CloseError); ok {
+				if errC.Code == websocket.CloseAbnormalClosure {
+					ws.Closed = true
+					//fmt.Println("Close socket\n")
+					c.releaseWebsocket(ws)
+					ws = c.acquireWebsocket()
+					attempts--
+					continue
+				}
+			} else {
+				return nil, err
+			}
 		}
 		if err = utils.LoadAsJson(msg.Content.(map[string]interface{}), &chunkCheck); err != nil {
 			return nil, err
