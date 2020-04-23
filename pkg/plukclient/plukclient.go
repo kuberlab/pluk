@@ -3,10 +3,12 @@ package plukclient
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/tls"
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"golang.org/x/sync/semaphore"
 	"io"
 	"io/ioutil"
 	"net"
@@ -119,16 +121,29 @@ func (c *Client) PrepareWebsocket(num int64) error {
 	u := fmt.Sprintf("%v://%v/%v", scheme, c.BaseURL.Host, strings.TrimPrefix(c.BaseURL.Path, "/"))
 	u = strings.TrimSuffix(u, "/") + urlStr
 	logrus.Debugf("Connect to %v", u)
-	for i := 0; i < int(num); i++ {
-		conn, resp, err := dialer.Dial(u, c.authHeaders())
 
-		if err != nil {
-			return err
-		}
-		id := resp.Header.Get("Sec-Websocket-Accept")
-		ws := types.NewWebsocketClient(conn, id, "0.0.0.0")
-		c.ws[ws] = false
+	sem := semaphore.NewWeighted(num)
+	ctx := context.TODO()
+	for i := 0; i < int(num); i++ {
+		go func() {
+			sem.Acquire(ctx, 1)
+			conn, resp, err := dialer.Dial(u, c.authHeaders())
+
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			id := resp.Header.Get("Sec-Websocket-Accept")
+			ws := types.NewWebsocketClient(conn, id, "0.0.0.0")
+
+			c.wsLock.Lock()
+			c.ws[ws] = false
+			c.wsLock.Unlock()
+
+			sem.Release(1)
+		}()
 	}
+	time.Sleep(200 * time.Millisecond)
+	sem.Acquire(ctx, num)
 	return nil
 }
 
@@ -611,17 +626,25 @@ func (c *Client) releaseWebsocket(ws *types.WebsocketClient) {
 	c.wsLock.Unlock()
 }
 
-func (c *Client) SaveChunkWebsocket(hash string, data []byte) error {
-	ws := c.acquireWebsocket()
+func (c *Client) websocketReadWrite(read bool, ws *types.WebsocketClient, msg types.Message) error {
+	needRelease := false
+	if ws == nil {
+		ws = c.acquireWebsocket()
+		needRelease = true
+	}
 
-	chunkData := types.ChunkData{Data: data, Hash: hash}
 	attempts := 5
+	libmsg := &libtypes.Message{}
 	var err error
 	for {
 		if attempts == 0 {
 			return err
 		}
-		err = ws.WriteMessage(chunkData.Type(), chunkData)
+		if read {
+			err = ws.Ws.ReadJSON(libmsg)
+		} else {
+			err = ws.WriteMessage(msg.Type(), msg)
+		}
 		if err != nil {
 			if errC, ok := err.(*websocket.CloseError); ok {
 				if errC.Code == websocket.CloseAbnormalClosure {
@@ -638,65 +661,42 @@ func (c *Client) SaveChunkWebsocket(hash string, data []byte) error {
 		}
 		break
 	}
-	c.releaseWebsocket(ws)
+	if needRelease {
+		c.releaseWebsocket(ws)
+	}
+	if read {
+		if err = utils.LoadAsJson(libmsg.Content.(map[string]interface{}), msg); err != nil {
+			return err
+		}
+	}
 	return err
+}
+
+func (c *Client) writeWebsocketMessage(msg types.Message, ws *types.WebsocketClient) error {
+	return c.websocketReadWrite(false, ws, msg)
+}
+
+func (c *Client) readWebsocketMessage(ws *types.WebsocketClient, msg types.Message) error {
+	return c.websocketReadWrite(true, ws, msg)
+}
+
+func (c *Client) SaveChunkWebsocket(hash string, data []byte) error {
+	chunkData := &types.ChunkData{Data: data, Hash: hash}
+	return c.writeWebsocketMessage(chunkData, nil)
 }
 
 func (c *Client) CheckChunkWebsocket(hash string) (*types.ChunkCheck, error) {
 	ws := c.acquireWebsocket()
 	defer c.releaseWebsocket(ws)
 
-	chunkCheck := types.ChunkCheck{Hash: hash}
-	attempts := 5
-	var err error
-	for {
-		if attempts == 0 {
-			return nil, err
-		}
-		err = ws.WriteMessage(chunkCheck.Type(), chunkCheck)
-		if err != nil {
-			if errC, ok := err.(*websocket.CloseError); ok {
-				if errC.Code == websocket.CloseAbnormalClosure {
-					//fmt.Println("Close socket\n")
-					ws.Closed = true
-					c.releaseWebsocket(ws)
-					ws = c.acquireWebsocket()
-					attempts--
-					continue
-				} else {
-					return nil, err
-				}
-			}
-		}
-		break
+	chunkCheck := &types.ChunkCheck{Hash: hash}
+	if err := c.writeWebsocketMessage(chunkCheck, ws); err != nil {
+		return nil, err
 	}
-	// attempt many reads (skip broadcast messages)
-	attempts = 5
-	for {
-		if attempts == 0 {
-			return nil, err
-		}
-		msg := libtypes.Message{}
-		if err = ws.Ws.ReadJSON(&msg); err != nil {
-			if errC, ok := err.(*websocket.CloseError); ok {
-				if errC.Code == websocket.CloseAbnormalClosure {
-					ws.Closed = true
-					//fmt.Println("Close socket\n")
-					c.releaseWebsocket(ws)
-					ws = c.acquireWebsocket()
-					attempts--
-					continue
-				}
-			} else {
-				return nil, err
-			}
-		}
-		if err = utils.LoadAsJson(msg.Content.(map[string]interface{}), &chunkCheck); err != nil {
-			return nil, err
-		}
-
-		return &chunkCheck, nil
+	if err := c.readWebsocketMessage(ws, chunkCheck); err != nil {
+		return nil, err
 	}
+	return chunkCheck, nil
 }
 
 func (c *Client) Close() error {
