@@ -150,7 +150,10 @@ func DetectConcurrency(avgSize float64, maxMultiplier float64) int64 {
 	if pivot < numCPU {
 		return numCPU
 	} else if pivot > int64(math.Round(maxMultiplier*float64(numCPU))) {
-		return int64(math.Round(maxMultiplier * float64(numCPU)))
+		res := int64(math.Round(maxMultiplier * float64(numCPU)))
+		if res > 100 {
+			return 100
+		}
 	}
 	return pivot
 }
@@ -257,9 +260,9 @@ func (cmd *pushCmd) run() error {
 	cmd.profiler.AddTime("computing space", time.Since(t))
 
 	if cmd.concurrency == 0 {
-		//if !cmd.websocket && fileCount > 5000 {
-		//	cmd.websocket = true
-		//}
+		if !cmd.websocket && fileCount > 5000 {
+			cmd.websocket = true
+		}
 
 		if cmd.websocket {
 			cmd.concurrency = DetectConcurrency(float64(totalSize/1024)/float64(fileCount), 5)
