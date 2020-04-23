@@ -41,6 +41,12 @@ import:
   subpackages:
   - unix
 - package: github.com/Masterminds/semver
-- package: golang.org/x/sync/semaphore
+- package: golang.org/x/sync
+  subpackages:
+  - semaphore
 - package: github.com/gorilla/websocket
 - package: github.com/hanwen/go-fuse
+  version: c029b69a13a7ca3ffdbf141a3958f9b1f1a45332
+  subpackages:
+  - fuse
+- package: github.com/mattn/go-isatty

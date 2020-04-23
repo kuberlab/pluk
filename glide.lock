@@ -1,5 +1,5 @@
-hash: ac20b28540c357b75d33f9eea6cf4330f8d015238ce6de17590697214c737cda
-updated: 2019-03-06T22:09:21.311880417+04:00
+hash: 8f61f1be1fe049c32ec5b524d120075da419b795857947d71d99f4332bf04789
+updated: 2020-04-23T16:47:07.104699137+04:00
 imports:
 - name: github.com/emicklei/go-restful
   version: cac44bf12ecf627c1cc74a69ebda014fcb029890
@@ -59,7 +59,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 0ff49de124c6f76f8494e194af75bde0f1a49a29
 - name: github.com/kuberlab/lib
-  version: 035e1986132f19fc16fdffcf47eb2b6d37f9e6b2
+  version: 9a712c6fd96f1e607a0c4a560b058591597c5bc8
   repo: ssh://git@github.com/kuberlab/lib.git
   subpackages:
   - pkg/dealerclient
@@ -79,8 +79,10 @@ imports:
   - jwriter
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
+- name: github.com/mattn/go-isatty
+  version: cb30d6282491c185f77d9bec5d25de1bb61a06bc
 - name: github.com/mattn/go-runewidth
-  version: c88d7e5f2e24de48a200a2655ac8a0910be9a0f7
+  version: 14e809f6d78fcf9f48ff9b70981472b64c05f754
 - name: github.com/mattn/go-sqlite3
   version: ad30583d8387ce8118f8605eaeb3b4f7b4ae0ee1
 - name: github.com/modern-go/concurrent
@@ -88,7 +90,7 @@ imports:
 - name: github.com/modern-go/reflect2
   version: 94122c33edd36123c84d5368cfb2b69df93a0ec8
 - name: github.com/patrickmn/go-cache
-  version: 5633e0862627c011927fa39556acae8b1f1df58a
+  version: 46f407853014144407b6c2ec7ccc76bf67958d93
 - name: github.com/pborman/uuid
   version: e790cca94e6cc75c7064b1332e63811d4aae1a53
 - name: github.com/PuerkitoBio/purell
@@ -113,7 +115,7 @@ imports:
   - trace
   - webdav
 - name: golang.org/x/sync
-  version: 42b317875d0fa942474b76e1b46a6060d720ae6e
+  version: 43a5402ce75a95522677f77c619865d66b8c57ab
   subpackages:
   - semaphore
 - name: golang.org/x/sys
@@ -176,9 +178,9 @@ imports:
   - status
   - tap
 - name: gopkg.in/cheggaaa/pb.v1
-  version: 007b75a044e968336a69a6c0c617251ab62ac14c
+  version: f907f6f5dd81f77c2bbc1cde92e4c5a04720cb11
 - name: gopkg.in/cheggaaa/pb.v2
-  version: c112833d014c77e8bde723fd0158e3156951639f
+  version: 11d8df0cfef0bcb94e149d1189e5739e275f4df6
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/robfig/cron.v2

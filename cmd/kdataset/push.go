@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/kuberlab/pluk/pkg/plukclient"
 	"io"
 	"io/ioutil"
 	"math"
@@ -18,8 +17,10 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	plukio "github.com/kuberlab/pluk/pkg/io"
+	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/semaphore"
 	"gopkg.in/cheggaaa/pb.v1"
@@ -160,6 +161,7 @@ func DetectConcurrency(avgSize float64, maxMultiplier float64) int64 {
 
 func (cmd *pushCmd) run() error {
 	c := make(chan os.Signal, 1)
+	istty := isatty.IsTerminal(os.Stdout.Fd())
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for range c {
@@ -291,7 +293,11 @@ func (cmd *pushCmd) run() error {
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	pool.RefreshRate = 150 * time.Millisecond
+	if istty {
+		pool.RefreshRate = 150 * time.Millisecond
+	} else {
+		pool.RefreshRate = 30 * time.Second
+	}
 
 	bufLimit := 2500
 	fileChan := make(chan *types.HashedFile, 10000)
