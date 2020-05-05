@@ -155,6 +155,7 @@ func DetectConcurrency(avgSize float64, maxMultiplier float64) int64 {
 		if res > 100 {
 			return 100
 		}
+		return res
 	}
 	return pivot
 }
