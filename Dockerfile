@@ -1,4 +1,4 @@
-FROM golang:1.10
+FROM golang:1.14
 
 COPY ./pluksrv.go "$GOPATH/src/github.com/kuberlab/pluk/pluksrv.go"
 COPY ./pkg "$GOPATH/src/github.com/kuberlab/pluk/pkg"
