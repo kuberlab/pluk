@@ -18,6 +18,7 @@ func WriteTar(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 	}()
 
 	prevName := ""
+	var written int64 = 0
 	err := fs.Walk("/", func(path string, f *plukio.ChunkedFile, err error) error {
 		name := path
 		// Inline strings.TrimPrefix(): more performance
@@ -55,12 +56,16 @@ func WriteTar(fs *plukio.ChunkedFileFS, resp *restful.Response) error {
 		if err := twriter.WriteHeader(h); err != nil {
 			return fmt.Errorf("Failed write file %v: %v", prevName, err)
 		}
-		_, err = io.Copy(twriter, f)
+		n, err := io.Copy(twriter, f)
 		if err != nil {
 			return fmt.Errorf("Failed write file %v: %v", name, err)
 		}
 		prevName = name
-		//resp.Flush()
+		written += n
+		if written > 1048576 {
+			resp.Flush()
+			written %= 1048576
+		}
 		f.Close()
 		return nil
 	})
