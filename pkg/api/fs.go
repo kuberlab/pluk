@@ -93,8 +93,15 @@ func (api *API) saveFS(req *restful.Request, resp *restful.Response) {
 			WriteError(resp, err)
 			return
 		}
+	case "gob":
+		dec := gob.NewDecoder(req.Request.Body)
+		err = dec.Decode(structure)
+		if err != nil {
+			WriteError(resp, err)
+			return
+		}
 	default:
-		WriteErrorString(resp, http.StatusBadRequest, "Wrong format: allowed json and gobgz")
+		WriteErrorString(resp, http.StatusBadRequest, "Wrong format: allowed json, gob and gobgz")
 		return
 	}
 
