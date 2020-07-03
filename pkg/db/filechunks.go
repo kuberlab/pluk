@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"github.com/Sirupsen/logrus"
 	"path/filepath"
 	"strings"
 	"time"
@@ -296,7 +297,9 @@ func (mgr *DatabaseMgr) GetRawFiles(dsType, workspace, dataset, version, prefix,
 }
 
 func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version, filter string) (*io.ChunkedFileFS, error) {
+	logrus.Infof("Start get FS DB %v/%v:%v", workspace, dataset, version)
 	rawFiles, err := mgr.GetRawFiles(dsType, workspace, dataset, version, "", filter, false)
+	logrus.Infof("End get FS DB %v/%v:%v", workspace, dataset, version)
 
 	if err != nil {
 		return nil, err
@@ -355,5 +358,6 @@ func (mgr *DatabaseMgr) GetFS(dsType, workspace, dataset, version, filter string
 			}
 		}
 	}
+	logrus.Infof("End get structured FS %v/%v:%v", workspace, dataset, version)
 	return fs, nil
 }
