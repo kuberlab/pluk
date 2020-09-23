@@ -213,7 +213,15 @@ func (api *API) CheckAuth(method, entityType, authHeader,
 			}
 			_, err := masterClient.ListEntities(entityType, ws)
 			if err != nil {
-				return false, errors.NewStatus(http.StatusUnauthorized, err.Error())
+				if strings.Contains(err.Error(), ": dial tcp") && strings.Contains(err.Error(), ": connect:") {
+					// Connect error to master;
+					// There was successful connect earlier with this key..
+					if _, err := api.mgr.GetAuth(key); err == nil {
+						return true, nil
+					}
+				} else {
+					return false, errors.NewStatus(http.StatusUnauthorized, err.Error())
+				}
 			}
 		} else if ws != "" && secret != "" {
 			// workspace is empty if we request chunks
@@ -319,6 +327,9 @@ func (api *API) CheckAuth(method, entityType, authHeader,
 			}
 		}
 		api.cache.Set(key, true)
+		if err := api.mgr.CreateAuth(key); err != nil {
+			logrus.Warning(err)
+		}
 	}
 	return true, nil
 }

@@ -27,6 +27,7 @@ func CreateTables(db *gorm.DB) error {
 		&FileChunk{},
 		&Dataset{},
 		&DatasetVersion{},
+		&Auth{},
 	).Error
 }
 

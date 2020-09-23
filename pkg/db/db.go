@@ -15,11 +15,12 @@ var DbMgr DataMgr
 
 type DataMgr interface {
 	// All models DB interfaces here.
+	AuthMgr
 	ChunkMgr
-	FileMgr
-	FileChunkMgr
 	DatasetMgr
 	DatasetVersionMgr
+	FileChunkMgr
+	FileMgr
 	DB() *gorm.DB
 	DBType() string
 	Begin() *DatabaseMgr
