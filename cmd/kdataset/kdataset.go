@@ -11,7 +11,7 @@ import (
 	"github.com/kuberlab/pluk/cmd/kdataset/config"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/spf13/cobra"
-	_ "github.com/uber-go/automaxprocs"
+	_ "go.uber.org/automaxprocs"
 )
 
 const (
