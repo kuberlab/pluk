@@ -308,7 +308,10 @@ func (cmd *pushCmd) run() error {
 	flushBuf := func(last bool) {
 		t = time.Now()
 		structure := types.FileStructure{Files: fileBuf}
-		if err = client.SaveFileStructure(
+		_, err = utils.Retry(
+			"check chunk",
+			1, 360,
+			client.SaveFileStructure,
 			structure,
 			entityType.Value,
 			cmd.workspace,
@@ -320,7 +323,8 @@ func (cmd *pushCmd) run() error {
 				Create:  cmd.create,
 				Editing: !last,
 			},
-		); err != nil {
+		)
+		if err != nil {
 			_ = pool.Stop()
 			logrus.Fatal(err)
 		}
