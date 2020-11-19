@@ -11,7 +11,7 @@ import (
 	"github.com/kuberlab/pluk/cmd/kdataset/config"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/spf13/cobra"
-	_ "go.uber.org/automaxprocs"
+	"go.uber.org/automaxprocs/maxprocs"
 )
 
 const (
@@ -128,6 +128,9 @@ func initClient() (*plukclient.Client, error) {
 }
 
 func initLogging() {
+	nopLog := func(string, ...interface{}) {}
+	_, _ = maxprocs.Set(maxprocs.Logger(nopLog)) // Ignore error
+
 	logrus.SetFormatter(&logrus.TextFormatter{TimestampFormat: "2006-01-02 15:04:05", FullTimestamp: true})
 
 	if debug {
