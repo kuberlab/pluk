@@ -146,7 +146,7 @@ func NewPushCmd() *cobra.Command {
 
 func DetectConcurrency(avgSize float64, maxMultiplier float64) int64 {
 	// y = 10.474 - 0.09474 * x
-	numCPU := int64(runtime.NumCPU())
+	numCPU := int64(runtime.GOMAXPROCS(-1))
 	pivot := int64(math.Round(10.474-0.09474*avgSize)) * numCPU
 	if pivot < numCPU {
 		return numCPU

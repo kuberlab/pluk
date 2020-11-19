@@ -50,3 +50,4 @@ import:
   subpackages:
   - fuse
 - package: github.com/mattn/go-isatty
+- package: github.com/uber-go/automaxprocs

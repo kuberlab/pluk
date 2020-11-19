@@ -374,9 +374,7 @@ func Retry(description string, delaySec, timeoutSec float64, f interface{}, arg 
 
 			if err == nil {
 				return res, nil
-			} //else {
-			//	tasks.Warning(err.Error())
-			//}
+			}
 			step++
 		case <-timeout.C:
 			return res, errors.New(fmt.Sprintf("Timeout while waiting for %v: %v", vf.String(), err))

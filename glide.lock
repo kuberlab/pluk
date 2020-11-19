@@ -1,6 +1,8 @@
-hash: 8f61f1be1fe049c32ec5b524d120075da419b795857947d71d99f4332bf04789
-updated: 2020-09-23T15:02:19.924173454+04:00
+hash: 1557c687424b2460feb028be6e2f428fe9dbc06ef338795ffa53c63b6f9bc866
+updated: 2020-11-19T11:41:57.919712709+04:00
 imports:
+- name: github.com/BurntSushi/toml
+  version: ea60c4def909bde529d41a7e0674e31eba751da3
 - name: github.com/emicklei/go-restful
   version: cac44bf12ecf627c1cc74a69ebda014fcb029890
   subpackages:
@@ -14,9 +16,9 @@ imports:
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/go-sql-driver/mysql
-  version: 46351a8892976898935f653f5333782579a96fa5
+  version: cf72fd249522a0cc5e1ce727dfa15189dcb6411f
 - name: github.com/gogits/git-module
-  version: 0bb10af0874d5c74f0967bb4b2d0102d11341404
+  version: 1ff5b5607f4e984e377e119c0305df7c6b98232d
 - name: github.com/gogo/protobuf
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
@@ -53,9 +55,9 @@ imports:
   - dialects/postgres
   - dialects/sqlite
 - name: github.com/jinzhu/inflection
-  version: 072f6a6317bebcc0b129d1c52132b180b173af4c
+  version: 098f377e9000012db0152f7a8d25b23ddfd21480
 - name: github.com/json-iterator/go
-  version: 6821bec9fa5c17f697f0f2f77ac5055e41a203ac
+  version: e6b9536d3649bda3e8842bb7e4fab489d79a97ea
 - name: github.com/kuberlab/lib
   version: 7dd470791392dbc438a75b9ffa7ca8b679105b69
   repo: ssh://git@github.com/kuberlab/lib.git
@@ -96,14 +98,31 @@ imports:
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
 - name: github.com/Sirupsen/logrus
-  version: 6699a89a232f3db797f2e280639854bbc4b89725
+  version: d131c24e23baaa812461202af6d7cfa388e2d292
 - name: github.com/spf13/cobra
   version: ef82de70bb3f60c65fb8eebacbb2d122ef517385
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
+- name: github.com/uber-go/automaxprocs
+  version: b685be8c1c23d79153564b8c82b804c5fd5e8257
+- name: go.uber.org/automaxprocs
+  version: b685be8c1c23d79153564b8c82b804c5fd5e8257
+  subpackages:
+  - internal/cgroups
+  - internal/runtime
+  - maxprocs
+- name: golang.org/x/lint
+  version: 738671d3881b9731cc63024d5d88cf28db875626
+  subpackages:
+  - golint
+- name: golang.org/x/mod
+  version: 3bfbaada29be620417d472f349d55056286b2119
+  subpackages:
+  - semver
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
+  - context
   - http2
   - http2/hpack
   - idna
@@ -112,7 +131,7 @@ imports:
   - trace
   - webdav
 - name: golang.org/x/sync
-  version: 6e8e738ad208923de99951fe0b48239bfd864f28
+  version: 67f06af15bc961c363a7260195bcd53487529a21
   subpackages:
   - semaphore
 - name: golang.org/x/sys
@@ -134,6 +153,35 @@ imports:
   - unicode/bidi
   - unicode/norm
   - width
+- name: golang.org/x/tools
+  version: 25dc3e1ccc3c22112721089cec64a69859b5d48b
+  subpackages:
+  - go/analysis
+  - go/analysis/passes/inspect
+  - go/ast/astutil
+  - go/ast/inspector
+  - go/buildutil
+  - go/gcexportdata
+  - go/internal/cgo
+  - go/internal/gcimporter
+  - go/internal/packagesdriver
+  - go/loader
+  - go/packages
+  - go/types/objectpath
+  - go/types/typeutil
+  - internal/analysisinternal
+  - internal/event
+  - internal/event/core
+  - internal/event/keys
+  - internal/event/label
+  - internal/gocommand
+  - internal/lsp/fuzzy
+  - internal/packagesinternal
+  - internal/typesinternal
+- name: golang.org/x/xerrors
+  version: 5ec99f83aff198f5fbd629d6c8d8eb38a04218ca
+  subpackages:
+  - internal
 - name: google.golang.org/genproto
   version: c66870c02cf823ceb633bcd05be3c7cda29976f4
   subpackages:
@@ -181,6 +229,40 @@ imports:
   version: be2e0b0deed5a68ffee390b4583a13aff8321535
 - name: gopkg.in/yaml.v2
   version: 0b1645d91e851e735d3e23330303ce81f70adbe3
+- name: honnef.co/go/tools
+  version: e068dc2034e7ef39930d3bdaae516754596e5050
+  subpackages:
+  - analysis/code
+  - analysis/edit
+  - analysis/facts
+  - analysis/facts/nilness
+  - analysis/facts/typedness
+  - analysis/lint
+  - analysis/report
+  - cmd/staticcheck
+  - config
+  - go/ast/astutil
+  - go/ir
+  - go/ir/irutil
+  - go/loader
+  - go/types/typeutil
+  - internal/cache
+  - internal/go/gcimporter
+  - internal/passes/buildir
+  - internal/renameio
+  - internal/robustio
+  - internal/sharedcheck
+  - internal/sync
+  - knowledge
+  - lintcmd
+  - lintcmd/runner
+  - lintcmd/version
+  - pattern
+  - printf
+  - simple
+  - staticcheck
+  - stylecheck
+  - unused
 - name: k8s.io/apimachinery
   version: 9d38e20d609d27e00d4ec18f7b9db67105a2bde0
   subpackages:
