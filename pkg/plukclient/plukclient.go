@@ -559,32 +559,33 @@ func (c *Client) GetFSStructure(entityType, workspace, name, version, filter str
 	return fs, nil
 }
 
-func (c *Client) SaveChunk(hash string, data []byte, version byte) error {
+func (c *Client) SaveChunk(hash string, data []byte, version byte) (*types.ChunkCheck, error) {
 	u := fmt.Sprintf("/chunks/%v/%v", hash, version)
 
 	req, err := c.NewRequest("POST", u, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	fakeWriter := &utils.FakeWriter{}
 	rd := io.TeeReader(bytes.NewReader(data), fakeWriter)
 	req.Body = ioutil.NopCloser(rd)
-	_, err = c.Do(req, nil)
+	res := new(types.ChunkCheck)
+	_, err = c.Do(req, res)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if fakeWriter.Written != len(data) {
-		return fmt.Errorf(
+	if fakeWriter.Written != len(data) || int64(len(data)) != res.Size {
+		return nil, fmt.Errorf(
 			"Data length doesn't match the length of written data in the request: "+
 				"got %v, need %v", fakeWriter.Written, len(data),
 		)
 	}
 
-	return err
+	return nil, err
 }
 
-func (c *Client) SaveChunkReader(hash string, reader io.Reader, version byte) error {
+func (c *Client) SaveChunkReader(hash string, reader io.Reader, dataLen int64, version byte) error {
 	u := fmt.Sprintf("/chunks/%v/%v", hash, version)
 
 	req, err := c.NewRequest("POST", u, nil)
@@ -592,10 +593,18 @@ func (c *Client) SaveChunkReader(hash string, reader io.Reader, version byte) er
 		return err
 	}
 	req.Body = ioutil.NopCloser(reader)
-	_, err = c.Do(req, nil)
+	res := new(types.ChunkCheck)
+	_, err = c.Do(req, res)
 
 	if err != nil {
 		return err
+	}
+
+	if dataLen != res.Size {
+		return fmt.Errorf(
+			"Data length doesn't match the length of written data in the request: "+
+				"got %v, need %v", res.Size, dataLen,
+		)
 	}
 
 	return err

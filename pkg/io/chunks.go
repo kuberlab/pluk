@@ -125,7 +125,7 @@ func GetChunk(chunkPath string, version byte) (reader ReaderInterface, err error
 
 			if utils.SaveChunks() {
 				//logrus.Debugf("download complete! %v", time.Since(t))
-				err = SaveChunk(hash, version, ioutil.NopCloser(bytes.NewBuffer(data)), false)
+				_, err = SaveChunk(hash, version, ioutil.NopCloser(bytes.NewBuffer(data)), false)
 				if err != nil {
 					logrus.Errorf("Could not save chunk: %v", err)
 				}
@@ -138,7 +138,7 @@ func GetChunk(chunkPath string, version byte) (reader ReaderInterface, err error
 	return reader, err
 }
 
-func SaveChunk(hash string, version byte, data io.ReadCloser, sendToMaster bool) error {
+func SaveChunk(hash string, version byte, data io.ReadCloser, sendToMaster bool) (int64, error) {
 	//logrus.Debugf("Save")
 	//t := time.Now()
 	filePath := utils.GetHashedFilename(hash, version)
@@ -148,13 +148,13 @@ func SaveChunk(hash string, version byte, data io.ReadCloser, sendToMaster bool)
 
 	if err := os.MkdirAll(strings.Join(baseDir, "/"), os.ModePerm); err != nil {
 		data.Close()
-		return err
+		return 0, err
 	}
 
 	file, err := os.Create(filePath)
 	if err != nil {
 		data.Close()
-		return err
+		return 0, err
 	}
 	logrus.Debugf("Created %v", filePath)
 
@@ -170,7 +170,7 @@ func SaveChunk(hash string, version byte, data io.ReadCloser, sendToMaster bool)
 	written, err = io.Copy(writer, data)
 	if err != nil {
 		data.Close()
-		return err
+		return 0, err
 	}
 	data.Close()
 
@@ -182,8 +182,8 @@ func SaveChunk(hash string, version byte, data io.ReadCloser, sendToMaster bool)
 			"Save chunk", 0.1, 30,
 			MasterClient.SaveChunk, hash, buf.Bytes(), byte(version),
 		)
-		return err
+		return 0, err
 	}
 	//logrus.Debugf("Save complete! %v", time.Since(t))
-	return nil
+	return written, nil
 }

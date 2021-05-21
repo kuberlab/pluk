@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/kuberlab/pluk/pkg/types"
 	"io"
 	"net/http"
 	"strconv"
@@ -56,11 +57,13 @@ func (api *API) downloadChunk(req *restful.Request, resp *restful.Response) {
 func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {
 	hash := req.PathParameter("hash")
 
-	if err := plukio.SaveChunk(hash, api.chunkVersion(req), req.Request.Body, true); err != nil {
+	written, err := plukio.SaveChunk(hash, api.chunkVersion(req), req.Request.Body, true)
+	if err != nil {
 		WriteStatusError(resp, http.StatusInternalServerError, err)
 		return
 	}
 
 	resp.WriteHeader(http.StatusCreated)
-	resp.Write([]byte("Ok!\n"))
+	chunkCheck := &types.ChunkCheck{Size: written, Hash: hash}
+	resp.WriteEntity(chunkCheck)
 }

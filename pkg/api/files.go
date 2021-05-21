@@ -320,7 +320,7 @@ func (api *API) readAndSaveFile(req *restful.Request, resp *restful.Response) (f
 			continue
 		}
 
-		if err = plukio.SaveChunk(hash, types.ChunkVersion, ioutil.NopCloser(bytes.NewBuffer(buf[:read])), true); err != nil {
+		if _, err = plukio.SaveChunk(hash, types.ChunkVersion, ioutil.NopCloser(bytes.NewBuffer(buf[:read])), true); err != nil {
 			return nil, err
 		}
 

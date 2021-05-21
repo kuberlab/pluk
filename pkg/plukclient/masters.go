@@ -258,26 +258,26 @@ func (c *MultiMasterClient) EntityTarSize(entityType, workspace, name, version s
 	return res, err
 }
 
-func (c *MultiMasterClient) SaveChunk(hash string, data []byte, version byte) (err error) {
+func (c *MultiMasterClient) SaveChunk(hash string, data []byte, version byte) (check *types.ChunkCheck, err error) {
 	for i, cl := range c.baseClients {
 		if err != nil {
-			return err
+			return nil, err
 		}
-		err = cl.SaveChunk(hash, data, version)
+		check, err = cl.SaveChunk(hash, data, version)
 		if err != nil {
 			logrus.Errorf("Failed save chunk to %v", c.Masters[i])
 			return
 		}
 	}
-	return err
+	return nil, err
 }
 
-func (c *MultiMasterClient) SaveChunkReader(hash string, reader io.Reader, version byte) (err error) {
+func (c *MultiMasterClient) SaveChunkReader(hash string, reader io.Reader, dataLen int64, version byte) (err error) {
 	for i, cl := range c.baseClients {
 		if err != nil {
 			return err
 		}
-		err = cl.SaveChunkReader(hash, reader, version)
+		err = cl.SaveChunkReader(hash, reader, dataLen, version)
 		if err != nil {
 			logrus.Errorf("Failed save chunk to %v", c.Masters[i])
 			return

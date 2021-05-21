@@ -114,7 +114,7 @@ func (api *API) wsReaderChunks(client *types.WebsocketClient) {
 				return
 			}
 
-			err = plukio.SaveChunk(
+			_, err := plukio.SaveChunk(
 				chunk.Hash,
 				2,
 				ioutil.NopCloser(bytes.NewReader(chunk.Data)),
@@ -188,7 +188,7 @@ func (api *API) wsReader(client *types.WebsocketClient) {
 				return
 			}
 
-			err = plukio.SaveChunk(
+			_, err = plukio.SaveChunk(
 				chunk.Hash,
 				2,
 				ioutil.NopCloser(bytes.NewReader(chunk.Data)),

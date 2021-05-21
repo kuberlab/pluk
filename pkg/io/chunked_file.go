@@ -41,8 +41,8 @@ type PlukClient interface {
 	DownloadFile(entityType, workspace, entityName, version, fileName string) (io.ReadCloser, error)
 	DeleteFile(entityType, workspace, entityName, version, fileName string) error
 
-	SaveChunk(hash string, data []byte, version byte) error
-	SaveChunkReader(hash string, reader io.Reader, version byte) error
+	SaveChunk(hash string, data []byte, version byte) (*types.ChunkCheck, error)
+	SaveChunkReader(hash string, reader io.Reader, datLen int64,version byte) error
 	SaveFileStructure(structure types.FileStructure,
 		entityType, workspace, name, version string, opts types.SaveOpts) error
 	WebdavAuth(user, pass, path string) (bool, error)
