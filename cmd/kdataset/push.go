@@ -309,8 +309,8 @@ func (cmd *pushCmd) run() error {
 		t = time.Now()
 		structure := types.FileStructure{Files: fileBuf}
 		_, err = utils.Retry(
-			"check chunk",
-			1, 360,
+			"save FS",
+			1, 5,
 			client.SaveFileStructure,
 			structure,
 			entityType.Value,
@@ -435,7 +435,7 @@ func (cmd *pushCmd) uploadChunks(
 				chReader := io.TeeReader(rd, bar)
 				if _, err = utils.Retry(
 					fmt.Sprintf("Upload chunk, file=%v", name),
-					0.1, 90,
+					0.5, 10,
 					client.SaveChunkReader, hash, chReader, int64(len(chunkData)), byte(types.ChunkVersion)); err != nil {
 					_ = pool.Stop()
 					logrus.Fatalf("Failed to upload chunk: %v", err)

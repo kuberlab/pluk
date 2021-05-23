@@ -319,7 +319,7 @@ func CheckVersion(version string) error {
 	return nil
 }
 
-func Retry(description string, delaySec, timeoutSec float64, f interface{}, arg ...interface{}) (res interface{}, err error) {
+func Retry(description string, delaySec float64, retries int, f interface{}, arg ...interface{}) (res interface{}, err error) {
 	vf := reflect.ValueOf(f)
 	valuesArgs := make([]reflect.Value, 0)
 
@@ -356,12 +356,12 @@ func Retry(description string, delaySec, timeoutSec float64, f interface{}, arg 
 		return res, nil
 	}
 
-	timeoutDur := time.Duration(int64(float64(time.Second) * timeoutSec))
+	//timeoutDur := time.Duration(int64(float64(time.Second) * timeoutSec))
 	delayDur := time.Duration(int64(float64(time.Second) * delaySec))
-	timeout := time.NewTimer(timeoutDur)
+	//timeout := time.NewTimer(timeoutDur)
 	sleep := time.NewTicker(delayDur)
 
-	defer timeout.Stop()
+	//defer timeout.Stop()
 	defer sleep.Stop()
 
 	step := 1
@@ -376,8 +376,16 @@ func Retry(description string, delaySec, timeoutSec float64, f interface{}, arg 
 				return res, nil
 			}
 			step++
-		case <-timeout.C:
-			return res, errors.New(fmt.Sprintf("Timeout while waiting for %v: %v", vf.String(), err))
+			if step + 1 >= retries {
+				return res, errors.New(
+					fmt.Sprintf(
+						"Max retries (%v) exceeded while waiting for %v: %v",
+						retries, vf.String(), err,
+					),
+				)
+			}
+		//case <-timeout.C:
+		//	return res, errors.New(fmt.Sprintf("Timeout while waiting for %v: %v", vf.String(), err))
 		}
 	}
 }

@@ -63,7 +63,6 @@ func (api *API) saveChunk(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	resp.WriteHeader(http.StatusCreated)
 	chunkCheck := &types.ChunkCheck{Size: written, Hash: hash}
-	resp.WriteEntity(chunkCheck)
+	_ = resp.WriteHeaderAndEntity(http.StatusCreated, chunkCheck)
 }

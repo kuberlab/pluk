@@ -9,7 +9,7 @@ RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && \
   go build -tags=jsoniter -ldflags="-s -w" pluksrv.go && \
   go build -ldflags="-s -w" ./cmd/kdataset/
 
-FROM ubuntu:19.10
+FROM ubuntu:20.04
 
 RUN apt-get update && apt-get install curl sqlite3 -y && \
   apt-get clean && \

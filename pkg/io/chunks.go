@@ -117,7 +117,7 @@ func GetChunk(chunkPath string, version byte) (reader ReaderInterface, err error
 			}
 
 			buf := bytes.NewBuffer([]byte{})
-			_, err := utils.Retry("get chunk", 0.1, 30, getData, hash, byte(version), buf)
+			_, err := utils.Retry("get chunk", 0.5, 10, getData, hash, byte(version), buf)
 			if err != nil {
 				logrus.Warningf("Failed get chunk: %v", err)
 			}
@@ -179,7 +179,7 @@ func SaveChunk(hash string, version byte, data io.ReadCloser, sendToMaster bool)
 	if utils.HasMasters() && sendToMaster {
 		// TODO: decide whether it can go in async
 		_, err = utils.Retry(
-			"Save chunk", 0.1, 30,
+			"Save chunk", 0.1, 10,
 			MasterClient.SaveChunk, hash, buf.Bytes(), byte(version),
 		)
 		return 0, err
