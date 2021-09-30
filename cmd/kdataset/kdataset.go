@@ -7,7 +7,7 @@ import (
 	"os/user"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/kuberlab/pluk/cmd/kdataset/config"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/spf13/cobra"

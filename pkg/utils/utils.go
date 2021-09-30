@@ -4,7 +4,7 @@ import (
 	"crypto/sha512"
 	"errors"
 	"fmt"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"os"
 	"reflect"
 	"runtime"

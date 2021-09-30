@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	libtypes "github.com/kuberlab/lib/pkg/types"
 	"github.com/kuberlab/pluk/pkg/datasets"

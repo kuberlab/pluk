@@ -3,7 +3,7 @@ package fuse
 import (
 	"io"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/hanwen/go-fuse/fuse/nodefs"
 	plukio "github.com/kuberlab/pluk/pkg/io"

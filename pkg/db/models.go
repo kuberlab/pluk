@@ -5,7 +5,7 @@ to migrate database state.
 package db
 
 import (
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"github.com/kuberlab/lib/pkg/types"
 )

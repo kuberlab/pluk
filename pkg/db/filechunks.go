@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"path/filepath"
 	"strings"
 	"time"

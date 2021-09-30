@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/gorilla/websocket"
 	libtypes "github.com/kuberlab/lib/pkg/types"

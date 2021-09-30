@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 )

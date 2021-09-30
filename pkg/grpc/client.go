@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"google.golang.org/grpc"
 )

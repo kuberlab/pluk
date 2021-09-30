@@ -6,7 +6,7 @@ import (
 
 	"strings"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/kuberlab/lib/pkg/errors"
 	libtypes "github.com/kuberlab/lib/pkg/types"
 	"github.com/kuberlab/pluk/pkg/db"
