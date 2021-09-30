@@ -1,7 +1,9 @@
-FROM golang:1.10
+FROM golang:1.16
 
 COPY ./pkg "$GOPATH/src/github.com/kuberlab/pluk/pkg"
 COPY ./cmd "$GOPATH/src/github.com/kuberlab/pluk/cmd"
+COPY ./go.mod "$GOPATH/src/github.com/kuberlab/pluk/go.mod"
+COPY ./go.sum "$GOPATH/src/github.com/kuberlab/pluk/go.sum"
 COPY ./vendor "$GOPATH/src/github.com/kuberlab/pluk/vendor"
 
 RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && \
