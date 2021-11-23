@@ -82,11 +82,11 @@ func GetChunkByHash(hash string, version byte) (reader io.ReadCloser, err error)
 }
 
 func GetChunk(chunkPath string, version byte) (reader ReaderInterface, err error) {
-	reader, err = os.Open(chunkPath)
+	f, err := os.Open(chunkPath)
 	if err != nil {
 		hash, _ := utils.GetHashFromPath(chunkPath)
-		if reader != nil {
-			reader.Close()
+		if f != nil {
+			f.Close()
 		}
 		if os.IsNotExist(err) && utils.HasMasters() {
 			// Read from master
@@ -135,6 +135,7 @@ func GetChunk(chunkPath string, version byte) (reader ReaderInterface, err error
 			return nil, err
 		}
 	}
+	reader = NewReaderFromFile(f)
 	return reader, err
 }
 

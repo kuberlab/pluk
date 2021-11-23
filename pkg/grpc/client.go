@@ -6,8 +6,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/plukclient"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 

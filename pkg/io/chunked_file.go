@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/types"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"github.com/sirupsen/logrus"
 )
 
 type PlukClient interface {
@@ -42,7 +42,7 @@ type PlukClient interface {
 	DeleteFile(entityType, workspace, entityName, version, fileName string) error
 
 	SaveChunk(hash string, data []byte, version byte) (*types.ChunkCheck, error)
-	SaveChunkReader(hash string, reader io.Reader, datLen int64,version byte) error
+	SaveChunkReader(hash string, reader io.Reader, datLen int64, version byte) error
 	SaveFileStructure(structure types.FileStructure,
 		entityType, workspace, name, version string, opts types.SaveOpts) error
 	WebdavAuth(user, pass, path string) (bool, error)
@@ -366,6 +366,12 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 			logrus.Error(err)
 			return read, io.EOF
 		}
+		if reader.DataSize() != -1 && (reader.DataSize() != f.Chunks[f.currentChunk].Size) {
+			logrus.Errorf(
+				"Data len mismatch for file %v, chunk %v id %v: got %v, want %v",
+				f.Name, f.currentChunk, f.Chunks[f.currentChunk].Path, reader.DataSize(), f.Chunks[f.currentChunk].Size,
+			)
+		}
 		f.currentChunkReader = reader
 	}
 
@@ -399,6 +405,12 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 				logrus.Error(err)
 				f.currentChunkReader = nil
 				return read, io.EOF
+			}
+			if reader.DataSize() != -1 && (reader.DataSize() != f.Chunks[f.currentChunk].Size) {
+				logrus.Errorf(
+					"Data len mismatch for file %v, chunk %v id %v: got %v, want %v",
+					f.Name, f.currentChunk, f.Chunks[f.currentChunk].Path, reader.DataSize(), f.Chunks[f.currentChunk].Size,
+				)
 			}
 			f.currentChunkReader = reader
 			err = nil
