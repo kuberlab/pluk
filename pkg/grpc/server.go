@@ -9,10 +9,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/kuberlab/pluk/pkg/api"
 	plukio "github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 )
@@ -33,7 +33,7 @@ func (s *Server) GetChunk(_ context.Context, in *ChunkRequest) (*ChunkResponse, 
 			logrus.Error(err)
 			return nil, err
 		}
-		bt := bytes.NewBuffer(make([]byte, 0, 16384))
+		bt := bytes.NewBuffer([]byte{})
 		io.Copy(bt, reader)
 		_ = reader.Close()
 		return bt.Bytes(), nil
@@ -68,7 +68,7 @@ func (s *Server) GetChunkWithCheck(_ context.Context, in *ChunkRequestWithCheck)
 			logrus.Error(err)
 			return nil, err
 		}
-		bt := bytes.NewBuffer(make([]byte, 0, 16384))
+		bt := bytes.NewBuffer([]byte{})
 		io.Copy(bt, reader)
 		_ = reader.Close()
 		return bt.Bytes(), nil

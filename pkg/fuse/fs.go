@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/hanwen/go-fuse/fuse/nodefs"
 	"github.com/hanwen/go-fuse/fuse/pathfs"
@@ -16,6 +15,7 @@ import (
 	"github.com/kuberlab/pluk/pkg/io"
 	"github.com/kuberlab/pluk/pkg/plukclient"
 	"github.com/kuberlab/pluk/pkg/utils"
+	"github.com/sirupsen/logrus"
 )
 
 var ChangeDatasetRegex = regexp.MustCompile("\\.([-.a-z0-9_A-Z]+)__([-a-z0-9.]+)")
