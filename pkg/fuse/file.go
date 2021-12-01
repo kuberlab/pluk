@@ -26,7 +26,7 @@ func NewPlukFile(chunked *plukio.ChunkedFile) *PlukFile {
 }
 
 func (f *PlukFile) Read(dest []byte, off int64) (fuse.ReadResult, fuse.Status) {
-	logrus.Debugf("READ %v, SIZE %v, OFFSET %v", f.chunked.Name, len(dest), off)
+	logrus.Debugf("READ %v %v, SIZE %v, OFFSET %v", f.chunked.AbsName, f.chunked.Name, len(dest), off)
 	return f.resultData(dest, off), fuse.OK
 }
 

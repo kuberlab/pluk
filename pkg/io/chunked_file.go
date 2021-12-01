@@ -85,6 +85,7 @@ func (fs *ChunkedFileFS) GetFile(absname string) *ChunkedFile {
 		return d.AsFile
 	} else {
 		if f, ok := curDir.Files[filename]; ok {
+			f.AbsName = absname
 			return f
 		} else {
 			return nil
@@ -245,6 +246,7 @@ type ChunkedFile struct {
 	currentChunkReader ReaderInterface
 	Chunks             []Chunk   `json:"chunks,omitempty"`
 	Name               string    `json:"name"`
+	AbsName            string    `json:"abs_name"`
 	Size               int64     `json:"size"`
 	Mode               uint32    `json:"mode"`
 	Dir                bool      `json:"dir"`
