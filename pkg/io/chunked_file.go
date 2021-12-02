@@ -368,12 +368,12 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 			logrus.Error(err)
 			return read, io.EOF
 		}
-		if reader.DataSize() != -1 && (reader.DataSize() != f.Chunks[f.currentChunk].Size) {
-			logrus.Errorf(
-				"Data len mismatch for file %v, chunk %v id %v: got %v, want %v",
-				f.Name, f.currentChunk, f.Chunks[f.currentChunk].Path, reader.DataSize(), f.Chunks[f.currentChunk].Size,
-			)
-		}
+		//if reader.DataSize() != -1 && (reader.DataSize() != f.Chunks[f.currentChunk].Size) {
+		//	logrus.Errorf(
+		//		"Data len mismatch for file %v, chunk %v id %v: got %v, want %v",
+		//		f.Name, f.currentChunk, f.Chunks[f.currentChunk].Path, reader.DataSize(), f.Chunks[f.currentChunk].Size,
+		//	)
+		//}
 		f.currentChunkReader = reader
 	}
 
@@ -383,6 +383,7 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 	//f.chunkOffset = 0
 	chunk := f.currentChunk
 	for {
+		//logrus.Debugf("Read chunk %v", f.Chunks[f.currentChunk].Path)
 		r, err = f.currentChunkReader.Read(p[read:])
 		if f.currentChunk == chunk {
 			f.chunkOffset += int64(r)
@@ -408,12 +409,12 @@ func (f *ChunkedFile) Read(p []byte) (n int, err error) {
 				f.currentChunkReader = nil
 				return read, io.EOF
 			}
-			if reader.DataSize() != -1 && (reader.DataSize() != f.Chunks[f.currentChunk].Size) {
-				logrus.Errorf(
-					"Data len mismatch for file %v, chunk %v id %v: got %v, want %v",
-					f.Name, f.currentChunk, f.Chunks[f.currentChunk].Path, reader.DataSize(), f.Chunks[f.currentChunk].Size,
-				)
-			}
+			//if reader.DataSize() != -1 && (reader.DataSize() != f.Chunks[f.currentChunk].Size) {
+			//	logrus.Errorf(
+			//		"Data len mismatch for file %v, chunk %v id %v: got %v, want %v",
+			//		f.Name, f.currentChunk, f.Chunks[f.currentChunk].Path, reader.DataSize(), f.Chunks[f.currentChunk].Size,
+			//	)
+			//}
 			f.currentChunkReader = reader
 			err = nil
 		} else {

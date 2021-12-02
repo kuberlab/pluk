@@ -1,19 +1,18 @@
 package fuse
 
 import (
-	"io"
-
-	"github.com/sirupsen/logrus"
-	"github.com/hanwen/go-fuse/fuse"
-	"github.com/hanwen/go-fuse/fuse/nodefs"
+	"github.com/hanwen/go-fuse/v2/fuse"
+	"github.com/hanwen/go-fuse/v2/fuse/nodefs"
 	plukio "github.com/kuberlab/pluk/pkg/io"
+	"github.com/sirupsen/logrus"
+	"io"
 )
 
 type PlukFile struct {
 	nodefs.File
 	chunked *plukio.ChunkedFile
-	data    []byte
-	size    int
+	//data    []byte
+	//size    int
 }
 
 var defFile = nodefs.NewDefaultFile()
@@ -26,8 +25,14 @@ func NewPlukFile(chunked *plukio.ChunkedFile) *PlukFile {
 }
 
 func (f *PlukFile) Read(dest []byte, off int64) (fuse.ReadResult, fuse.Status) {
-	logrus.Debugf("READ %v %v, SIZE %v, OFFSET %v", f.chunked.AbsName, f.chunked.Name, len(dest), off)
-	return f.resultData(dest, off), fuse.OK
+	//logrus.Debugf("READ %v %v, SIZE %v, OFFSET %v", f.chunked.AbsName, f.chunked.Name, len(dest), off)
+	res := f.resultData(dest, off)
+	//time.Sleep(time.Microsecond * 50)
+	//logrus.Debugf(
+	//	"READ %v %v, SIZE %v, OFFSET %v RECEIVED %v",
+	//	f.chunked.AbsName, f.chunked.Name, len(dest), off, res.Size(),
+	//)
+	return res, fuse.OK
 }
 
 func (f *PlukFile) Flush() fuse.Status {
@@ -71,23 +76,28 @@ func (f *PlukFile) resultData(buf []byte, off int64) fuse.ReadResult {
 	// SEEK 0
 	// READ 500
 	n, err := f.chunked.SeekAndRead(buf, off)
-	f.size = n
-	f.data = buf[:n]
+	//f.data = buf[:n]
+	//f.size = n
 	if err != nil {
 		if err != io.EOF {
 			logrus.Errorf("Read error: %v", err)
 		}
-		return f
+		return fuse.ReadResultData(buf[:n])
+		//return f
 	}
-	return f
+
+	return fuse.ReadResultData(buf[:n])
+	//return f
 }
 
 func (f *PlukFile) Bytes(buf []byte) ([]byte, fuse.Status) {
-	return f.data, fuse.OK
+	//return f.data, fuse.OK
+	return nil, fuse.OK
 }
 
 func (f *PlukFile) Size() int {
-	return f.size
+	//return f.size
+	return 0
 }
 
 func (f *PlukFile) Done() {}
