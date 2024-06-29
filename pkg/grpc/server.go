@@ -17,8 +17,10 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-// server is used to implement PlukeServer.
-type Server struct{}
+// Server is used to implement PlukeServer.
+type Server struct {
+	UnimplementedPlukeServer
+}
 
 // GetChunk implements PlukeServer
 func (s *Server) GetChunk(_ context.Context, in *ChunkRequest) (*ChunkResponse, error) {
