@@ -1,15 +1,14 @@
-FROM golang:1.16
+FROM golang:1.19
 
 COPY ./pkg "$GOPATH/src/github.com/kuberlab/pluk/pkg"
 COPY ./cmd "$GOPATH/src/github.com/kuberlab/pluk/cmd"
 COPY ./go.mod "$GOPATH/src/github.com/kuberlab/pluk/go.mod"
 COPY ./go.sum "$GOPATH/src/github.com/kuberlab/pluk/go.sum"
-COPY ./vendor "$GOPATH/src/github.com/kuberlab/pluk/vendor"
 
 RUN cd "$GOPATH/src/github.com/kuberlab/pluk" && \
   go build -tags=jsoniter -ldflags="-s -w" ./cmd/plukefs/
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 RUN apt-get update && \
   apt-get install -y libfuse-dev fuse && \
